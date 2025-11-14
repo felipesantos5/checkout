@@ -4,6 +4,7 @@ import User from "../models/user.model";
 import stripe from "../lib/stripe";
 import Offer from "../models/offer.model";
 import Sale from "../models/sale.model";
+import { Stripe } from "stripe";
 
 // !! IMPORTANTE !!
 // Altere estas URLs para as rotas do seu frontend (dashboard-admin)
