@@ -13,7 +13,7 @@ RUN npm ci
 COPY . .
 
 # Exponha a porta que sua aplicação usa
-EXPOSE 3001
+EXPOSE 3002
 
 # Comando para iniciar a aplicação
 CMD ["node", "src/app.js"]
