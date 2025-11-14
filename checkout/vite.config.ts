@@ -7,7 +7,4 @@ export default defineConfig({
     tailwindcss(),
     basicSsl(), // 2. Adicione o plugin
   ],
-  server: {
-    https: true, // 3. Force o HTTPS
-  },
 });

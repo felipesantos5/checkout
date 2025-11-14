@@ -113,10 +113,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
             },
           },
           receipt_email: email,
-          shipping: {
-            name: fullName,
-            address: { country: "BR" },
-          },
         });
 
         if (error) throw error;

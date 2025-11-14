@@ -6,6 +6,7 @@ interface Bump {
   _id: string;
   name: string;
   imageUrl?: string;
+  description?: string;
   priceInCents: number;
 }
 
