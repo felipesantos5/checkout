@@ -1,34 +1,64 @@
+// src/pages/CheckoutPage.tsx
 import React from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
-
-// Importe o componente de formulário que criamos
 import { CheckoutForm } from "../components/checkout/CheckoutForm";
+import type { OfferData } from "./CheckoutSlugPage";
 
-// 1. Carregue o Stripe FORA do render do componente.
-// Use sua Chave Publicável (Publishable Key)
-const stripePromise = loadStripe("pk_test_SUA_CHAVE_PUBLICAVEL_AQUI");
+// 1. Importe 'parseToRgb' e 'getContrast' da biblioteca polished
+import { parseToRgb, getContrast } from "polished";
 
-/**
- * Esta é a página de checkout principal.
- * Ela serve como o "container" que carrega o Stripe
- * e fornece o contexto "Elements" para seus filhos.
- */
-const CheckoutPage: React.FC = () => {
-  // Esta página não tem mais lógica de handleSubmit ou hooks.
-  // Todo o HTML e funções do formulário estão no <CheckoutForm />.
+// Leitura da Chave do .env
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+if (!stripeKey) {
+  throw new Error("VITE_STRIPE_PUBLISHABLE_KEY não está definida no .env");
+}
+const stripePromise = loadStripe(stripeKey);
+
+interface CheckoutPageProps {
+  offerData: OfferData;
+}
+
+const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
+  // 2. Converta as cores HEX para objetos RGB
+  //    (Use cores padrão caso a oferta não tenha cor definida)
+  const primaryRgb = parseToRgb(offerData.primaryColor || "#374151");
+  const buttonRgb = parseToRgb(offerData.buttonColor || "#2563EB");
+
+  // 3. Crie a string "R G B" para o CSS
+  const primaryColorString = `${primaryRgb.red} ${primaryRgb.green} ${primaryRgb.blue}`;
+  const buttonColorString = `${buttonRgb.red} ${buttonRgb.green} ${buttonRgb.blue}`;
+
+  // 4. Calcule a cor do texto do botão (preto ou branco)
+  const buttonTextColor =
+    getContrast(offerData.buttonColor || "#2563EB", "#FFFFFF") > 2.5
+      ? "255 255 255" // Branco
+      : "0 0 0"; // Preto
+
+  // 5. Defina as variáveis CSS
+  const themeStyles = {
+    "--color-primary": primaryColorString,
+    "--color-button": buttonColorString,
+    "--color-button-foreground": buttonTextColor,
+  } as React.CSSProperties;
 
   return (
-    // Container principal com fundo cinza
-    <div className="min-h-screen bg-gray-100 p-4">
-      {/* Container do formulário mobile-first */}
+    // 6. Aplique as variáveis CSS ao contêiner principal
+    <div className="min-h-screen bg-gray-100 p-4" style={themeStyles}>
+      {/* (Opcional) Injeta globalmente se o style={...} acima falhar */}
+      <style>
+        {`
+          :root {
+            --color-primary: ${primaryColorString};
+            --color-button: ${buttonColorString};
+            --color-button-foreground: ${buttonTextColor};
+          }
+        `}
+      </style>
+
       <div className="max-w-lg mx-auto bg-white rounded-xl shadow-xl p-6">
-        {/* 2. O 'Elements' provider deve envolver o componente
-             que contém o formulário e chama os hooks do Stripe. */}
         <Elements stripe={stripePromise}>
-          {/* 3. O CheckoutForm é o FILHO que vai usar 
-               useStripe() e useElements() */}
-          <CheckoutForm />
+          <CheckoutForm offerData={offerData} />
         </Elements>
       </div>
     </div>

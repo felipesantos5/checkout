@@ -1,0 +1,29 @@
+// src/routes/offer.routes.ts
+import { Router } from "express";
+import * as offerController from "../controllers/offer.controller";
+import { protectRoute } from "../middleware/auth.middleware";
+
+const router = Router();
+
+// --- Rotas Protegidas (Dashboard) ---
+
+// POST /api/offers (Cria uma nova oferta)
+router.post("/", protectRoute, offerController.handleCreateOffer);
+
+// GET /api/offers (Lista todas as ofertas do usuário logado)
+router.get("/", protectRoute, offerController.handleListMyOffers);
+
+// --- ROTA NOVA ADICIONADA AQUI ---
+// GET /api/offers/:id (Busca UMA oferta por ID para edição)
+router.get("/:id", protectRoute, offerController.handleGetOfferById);
+
+// --- ROTA NOVA ADICIONADA AQUI ---
+// PUT /api/offers/:id (Atualiza uma oferta)
+router.put("/:id", protectRoute, offerController.handleUpdateOffer);
+
+// --- Rota Pública (Checkout) ---
+
+// GET /api/offers/slug/:slug
+router.get("/slug/:slug", offerController.handleGetOfferBySlug);
+
+export default router;

@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import React from "react";
 import { CreditCardForm } from "./CreditCardForm";
-import { PixDisplay } from "./PixDisplay";
-
-// Ícones (você pode usar react-icons ou SVGs)
-const VisaIcon = () => <span className="text-blue-800 font-bold">VISA</span>;
-const AmexIcon = () => <span className="text-blue-600 font-bold">AMEX</span>;
 
 type PaymentMethod = "creditCard" | "pix";
 
-export const PaymentMethods: React.FC = () => {
-  const [method, setMethod] = useState<PaymentMethod>("creditCard");
+interface PaymentMethodsProps {
+  method: PaymentMethod;
+  setMethod: (method: PaymentMethod) => void;
+  pixCopiaECola: string | null;
+}
 
+export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMethod }) => {
   const PaymentOption: React.FC<{
     value: PaymentMethod;
     title: string;
@@ -54,23 +53,11 @@ export const PaymentMethods: React.FC = () => {
             <div className="inner_payment_img hideonmobile brand-dinersclub">
               <img loading="lazy" src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/dinersclub.svg" />
             </div>
-
-            {/* <div className="">E mais…</div> */}
           </div>
-          {/* Adicione outros ícones aqui */}
-        </PaymentOption>
-
-        {/* Você adicionaria a opção de Pix aqui */}
-        <PaymentOption value="pix" title="Pix">
-          {/*  */}
-          <span className="font-bold">Pix</span>
         </PaymentOption>
       </div>
 
-      <div className="mt-6">
-        {method === "creditCard" && <CreditCardForm />}
-        {method === "pix" && <PixDisplay />}
-      </div>
+      <div className="mt-6">{method === "creditCard" && <CreditCardForm />}</div>
     </div>
   );
 };

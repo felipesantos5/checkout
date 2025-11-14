@@ -1,3 +1,11 @@
-export const Banner = () => {
-  return <img src="https://perfectpay-files.s3.us-east-2.amazonaws.com/app/img/plan/PPPBDJ82/pplqqnqd2imageheaderpathnao_fr.webp" alt="" />;
+// src/components/checkout/Banner.tsx
+interface BannerProps {
+  imageUrl?: string;
+}
+
+export const Banner: React.FC<BannerProps> = ({ imageUrl }) => {
+  if (!imageUrl) {
+    return null; // Não renderiza nada se não houver banner
+  }
+  return <img src={imageUrl} alt="Banner da oferta" className="w-full rounded-t-xl" />;
 };

@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+// src/components/checkout/CheckoutForm.tsx
+import React, { useState, useEffect } from "react";
 import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-js";
+import type { OfferData } from "../../pages/CheckoutSlugPage"; // Importe a tipagem
 
 // Importe os componentes visuais do formulário
 import { OrderSummary } from "./OrderSummary";
@@ -7,109 +9,175 @@ import { ContactInfo } from "./ContactInfo";
 import { PaymentMethods } from "./PaymentMethods";
 import { OrderBump } from "./OrderBump";
 import { Banner } from "./Banner";
+import { API_URL } from "../../config/BackendUrl";
 
-/**
- * Este componente contém toda a lógica do formulário,
- * os hooks do Stripe e a função de submissão.
- */
-export const CheckoutForm: React.FC = () => {
-  // 1. Hooks do Stripe (funcionam pois estão dentro de <Elements>)
+interface CheckoutFormProps {
+  offerData: OfferData;
+}
+
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
+  // 1. Hooks do Stripe
   const stripe = useStripe();
   const elements = useElements();
 
-  // 2. Estados de UI para feedback
+  // 2. Estados de UI
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [paymentSucceeded, setPaymentSucceeded] = useState(false);
+
+  // 3. (Refatorado) Estados de Pagamento e Total
+  const [method, setMethod] = useState<"creditCard" | "pix">("creditCard");
+  const [selectedBumps, setSelectedBumps] = useState<string[]>([]); // Lista de IDs
+  const [quantity, setQuantity] = useState(1);
+  const [totalAmount, setTotalAmount] = useState(offerData.mainProduct.priceInCents);
+
+  // 4. (Refatorado) Efeito para recalcular o total
+  useEffect(() => {
+    // 2. O TOTAL AGORA DEPENDE DA QUANTIDADE
+    let newTotal = offerData.mainProduct.priceInCents * quantity;
+
+    selectedBumps.forEach((bumpId) => {
+      const bump = offerData.orderBumps.find((b) => b._id === bumpId);
+      if (bump) {
+        newTotal += bump.priceInCents; // Bumps não são multiplicados pela quantidade
+      }
+    });
+
+    setTotalAmount(newTotal);
+  }, [selectedBumps, quantity, offerData]);
+
+  // 5. (Refatorado) Função para (des)marcar um bump
+  const handleToggleBump = (bumpId: string) => {
+    setSelectedBumps(
+      (prev) =>
+        prev.includes(bumpId)
+          ? prev.filter((id) => id !== bumpId) // Remove
+          : [...prev, bumpId] // Adiciona
+    );
+  };
 
   /**
-   * Função principal de submissão do formulário.
+   * (Refatorado) Função principal de submissão do formulário.
    */
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // Impede o reload da página
-
-    // 3. Valida se o Stripe e Elements foram carregados
-    if (!stripe || !elements) {
-      console.warn("Stripe.js ainda não carregou.");
-      return;
-    }
+    e.preventDefault();
+    if (!stripe || !elements) return;
 
     setLoading(true);
     setErrorMessage(null);
 
-    // 4. Chamar seu backend para criar um PaymentIntent
-    //    Isso é uma etapa de segurança crucial.
-    // !! SIMULAÇÃO DA CHAMADA DE BACKEND !!
-    const response = await fetch("/api/create-payment-intent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 4905, currency: "brl" }), // Valor em centavos
-    });
-    const { clientSecret, error: backendError } = await response.json();
+    // 6. (Refatorado) Coletar dados do formulário
+    const email = (document.getElementById("email") as HTMLInputElement).value;
+    const fullName = (document.getElementById("name") as HTMLInputElement).value;
+    const phone = (document.getElementById("phone") as HTMLInputElement).value;
+    // const country = (document.getElementById("country") as HTMLSelectElement).value;
 
-    if (backendError) {
-      setErrorMessage(backendError.message);
-      setLoading(false);
-      return;
-    }
-
-    // 5. Pegar o elemento do cartão (precisamos do CardNumberElement)
-    const cardElement = elements.getElement(CardNumberElement);
-    if (!cardElement) {
-      setErrorMessage("Componente do cartão não encontrado.");
-      setLoading(false);
-      return;
-    }
-
-    // 6. Pegar o nome do formulário (exemplo)
-    const cardName = (document.getElementById("card-name") as HTMLInputElement).value;
-
-    // 7. Confirmar o pagamento no frontend com o clientSecret
-    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: {
-        card: cardElement,
-        billing_details: {
-          name: cardName,
-          // Você pode adicionar email, telefone, etc., daqui
-        },
+    // 7. (Refatorado) Montar o payload para o backend
+    const payload = {
+      offerSlug: offerData.slug,
+      selectedOrderBumps: selectedBumps,
+      contactInfo: {
+        email,
+        name: fullName,
+        phone,
+        // country,
       },
-    });
+    };
+
+    try {
+      if (method === "creditCard") {
+        // 8. (Refatorado) Chamar o NOVO endpoint
+        const res = await fetch(`${API_URL}/payments/create-intent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const { clientSecret, error: backendError } = await res.json();
+        if (backendError) throw new Error(backendError.message);
+
+        const cardElement = elements.getElement(CardNumberElement);
+        if (!cardElement) throw new Error("Componente do cartão não encontrado.");
+
+        const cardName = (document.getElementById("card-name") as HTMLInputElement).value;
+
+        // 9. (Refatorado) Enviar os dados de contato corretos
+        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: cardName,
+              email: email,
+              phone: phone,
+              // address: { country: country },
+            },
+          },
+          receipt_email: email,
+          shipping: {
+            name: fullName,
+            address: { country: "BR" },
+          },
+        });
+
+        if (error) throw error;
+        if (paymentIntent.status === "succeeded") setPaymentSucceeded(true);
+      } else if (method === "pix") {
+        // TODO: A lógica do PIX também usará o endpoint 'create-intent'
+        setErrorMessage("Pagamento com PIX ainda não implementado.");
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || "Ocorreu um erro desconhecido.");
+    }
 
     setLoading(false);
-
-    // 8. Tratar o resultado
-    if (error) {
-      // Mostrar erro para o usuário (ex: "Seu cartão foi recusado.")
-      setErrorMessage(error.message || "Ocorreu um erro desconhecido.");
-    } else {
-      // Pagamento bem-sucedido!
-      if (paymentIntent.status === "succeeded") {
-        console.log("Pagamento realizado com sucesso!", paymentIntent);
-        // Redirecionar para a página de obrigado
-        // window.location.href = '/obrigado';
-      }
-    }
   };
 
-  // 9. O HTML (JSX) do formulário
+  // 10. Tela de Sucesso
+  if (paymentSucceeded) {
+    return (
+      <div className="p-6 text-center">
+        <h2 className="text-2xl font-bold text-green-600">Pagamento Aprovado!</h2>
+        <p className="mt-2 text-gray-700">Obrigado pela sua compra. Os detalhes foram enviados para o seu e-mail.</p>
+      </div>
+    );
+  }
+
+  // 11. (Refatorado) JSX do formulário, passando props dinâmicas
   return (
     <form onSubmit={handleSubmit}>
-      {/* Componentes visuais do formulário */}
-      <Banner />
-      <OrderSummary />
+      <Banner imageUrl={offerData.bannerImageUrl} />
+
+      <OrderSummary
+        productName={offerData.mainProduct.name}
+        productImageUrl={offerData.mainProduct.imageUrl}
+        totalAmountInCents={totalAmount}
+        basePriceInCents={offerData.mainProduct.priceInCents}
+        currency={offerData.currency}
+        quantity={quantity}
+        setQuantity={setQuantity}
+      />
+
       <ContactInfo />
-      <PaymentMethods />
-      <OrderBump />
+
+      <PaymentMethods
+        // (O PaymentMethods não precisa de mudanças por enquanto)
+        method={method}
+        setMethod={setMethod}
+        pixCopiaECola={null}
+      />
+
+      <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
 
       {/* Botão de Finalização */}
       <button
         type="submit"
-        disabled={!stripe || loading} // Desabilitar enquanto carrega/processa
-        className="w-full mt-8 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg text-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        disabled={!stripe || loading}
+        className="w-full mt-8 bg-button text-button-foreground font-bold py-3 px-4 rounded-lg text-lg transition-colors disabled:opacity-50
+                   hover:opacity-90"
       >
-        {loading ? "Processando..." : "Finalizar compra"}
+        {loading ? "Processando..." : method === "pix" ? "Gerar PIX" : "Finalizar compra"}
       </button>
 
-      {/* Exibição de Erros */}
       {errorMessage && <div className="text-red-500 text-sm text-center mt-4">{errorMessage}</div>}
     </form>
   );

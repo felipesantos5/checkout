@@ -1,28 +1,62 @@
+// src/components/checkout/OrderBump.tsx
 import React from "react";
 
-export const OrderBump: React.FC = () => {
-  return (
-    <div className="w-full mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-      <div className="flex items-start">
-        <input id="order-bump" type="checkbox" className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1" />
-        <div className="ml-3 text-sm">
-          <label htmlFor="order-bump" className="font-medium text-gray-800">
-            How to Develop Reading, Writing, School Routines, and Math Based on the VB-MAPP
-            <span className="ml-2 font-bold text-green-600">R$ 65,07</span>
-          </label>
+// Tipagem para um único bump
+interface Bump {
+  _id: string;
+  name: string;
+  imageUrl?: string;
+  priceInCents: number;
+}
 
-          <div className="flex items-center mt-2">
-            <img
-              src="https://perfectpay-files.s3.us-east-2.amazonaws.com/app/img/product/checkout/order_bump/176247877720_plan_es.png" // Substitua pela imagem do livro
-              alt="School Readiness"
-              className="w-14 h-auto rounded"
+interface OrderBumpProps {
+  bumps: Bump[]; // A lista de bumps vinda da API
+  selectedBumps: string[]; // A lista de IDs selecionados
+  onToggleBump: (bumpId: string) => void; // Função para (des)marcar
+  currency: string;
+}
+
+// Helper de formatação
+const formatCurrency = (amountInCents: number, currency: string) => {
+  const amount = amountInCents / 100;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: currency,
+  }).format(amount);
+};
+
+export const OrderBump: React.FC<OrderBumpProps> = ({ bumps, selectedBumps, onToggleBump, currency }) => {
+  if (!bumps || bumps.length === 0) {
+    return null; // Não renderiza nada se não houver bumps
+  }
+
+  return (
+    <>
+      {/* Renderiza um bloco para CADA bump */}
+      {bumps.map((bump) => (
+        <div key={bump._id} className="w-full mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="flex items-start">
+            <input
+              id={`order-bump-${bump._id}`}
+              type="checkbox"
+              className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mt-1"
+              checked={selectedBumps.includes(bump._id)}
+              onChange={() => onToggleBump(bump._id)}
             />
-            <p className="ml-3 text-xs text-gray-600">
-              Develop reading, writing, routines, and math with structured strategies based on the VB-MAPP!
-            </p>
+            <div className="ml-3 text-sm">
+              <label htmlFor={`order-bump-${bump._id}`} className="font-medium text-gray-800">
+                {bump.name}
+                <span className="ml-2 font-bold text-green-600">{formatCurrency(bump.priceInCents, currency)}</span>
+              </label>
+
+              <div className="flex items-center mt-2">
+                {bump.imageUrl && <img src={bump.imageUrl} alt={bump.name} className="w-14 h-auto rounded" />}
+                <p className="ml-3 text-xs text-gray-600">{bump.description}</p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      ))}
+    </>
   );
 };
