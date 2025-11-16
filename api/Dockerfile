@@ -34,7 +34,7 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 
 # Exponha a porta
-EXPOSE 3002
+EXPOSE 4242
 
 # Executa o JavaScript compilado
 # O script "start" do seu package.json já é "node dist/server.js"
