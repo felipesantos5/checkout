@@ -9,8 +9,8 @@ import { Stripe } from "stripe";
 // !! IMPORTANTE !!
 // Altere estas URLs para as rotas do seu frontend (dashboard-admin)
 // O usuário será enviado para cá DEPOIS de terminar o onboarding do Stripe.
-const STRIPE_ONBOARDING_RETURN_URL = "http://localhost:5173/dashboard/stripe-return";
-const STRIPE_ONBOARDING_REFRESH_URL = "http://localhost:5173/dashboard/stripe-refresh";
+const STRIPE_ONBOARDING_RETURN_URL = "https://admin.snappcheckout.com/dashboard/stripe-return";
+const STRIPE_ONBOARDING_REFRESH_URL = "https://admin.snappcheckout.com/dashboard/stripe-refresh";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
