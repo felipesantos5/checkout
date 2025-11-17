@@ -8,6 +8,7 @@ import { OrderBump } from "./OrderBump";
 import { Banner } from "./Banner";
 import { API_URL } from "../../config/BackendUrl";
 import { useTheme } from "../../context/ThemeContext";
+import { useTranslation } from "../../i18n/I18nContext";
 
 interface CheckoutFormProps {
   offerData: OfferData;
@@ -17,6 +18,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   const stripe = useStripe();
   const elements = useElements();
   const { button, buttonForeground } = useTheme();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         if (backendError) throw new Error(backendError.message);
 
         const cardElement = elements.getElement(CardNumberElement);
-        if (!cardElement) throw new Error("Componente do cartão não encontrado.");
+        if (!cardElement) throw new Error(t.messages.cardElementNotFound);
 
         const cardName = (document.getElementById("card-name") as HTMLInputElement).value;
 
@@ -96,10 +98,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         if (paymentIntent.status === "succeeded") setPaymentSucceeded(true);
       } else if (method === "pix") {
         // TODO: A lógica do PIX também usará o endpoint 'create-intent'
-        setErrorMessage("Pagamento com PIX ainda não implementado.");
+        setErrorMessage(t.messages.pixNotImplemented);
       }
     } catch (error: any) {
-      setErrorMessage(error.message || "Ocorreu um erro desconhecido.");
+      setErrorMessage(error.message || t.messages.error);
     }
 
     setLoading(false);
@@ -108,8 +110,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   if (paymentSucceeded) {
     return (
       <div className="p-6 text-center">
-        <h2 className="text-2xl font-bold text-green-600">Pagamento Aprovado!</h2>
-        <p className="mt-2 text-gray-700">Obrigado pela sua compra. Os detalhes foram enviados para o seu e-mail.</p>
+        <h2 className="text-2xl font-bold text-green-600">{t.messages.success}</h2>
+        <p className="mt-2 text-gray-700">{t.messages.successDescription}</p>
       </div>
     );
   }
@@ -126,7 +128,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         currency={offerData.currency}
         quantity={quantity}
         setQuantity={setQuantity}
-        originalPriceInCents={offerData.mainProduct.originalPriceInCents}
+        originalPriceInCents={offerData.mainProduct.compareAtPriceInCents}
         discountPercentage={offerData.mainProduct.discountPercentage}
       />
 
@@ -147,7 +149,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
           opacity: loading ? 0.7 : 1,
         }}
       >
-        {loading ? "Processando..." : method === "pix" ? "Gerar PIX" : "Finalizar compra"}
+        {loading ? t.buttons.processing : method === "pix" ? t.buttons.submitPix : t.buttons.submit}
       </button>
 
       {errorMessage && <div className="text-red-500 text-sm text-center mt-4">{errorMessage}</div>}

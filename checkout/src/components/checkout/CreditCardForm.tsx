@@ -2,6 +2,7 @@ import React from "react";
 import { CardNumberElement, CardExpiryElement, CardCvcElement } from "@stripe/react-stripe-js";
 import { Input } from "../ui/Input"; // Ainda usamos para o "Nome"
 import type { StripeElementStyle } from "@stripe/stripe-js";
+import { useTranslation } from "../../i18n/I18nContext";
 
 // ESTILO DOS ELEMENTOS STRIPE
 // Isso é crucial para o white-label.
@@ -46,29 +47,31 @@ const StripeElementWrapper: React.FC<{ children: React.ReactNode; label: string;
 };
 
 export const CreditCardForm: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
       {/* 1. Número do Cartão (Real) */}
-      <StripeElementWrapper label="Número do cartão" id="card-number">
+      <StripeElementWrapper label={t.creditCard.cardNumber} id="card-number">
         <CardNumberElement id="card-number" options={ELEMENT_OPTIONS} />
       </StripeElementWrapper>
 
       {/* 2. Nome (continua sendo um Input normal) */}
-      {/* O Stripe não coleta nome no elemento do cartão, 
+      {/* O Stripe não coleta nome no elemento do cartão,
           ele é passado como 'billing_details' */}
-      <Input label="Nome impresso no cartão" id="card-name" placeholder="Como está no cartão" />
+      <Input label={t.creditCard.cardholderName} id="card-name" placeholder={t.creditCard.cardholderNamePlaceholder} />
 
       <div className="flex space-x-4">
         {/* 3. Validade (Real) */}
         <div className="w-1/2">
-          <StripeElementWrapper label="MM/AA" id="card-expiry">
+          <StripeElementWrapper label={t.creditCard.expiry} id="card-expiry">
             <CardExpiryElement id="card-expiry" options={ELEMENT_OPTIONS} />
           </StripeElementWrapper>
         </div>
 
         {/* 4. CVV (Real) */}
         <div className="w-1/2">
-          <StripeElementWrapper label="CVV" id="card-cvv">
+          <StripeElementWrapper label={t.creditCard.cvc} id="card-cvv">
             <CardCvcElement id="card-cvv" options={ELEMENT_OPTIONS} />
           </StripeElementWrapper>
         </div>

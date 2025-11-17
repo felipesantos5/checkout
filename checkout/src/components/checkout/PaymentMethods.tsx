@@ -1,5 +1,6 @@
 import React from "react";
 import { CreditCardForm } from "./CreditCardForm";
+import { useTranslation } from "../../i18n/I18nContext";
 
 type PaymentMethod = "creditCard" | "pix";
 
@@ -9,6 +10,7 @@ interface PaymentMethodsProps {
 }
 
 export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMethod }) => {
+  const { t } = useTranslation();
   const PaymentOption: React.FC<{
     value: PaymentMethod;
     title: string;
@@ -36,9 +38,9 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMetho
 
   return (
     <div className="w-full mt-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Pagamento</h2>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">{t.payment.title}</h2>
       <div className="space-y-4">
-        <PaymentOption value="creditCard" title="Cartão de Crédito">
+        <PaymentOption value="creditCard" title={t.payment.creditCard}>
           <div className="flex gap-2 ">
             <div className="inner_payment_img brand-visa">
               <img loading="lazy" src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/visa.svg" />

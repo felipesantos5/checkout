@@ -30,6 +30,7 @@ interface ApiOfferData {
   name: string;
   bannerImageUrl?: string;
   currency: string;
+  language: string;
   primaryColor: string;
   buttonColor: string;
   mainProduct: ApiProductData;

@@ -81,12 +81,12 @@ const calculateTotalAmount = async (slug: string, bumpIds: string[], quantity: n
  */
 export const handleCreatePaymentIntent = async (req: Request, res: Response) => {
   try {
-    const { offerSlug, selectedOrderBumps, quantity } = req.body as CreateIntentPayload;
+    const { offerSlug, selectedOrderBumps, quantity, contactInfo } = req.body as CreateIntentPayload;
 
     const stripeAccountId = await getStripeAccountId(offerSlug);
 
     // 4. Passe a quantidade para o cálculo seguro
-    const totalAmount = await calculateTotalAmount(offerSlug, selectedOrderBumps, quantity);
+    const totalAmount = await calculateTotalAmount(offerSlug, selectedOrderBumps, quantity || 1);
 
     if (totalAmount < 50) {
       throw new Error("Valor da compra muito baixo.");
@@ -94,7 +94,7 @@ export const handleCreatePaymentIntent = async (req: Request, res: Response) => 
 
     const applicationFee = Math.round(totalAmount * 0.05);
 
-    // 5. Adicione a quantidade aos METADADOS (para salvar na Venda)
+    // 5. Adicione os metadados completos para processar no webhook
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: totalAmount,
@@ -102,9 +102,14 @@ export const handleCreatePaymentIntent = async (req: Request, res: Response) => 
         payment_method_types: ["card"],
         application_fee_amount: applicationFee,
         metadata: {
-          // ... (metadata existente)
-          quantity: quantity,
+          offerSlug: offerSlug,
+          selectedOrderBumps: JSON.stringify(selectedOrderBumps || []),
+          quantity: String(quantity || 1),
+          customerEmail: contactInfo.email,
+          customerName: contactInfo.name,
+          customerPhone: contactInfo.phone || "",
         },
+        receipt_email: contactInfo.email, // Email para enviar recibo do Stripe
       },
       {
         stripeAccount: stripeAccountId,

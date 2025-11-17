@@ -7,6 +7,7 @@ import mongoose, { Schema, Document, model, Model } from "mongoose";
 const productSubSchema = new Schema(
   {
     name: { type: String, required: true },
+    headline: { type: String, default: "" },
     description: { type: String, default: "" },
     imageUrl: { type: String, default: "" },
     priceInCents: { type: Number, required: true },
@@ -17,6 +18,7 @@ const productSubSchema = new Schema(
 
 export interface IProductSubDocument {
   name: string;
+  headline?: string;
   description?: string;
   imageUrl?: string;
   priceInCents: number;
@@ -29,6 +31,7 @@ export interface IOffer extends Document {
   slug: string;
   bannerImageUrl?: string;
   currency: string;
+  language: string; // Idioma da oferta (pt, en, fr)
 
   primaryColor: string; // Cor principal (textos, bordas)
   buttonColor: string; // Cor do botão de compra
@@ -71,6 +74,12 @@ const offerSchema = new Schema<IOffer>(
       type: String,
       required: true,
       default: "BRL",
+    },
+    language: {
+      type: String,
+      required: true,
+      enum: ["pt", "en", "fr"],
+      default: "pt",
     },
 
     // --- MUDANÇA PRINCIPAL ---

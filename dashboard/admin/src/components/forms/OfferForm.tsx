@@ -24,6 +24,7 @@ const optionalUrl = z.string().url({ message: "URL inválida." }).optional().or(
 const productSchema = z.object({
   _id: z.string().optional(),
   name: z.string().min(3, { message: "Nome do produto é obrigatório." }),
+  headline: z.string().optional(),
   description: z.string().optional(),
   imageUrl: optionalUrl,
   priceInCents: z.coerce.number().min(0.5, { message: "Preço deve ser ao menos R$ 0,50." }),
@@ -40,6 +41,7 @@ const offerFormSchema = z.object({
   name: z.string().min(3, { message: "Nome do link é obrigatório." }),
   bannerImageUrl: optionalUrl,
   currency: z.string().default("BRL"), // Input: string | undefined, Output: string
+  language: z.string().default("pt"), // Idioma da oferta (pt, en, fr)
   primaryColor: colorSchema,
   buttonColor: colorSchema,
   mainProduct: productSchema, // Input: priceInCents: unknown, Output: number
@@ -79,6 +81,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       name: "",
       bannerImageUrl: "",
       currency: "BRL",
+      language: "pt",
       mainProduct: {
         name: "",
         description: "",
@@ -205,6 +208,29 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="language"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Idioma</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o idioma" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="pt">🇧🇷 Português</SelectItem>
+                    <SelectItem value="en">🇺🇸 English</SelectItem>
+                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <Separator />
           <h4 className="text-md font-medium">Personalização</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -322,6 +348,35 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name={`orderBumps.${index}.headline`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Headline (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Sim! Quero turbinar minha compra!" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name={`orderBumps.${index}.description`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ex: Aprenda técnicas avançadas com este material exclusivo" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name={`orderBumps.${index}.priceInCents`}
@@ -335,6 +390,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name={`orderBumps.${index}.imageUrl`}
@@ -357,8 +413,9 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             onClick={() =>
               append({
                 name: "",
-                priceInCents: 9.9, // Este 'number' é assignável a 'unknown'
+                headline: "",
                 description: "",
+                priceInCents: 9.9, // Este 'number' é assignável a 'unknown'
                 imageUrl: "",
               })
             }

@@ -4,11 +4,14 @@ import CheckoutPage from "./CheckoutPage";
 import { getContrast } from "polished";
 import { API_URL } from "../config/BackendUrl";
 import { ThemeContext, type ThemeColors } from "../context/ThemeContext";
+import { I18nProvider } from "../i18n/I18nContext";
+import type { Language } from "../i18n/translations";
 
 export interface OfferData {
   _id: string;
   slug: string;
   name: string;
+  language?: Language; // Idioma do checkout (pt, en, fr)
   bannerImageUrl?: string;
   currency: string;
   primaryColor: string;
@@ -21,6 +24,7 @@ export interface OfferData {
     priceInCents: number;
     originalPriceInCents?: number; // Preço original antes do desconto
     discountPercentage?: number; // Porcentagem de desconto
+    compareAtPriceInCents?: number;
   };
   orderBumps: {
     _id: string;
@@ -103,8 +107,10 @@ export function CheckoutSlugPage() {
 
   // Se tudo deu certo, renderiza o CheckoutPage com os dados
   return (
-    <ThemeContext.Provider value={themeValues}>
-      <CheckoutPage offerData={offerData} />;
-    </ThemeContext.Provider>
+    <I18nProvider language={offerData.language || "pt"}>
+      <ThemeContext.Provider value={themeValues}>
+        <CheckoutPage offerData={offerData} />
+      </ThemeContext.Provider>
+    </I18nProvider>
   );
 }

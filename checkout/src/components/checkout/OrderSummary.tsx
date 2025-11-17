@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronDown, ShoppingCart } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { useTranslation } from "../../i18n/I18nContext";
 
 interface OrderSummaryProps {
   productName: string;
@@ -36,10 +37,14 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { primary } = useTheme();
+  const { t } = useTranslation();
 
   const subtotal = basePriceInCents * quantity;
+  const subtotalOldPrice = (originalPriceInCents || 0) * quantity;
+  const discountAmount = originalPriceInCents ? (originalPriceInCents - basePriceInCents) * quantity : 0;
   const bumpsTotal = totalAmountInCents - subtotal;
   const totalSmallText = formatCurrency(totalAmountInCents, currency);
+  const totalOldPrice = originalPriceInCents ? formatCurrency(subtotalOldPrice + bumpsTotal, currency) : null;
 
   const handleIncrease = () => {
     setQuantity(quantity + 1);
@@ -52,18 +57,22 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
 
   return (
     <Collapsible.Root open={isOpen} onOpenChange={setIsOpen} className="w-full bg-gray-50 rounded-lg shadow">
-      <Collapsible.Trigger className="w-full p-4 flex justify-between items-center cursor-pointer">
+      <Collapsible.Trigger className="w-full p-4 flex justify-between  cursor-pointer">
         <div className="flex items-center">
           <ShoppingCart className="h-5 w-5 text-primary" />
-          <span className="text-md font-semibold text-primary ml-2">{isOpen ? "Ocultar resumo do pedido" : "Resumo do pedido"}</span>
+          <span className="text-md font-semibold text-primary ml-2">{isOpen ? t.orderSummary.hideTitle : t.orderSummary.title}</span>
           <ChevronDown className={`h-5 w-5 text-primary ml-1 transition-transform ${isOpen ? "rotate-180" : ""}`} />
         </div>
 
         {!isOpen && (
           <div className="text-right">
-            <p className="text-md font-semibold" style={{ color: primary }}>
+            {totalOldPrice && <p className="text-sm line-through text-gray-500">{totalOldPrice}</p>}
+            <p className="text-xl font-semibold" style={{ color: primary }}>
               {totalSmallText}
             </p>
+            {discountAmount > 0 && (
+              <p className="text-xs text-green-600 font-medium">{t.orderSummary.save} {formatCurrency(discountAmount, currency)}</p>
+            )}
           </div>
         )}
       </Collapsible.Trigger>
@@ -79,7 +88,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-500 line-through">{formatCurrency(originalPriceInCents, currency)}</span>
                     {discountPercentage && (
-                      <span className="text-xs font-semibold text-white bg-green-600 px-2 py-0.5 rounded">{discountPercentage}% OFF</span>
+                      <span className="text-xs font-semibold text-white bg-green-600 px-2 py-0.5 rounded">{discountPercentage}{t.product.discount}</span>
                     )}
                   </div>
                 )}
@@ -100,20 +109,37 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
         </div>
 
         <div className="mt-4 border-t border-gray-200 pt-4 text-sm text-gray-600 space-y-1">
-          <div className="flex justify-between">
-            <span>Subtotal</span>
-            <span>{formatCurrency(subtotal, currency)}</span>
-          </div>
+          {originalPriceInCents && originalPriceInCents > basePriceInCents ? (
+            <>
+              <div className="flex justify-between">
+                <span>{t.orderSummary.originalSubtotal}</span>
+                <span className="line-through text-gray-400">{formatCurrency(subtotalOldPrice, currency)}</span>
+              </div>
+              <div className="flex justify-between text-green-600 font-semibold">
+                <span>{t.orderSummary.discount}</span>
+                <span>- {formatCurrency(discountAmount, currency)}</span>
+              </div>
+              <div className="flex justify-between font-medium text-gray-900">
+                <span>{t.orderSummary.subtotalWithDiscount}</span>
+                <span>{formatCurrency(subtotal, currency)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span>{t.orderSummary.subtotal}</span>
+              <span>{formatCurrency(subtotal, currency)}</span>
+            </div>
+          )}
 
           {bumpsTotal > 0 && (
             <div className="flex justify-between text-green-600">
-              <span>Produto Extra</span>
+              <span>{t.orderSummary.extraProduct}</span>
               <span>+ {formatCurrency(bumpsTotal, currency)}</span>
             </div>
           )}
 
           <div className="flex justify-between mt-2 pt-2 border-t border-gray-300 text-base font-bold text-gray-900">
-            <span>Total</span>
+            <span>{t.orderSummary.total}</span>
             <span style={{ color: primary }}>{formatCurrency(totalAmountInCents, currency)}</span>
           </div>
         </div>

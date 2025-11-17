@@ -4,10 +4,11 @@ import { Schema } from "mongoose";
 export interface IOrderBump {
   productId: string;
   name: string;
+  headline?: string;
+  description?: string;
   priceInCents: number;
   compareAtPriceInCents?: number;
   imageUrl?: string;
-  description: string;
 }
 
 export const orderBumpSchema = new Schema({
@@ -15,9 +16,13 @@ export const orderBumpSchema = new Schema({
     type: String,
     required: true,
   },
+  headline: {
+    type: String,
+    required: false,
+  },
   description: {
     type: String,
-    required: true,
+    required: false,
   },
   priceInCents: {
     type: Number,
