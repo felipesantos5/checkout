@@ -18,8 +18,12 @@ interface CheckoutPageProps {
   offerData: OfferData;
 }
 
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+
 const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
-  const stripePromise = loadStripe(offerData.ownerId.stripeAccountId);
+  const stripePromise = loadStripe(stripeKey, {
+    stripeAccount: offerData.ownerId.stripeAccountId, // <-- O 'acct_...'
+  });
 
   // 2. Converta as cores HEX para objetos RGB
   //    (Use cores padrão caso a oferta não tenha cor definida)
