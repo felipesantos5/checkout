@@ -46,7 +46,8 @@ const offerFormSchema = z.object({
   collectAddress: z.boolean().default(false), // Se deve coletar endereço
   primaryColor: colorSchema,
   buttonColor: colorSchema,
-  mainProduct: productSchema, // Input: priceInCents: unknown, Output: number
+  mainProduct: productSchema,
+  utmfyWebhookUrl: optionalUrl,
   orderBumps: z.array(productSchema).optional(),
 });
 
@@ -85,6 +86,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       currency: "BRL",
       language: "pt",
       collectAddress: false,
+      utmfyWebhookUrl: "",
       mainProduct: {
         name: "",
         description: "",
@@ -188,51 +190,52 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               </FormItem>
             )}
           />
+          <div className="flex justify-between gap-10">
+            <FormField
+              control={form.control}
+              name="currency"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Moeda</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl className="w-full">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a moeda" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="BRL">BRL (Real Brasileiro)</SelectItem>
+                      <SelectItem value="USD">USD (Dólar Americano)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <FormField
-            control={form.control}
-            name="currency"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Moeda</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a moeda" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="BRL">BRL (Real Brasileiro)</SelectItem>
-                    <SelectItem value="USD">USD (Dólar Americano)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="language"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Idioma</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o idioma" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="pt">🇧🇷 Português</SelectItem>
-                    <SelectItem value="en">🇺🇸 English</SelectItem>
-                    <SelectItem value="fr">🇫🇷 Français</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="language"
+              render={({ field }) => (
+                <FormItem className="w-full">
+                  <FormLabel>Idioma</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl className="w-full">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o idioma" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="pt">🇧🇷 Português</SelectItem>
+                      <SelectItem value="en">🇺🇸 English</SelectItem>
+                      <SelectItem value="fr">🇫🇷 Français</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}
@@ -240,18 +243,11 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             render={({ field }) => (
               <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                 <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                 </FormControl>
                 <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    Coletar endereço de entrega
-                  </FormLabel>
-                  <FormDescription>
-                    Ative esta opção se deseja coletar o endereço completo do cliente no checkout
-                  </FormDescription>
+                  <FormLabel>Coletar endereço de entrega</FormLabel>
+                  <FormDescription>Ative esta opção se deseja coletar o endereço completo do cliente no checkout</FormDescription>
                 </div>
               </FormItem>
             )}

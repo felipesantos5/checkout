@@ -113,3 +113,52 @@ export const sendRefundToUTMfy = async (transactionId: string): Promise<void> =>
     console.error("❌ Erro ao enviar reembolso para UTMfy:", error);
   }
 };
+
+/**
+ * Envia um payload de compra detalhado para um Webhook da UTMfy.
+ * Usa a nova estrutura de payload e a API Key global.
+ *
+ * @param webhookUrl - A URL de webhook específica da oferta
+ * @param payload - O objeto JSON (formato 'Purchase_Order_Confirmed')
+ */
+export const sendPurchaseToUTMfyWebhook = async (webhookUrl: string, payload: any): Promise<void> => {
+  try {
+    const utmfyApiKey = process.env.UTMFY_API_KEY;
+
+    // Validação de configuração
+    if (!utmfyApiKey) {
+      console.warn("⚠️  UTMfy não configurada. Defina UTMFY_API_KEY no .env");
+      return;
+    }
+
+    console.log(`📤 Enviando conversão (V2) para Webhook UTMfy: ${payload.Data.Purchase.PaymentId}`);
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // Adiciona a autenticação Bearer, conforme o seu serviço antigo
+        Authorization: `Bearer ${utmfyApiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    // Verifica se a resposta foi bem-sucedida
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Webhook UTMfy V2 retornou ${response.status}: ${errorText}`);
+    }
+
+    // Webhooks podem responder com 204 (No Content)
+    if (response.status === 204) {
+      console.log("✅ Conversão (V2) enviada para UTMfy com sucesso (204 No Content)");
+    } else {
+      const responseData = await response.json();
+      console.log("✅ Conversão (V2) enviada para UTMfy com sucesso:", responseData);
+    }
+  } catch (error) {
+    // IMPORTANTE: Não re-lançar o erro
+    // Isso evita que o webhook do Stripe falhe se a UTMfy estiver fora do ar
+    console.error("❌ Erro ao enviar conversão (V2) para Webhook UTMfy:", error);
+  }
+};

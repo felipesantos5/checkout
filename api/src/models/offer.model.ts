@@ -31,11 +31,13 @@ export interface IOffer extends Document {
   slug: string;
   bannerImageUrl?: string;
   currency: string;
-  language: string; // Idioma da oferta (pt, en, fr)
-  collectAddress: boolean; // Se deve coletar dados de endereço no checkout
+  language: string;
+  collectAddress: boolean;
 
-  primaryColor: string; // Cor principal (textos, bordas)
-  buttonColor: string; // Cor do botão de compra
+  primaryColor: string;
+  buttonColor: string;
+
+  utmfyWebhookUrl?: string;
 
   mainProduct: IProductSubDocument;
   orderBumps: IProductSubDocument[];
@@ -58,6 +60,10 @@ const offerSchema = new Schema<IOffer>(
       unique: true,
       lowercase: true,
       trim: true,
+    },
+    utmfyWebhookUrl: {
+      type: String,
+      default: "",
     },
     bannerImageUrl: {
       type: String,
