@@ -7,10 +7,9 @@ export interface IProduct extends Document {
   name: string;
   description: string;
   imageUrl: string;
-  priceInCents: number; // Preço principal
-  orderBumps: (typeof orderBumpSchema)[]; // Array de order bumps
-  // Futuramente:
-  // ownerId: Schema.Types.ObjectId; // Para saber qual cliente/usuário criou
+  priceInCents: number;
+  compareAtPriceInCents?: number;
+  orderBumps: (typeof orderBumpSchema)[];
 }
 
 // Schema do Mongoose
@@ -32,21 +31,14 @@ const productSchema = new Schema<IProduct>(
       type: Number,
       required: true,
     },
-    // Incorpora o schema do order bump como um array
+    compareAtPriceInCents: { type: Number, required: false },
     orderBumps: [orderBumpSchema],
-
-    // ownerId: {
-    //   type: Schema.Types.ObjectId,
-    //   ref: 'User', // Referência a um futuro modelo 'User'
-    //   required: true
-    // }
   },
   {
-    timestamps: true, // Adiciona createdAt e updatedAt
+    timestamps: true,
   }
 );
 
-// Cria o modelo se ele não existir
 const Product: Model<IProduct> = mongoose.models.Product || model<IProduct>("Product", productSchema);
 
 export default Product;

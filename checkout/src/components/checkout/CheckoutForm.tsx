@@ -10,6 +10,7 @@ import { PaymentMethods } from "./PaymentMethods";
 import { OrderBump } from "./OrderBump";
 import { Banner } from "./Banner";
 import { API_URL } from "../../config/BackendUrl";
+import { useTheme } from "../../context/ThemeContext";
 
 interface CheckoutFormProps {
   offerData: OfferData;
@@ -19,6 +20,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   // 1. Hooks do Stripe
   const stripe = useStripe();
   const elements = useElements();
+  const { button, buttonForeground } = useTheme();
 
   // 2. Estados de UI
   const [loading, setLoading] = useState(false);
@@ -138,7 +140,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     );
   }
 
-  // 11. (Refatorado) JSX do formulário, passando props dinâmicas
   return (
     <form onSubmit={handleSubmit}>
       <Banner imageUrl={offerData.bannerImageUrl} />
@@ -155,21 +156,20 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
       <ContactInfo />
 
-      <PaymentMethods
-        // (O PaymentMethods não precisa de mudanças por enquanto)
-        method={method}
-        setMethod={setMethod}
-        pixCopiaECola={null}
-      />
+      <PaymentMethods method={method} setMethod={setMethod} />
 
       <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
 
-      {/* Botão de Finalização */}
       <button
         type="submit"
         disabled={!stripe || loading}
         className="w-full mt-8 bg-button text-button-foreground font-bold py-3 px-4 rounded-lg text-lg transition-colors disabled:opacity-50
-                   hover:opacity-90"
+                   hover:opacity-90 cursor-pointer"
+        style={{
+          backgroundColor: loading ? "#ccc" : button,
+          color: buttonForeground,
+          opacity: loading ? 0.7 : 1,
+        }}
       >
         {loading ? "Processando..." : method === "pix" ? "Gerar PIX" : "Finalizar compra"}
       </button>

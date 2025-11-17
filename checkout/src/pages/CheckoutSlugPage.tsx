@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import CheckoutPage from "./CheckoutPage"; // O seu layout antigo
 import { getContrast } from "polished";
 import { API_URL } from "../config/BackendUrl";
+import { ThemeContext, type ThemeColors } from "../context/ThemeContext";
 
 // URL da sua AP
 
@@ -64,30 +65,17 @@ export function CheckoutSlugPage() {
     fetchOffer();
   }, [slug]);
 
-  useEffect(() => {
-    if (offerData) {
-      const root = document.documentElement; // Pega o :root
+  const primaryColor = offerData?.primaryColor || "#000000";
+  const buttonColor = offerData?.buttonColor || "#2563eb";
 
-      // a. Calcula a cor de texto do botão (preto ou branco)
-      const buttonTextColor =
-        getContrast(offerData.buttonColor, "#FFFFFF") > 2.5
-          ? "#FFFFFF" // Branco
-          : "#000000"; // Preto
+  // Calcular a cor do texto do botão (branco ou preto)
+  const buttonTextColor = getContrast(buttonColor, "#FFF") > 2.5 ? "#FFFFFF" : "#000000";
 
-      // b. Aplica as variáveis (como você sugeriu!)
-      root.style.setProperty("--color-primary", offerData.primaryColor);
-      root.style.setProperty("--color-button", offerData.buttonColor);
-      root.style.setProperty("--color-button-foreground", buttonTextColor);
-    }
-
-    // c. (Opcional) Limpa as variáveis se o usuário sair da página
-    return () => {
-      const root = document.documentElement;
-      root.style.removeProperty("--color-primary");
-      root.style.removeProperty("--color-button");
-      root.style.removeProperty("--color-button-foreground");
-    };
-  }, [offerData]);
+  const themeValues: ThemeColors = {
+    primary: primaryColor,
+    button: buttonColor,
+    buttonForeground: buttonTextColor,
+  };
 
   if (isLoading) {
     return (
@@ -114,5 +102,9 @@ export function CheckoutSlugPage() {
   }
 
   // Se tudo deu certo, renderiza o CheckoutPage com os dados
-  return <CheckoutPage offerData={offerData} />;
+  return (
+    <ThemeContext.Provider value={themeValues}>
+      <CheckoutPage offerData={offerData} />;
+    </ThemeContext.Provider>
+  );
 }

@@ -139,3 +139,33 @@ export const handleWebhook = async (req: Request, res: Response) => {
   // 3. Responda 200 OK para o Stripe
   res.status(200).json({ received: true });
 };
+
+export const handleGetBalance = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+
+    // 1. Verifique se o usuário tem uma conta e se ela está ativa
+    if (!user?.stripeAccountId || !user.stripeOnboardingComplete) {
+      return res.status(400).json({
+        error: { message: "Conta Stripe não conectada ou onboarding incompleto." },
+      });
+    }
+
+    // 2. Chame a API de Saldo da Stripe, autenticando
+    //    como a conta conectada
+    const balance = await stripe.balance.retrieve({
+      stripeAccount: user.stripeAccountId,
+    });
+
+    // 3. Retorne os saldos 'available' (disponível) e 'pending' (pendente)
+    //    Eles vêm como arrays, mas geralmente só nos importa o primeiro (BRL, USD)
+    res.status(200).json({
+      available: balance.available, // Saldo disponível para saque
+      pending: balance.pending, // Saldo processando
+    });
+  } catch (error) {
+    console.error("Erro ao buscar saldo Stripe:", error);
+    res.status(500).json({ error: { message: (error as Error).message } });
+  }
+};

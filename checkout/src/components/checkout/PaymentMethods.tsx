@@ -6,7 +6,6 @@ type PaymentMethod = "creditCard" | "pix";
 interface PaymentMethodsProps {
   method: PaymentMethod;
   setMethod: (method: PaymentMethod) => void;
-  pixCopiaECola: string | null;
 }
 
 export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMethod }) => {

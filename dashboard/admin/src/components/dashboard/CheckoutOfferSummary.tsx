@@ -39,25 +39,13 @@ export function CheckoutOfferSummary({ offer, slug }: CheckoutOfferSummaryProps)
         {/* 1. Informações Gerais */}
         <div>
           <h3 className="text-lg font-semibold mb-2">Configurações Gerais</h3>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center  gap-6">
             <div className="flex-1 space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Moeda</span>
                 <Badge variant="outline">{offer.currency}</Badge>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Banner</span>
-                {offer.bannerImageUrl ? <Badge variant="secondary">Configurado</Badge> : <Badge variant="destructive">Nenhum</Badge>}
-              </div>
             </div>
-            {offer.bannerImageUrl ? (
-              <Avatar className="h-16 w-16 rounded-md">
-                <AvatarImage src={offer.bannerImageUrl} alt="Banner" />
-                <AvatarFallback className="rounded-md">
-                  <ImageIcon />
-                </AvatarFallback>
-              </Avatar>
-            ) : null}
           </div>
         </div>
 

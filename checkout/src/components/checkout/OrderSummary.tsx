@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronDown, ShoppingCart } from "lucide-react";
+import { useTheme } from "../../context/ThemeContext";
 
 // Props que ele receberá do CheckoutForm
 interface OrderSummaryProps {
@@ -33,15 +34,16 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   setQuantity,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { primary } = useTheme();
+
+  console.log(`primary`, primary);
 
   // Calcula o subtotal e o total dos bumps
   const subtotal = basePriceInCents * quantity;
   const bumpsTotal = totalAmountInCents - subtotal;
 
   // Lógica de parcelamento (simulada)
-  const installmentValue = totalAmountInCents / 6 / 100;
-  const totalText = `6x de ${installmentValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}*`;
-  const totalSmallText = `OU ${formatCurrency(totalAmountInCents, currency)} À VISTA`;
+  const totalSmallText = `${formatCurrency(totalAmountInCents, currency)}`;
 
   // Funções do input de quantidade
   const handleIncrease = () => {
@@ -66,8 +68,10 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
         {/* Total (mostra apenas quando fechado) */}
         {!isOpen && (
           <div className="text-right">
-            <span className="text-md font-bold text-gray-900">{totalText}</span>
-            <p className="text-xs text-gray-500">{totalSmallText}</p>
+            {/* <span className="text-md font-bold text-gray-900">{totalText}</span> */}
+            <p className="text-md font-semibold" style={{ color: primary }}>
+              {totalSmallText}
+            </p>
           </div>
         )}
       </Collapsible.Trigger>
@@ -111,16 +115,15 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
             </div>
           )}
 
-          <div className="flex justify-between">
+          {/* <div className="flex justify-between">
             <span>Entrega</span>
             <span>---</span>
-          </div>
+          </div> */}
 
           <div className="flex justify-between mt-2 pt-2 border-t border-gray-300 text-base font-bold text-gray-900">
             <span>Total</span>
-            <span>{formatCurrency(totalAmountInCents, currency)}</span>
+            <span style={{ color: primary }}>{formatCurrency(totalAmountInCents, currency)}</span>
           </div>
-          <p className="text-right text-xs text-gray-500 mt-1">{totalText}</p>
         </div>
       </Collapsible.Content>
     </Collapsible.Root>

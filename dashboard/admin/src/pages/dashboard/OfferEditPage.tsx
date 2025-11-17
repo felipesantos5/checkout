@@ -106,10 +106,6 @@ export function OfferEditPage() {
 
       <Separator />
 
-      <SalesHistoryTable offerId={offerId!} />
-
-      <Separator />
-
       <Card>
         <CardHeader>
           <CardTitle>Editar Oferta</CardTitle>
@@ -127,6 +123,10 @@ export function OfferEditPage() {
           />
         </CardContent>
       </Card>
+
+      <Separator />
+
+      <SalesHistoryTable offerId={offerId!} />
     </div>
   );
 }

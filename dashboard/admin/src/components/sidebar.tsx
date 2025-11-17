@@ -1,4 +1,4 @@
-import { Inbox, ChartNoAxesCombined, ShoppingBasket, User } from "lucide-react";
+import { Inbox, ChartNoAxesCombined, ShoppingBasket, User, ChartColumnIncreasing } from "lucide-react";
 import logo from "../assets/logo.png";
 
 import {
@@ -37,8 +37,8 @@ const items = [
   },
   {
     title: "DashBoard",
-    url: "/dashboard",
-    icon: Inbox,
+    url: "/",
+    icon: ChartColumnIncreasing,
   },
 ];
 
@@ -101,7 +101,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent className="justify-between">
         <SidebarGroup>
-          <img src={logo} alt="logo" className="mt-12 mb-10 w-[40%]" />
+          <img src={logo} alt="logo" className="mt-12 mb-10 w-[50%]" />
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (

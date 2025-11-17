@@ -9,7 +9,7 @@ import axios from "axios";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,7 +27,8 @@ const productSchema = z.object({
   name: z.string().min(3, { message: "Nome do produto é obrigatório." }),
   description: z.string().optional(),
   imageUrl: optionalUrl,
-  priceInCents: z.coerce.number().min(0.5, { message: "Preço deve ser ao menos R$ 0,50." }), // Mantemos o coerce
+  priceInCents: z.coerce.number().min(0.5, { message: "Preço deve ser ao menos R$ 0,50." }),
+  compareAtPriceInCents: z.coerce.number().optional(),
 });
 
 const colorSchema = z
@@ -254,7 +255,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             name="mainProduct.priceInCents"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço (Ex: 19``.90)</FormLabel>
+                <FormLabel>Preço (Ex: 19.90)</FormLabel>
                 <FormControl>
                   <Input type="number" step="0.01" {...field} value={typeof field.value === "number" ? field.value : String(field.value ?? "")} />
                 </FormControl>
@@ -262,19 +263,22 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
-            name="mainProduct.description"
+            name="mainProduct.compareAtPriceInCents"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Descrição (Opcional)</FormLabel>
+                <FormLabel>Preço de Comparação (em centavos)</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="O que o cliente está comprando..." {...field} />
+                  <Input type="number" placeholder="Ex: 9900 (para R$ 99,00)" {...field} value={field.value || ""} />
                 </FormControl>
+                <FormDescription>Opcional: O preço "antigo" (Ex: De R$ 99,00).</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="mainProduct.imageUrl"

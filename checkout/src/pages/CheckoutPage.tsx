@@ -5,62 +5,39 @@ import { Elements } from "@stripe/react-stripe-js";
 import { CheckoutForm } from "../components/checkout/CheckoutForm";
 import type { OfferData } from "./CheckoutSlugPage";
 
-// 1. Importe 'parseToRgb' e 'getContrast' da biblioteca polished
-import { parseToRgb, getContrast } from "polished";
+// 1. Remova os imports do 'polished'
+// import { parseToRgb, getContrast } from "polished";
 
 // Leitura da Chave do .env
-// const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-// if (!stripeKey) {
-//   throw new Error("VITE_STRIPE_PUBLISHABLE_KEY não está definida no .env");
-// }
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+if (!stripeKey) {
+  throw new Error("VITE_STRIPE_PUBLISHABLE_KEY não está definida no .env");
+}
+// 2. Mova o loadStripe para DENTRO do componente
+// const stripePromise = loadStripe(stripeKey);
 
 interface CheckoutPageProps {
   offerData: OfferData;
 }
 
-const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-
 const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
+  // 3. Inicialize o stripePromise AQUI DENTRO, usando o ID da conta
+  // (Isso corrige o erro "resource_missing" que você teve antes)
   const stripePromise = loadStripe(stripeKey, {
-    stripeAccount: offerData.ownerId.stripeAccountId, // <-- O 'acct_...'
+    stripeAccount: offerData.ownerId.stripeAccountId,
   });
 
-  // 2. Converta as cores HEX para objetos RGB
-  //    (Use cores padrão caso a oferta não tenha cor definida)
-  const primaryRgb = parseToRgb(offerData.primaryColor || "#374151");
-  const buttonRgb = parseToRgb(offerData.buttonColor || "#2563EB");
-
-  // 3. Crie a string "R G B" para o CSS
-  const primaryColorString = `${primaryRgb.red} ${primaryRgb.green} ${primaryRgb.blue}`;
-  const buttonColorString = `${buttonRgb.red} ${buttonRgb.green} ${buttonRgb.blue}`;
-
-  // 4. Calcule a cor do texto do botão (preto ou branco)
-  const buttonTextColor =
-    getContrast(offerData.buttonColor || "#2563EB", "#FFFFFF") > 2.5
-      ? "255 255 255" // Branco
-      : "0 0 0"; // Preto
-
-  // 5. Defina as variáveis CSS
-  const themeStyles = {
-    "--color-primary": primaryColorString,
-    "--color-button": buttonColorString,
-    "--color-button-foreground": buttonTextColor,
-  } as React.CSSProperties;
+  // 4. Remova TODA a lógica de conversão de cores
+  // const primaryRgb = ...
+  // const buttonRgb = ...
+  // const primaryColorString = ...
+  // const buttonColorString = ...
+  // const buttonTextColor = ...
+  // const themeStyles = { ... }
 
   return (
-    // 6. Aplique as variáveis CSS ao contêiner principal
-    <div className="min-h-screen bg-gray-100 p-4" style={themeStyles}>
-      {/* (Opcional) Injeta globalmente se o style={...} acima falhar */}
-      <style>
-        {`
-          :root {
-            --color-primary: ${primaryColorString};
-            --color-button: ${buttonColorString};
-            --color-button-foreground: ${buttonTextColor};
-          }
-        `}
-      </style>
-
+    // 5. Remova o `style={themeStyles}` e o <style> tag
+    <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-lg mx-auto bg-white rounded-xl shadow-xl p-6">
         <Elements stripe={stripePromise}>
           <CheckoutForm offerData={offerData} />

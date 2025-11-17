@@ -1,8 +1,15 @@
 // src/models/orderBump.schema.ts
 import { Schema } from "mongoose";
 
-// Definimos o OrderBump como um Schema separado
-// para poder reutilizá-lo.
+export interface IOrderBump {
+  productId: string;
+  name: string;
+  priceInCents: number;
+  compareAtPriceInCents?: number;
+  imageUrl?: string;
+  description: string;
+}
+
 export const orderBumpSchema = new Schema({
   name: {
     type: String,
@@ -13,10 +20,10 @@ export const orderBumpSchema = new Schema({
     required: true,
   },
   priceInCents: {
-    // Sempre armazene dinheiro como centavos (inteiro)
     type: Number,
     required: true,
   },
+  compareAtPriceInCents: { type: Number, required: false },
   imageUrl: {
     type: String,
     required: false,

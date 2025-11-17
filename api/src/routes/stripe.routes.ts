@@ -24,4 +24,10 @@ router.post(
   stripeController.handleWebhook
 );
 
+router.get(
+  "/balance",
+  protectRoute, // Apenas usuários logados
+  stripeController.handleGetBalance
+);
+
 export default router;

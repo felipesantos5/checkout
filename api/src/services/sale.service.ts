@@ -6,7 +6,14 @@ import Sale, { ISale } from "../models/sale.model";
  */
 export const listMySales = async (ownerId: string): Promise<ISale[]> => {
   try {
-    return await Sale.find({ ownerId }).sort({ createdAt: -1 }).limit(100);
+    return await Sale.find({ ownerId })
+      .populate({
+        path: "offerId",
+        select: "name", // Seleciona apenas o campo 'name' da oferta
+      })
+      .sort({ createdAt: -1 })
+      .limit(100);
+    // --- FIM DA MUDANÇA ---
   } catch (error) {
     throw new Error("Falha ao listar vendas.");
   }

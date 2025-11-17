@@ -2,6 +2,7 @@ import React from "react";
 import { CardNumberElement, CardExpiryElement, CardCvcElement } from "@stripe/react-stripe-js";
 import { Input } from "../ui/Input"; // Ainda usamos para o "Nome"
 import type { StripeElementStyle } from "@stripe/stripe-js";
+import { useTheme } from "../../context/ThemeContext";
 
 // ESTILO DOS ELEMENTOS STRIPE
 // Isso é crucial para o white-label.
@@ -30,18 +31,22 @@ const ELEMENT_OPTIONS = {
 };
 
 // Wrapper customizado para aplicar o estilo do Tailwind
-const StripeElementWrapper: React.FC<{ children: React.ReactNode; label: string; id: string }> = ({ children, label, id }) => (
-  <div>
-    <label htmlFor={id} className="block text-sm font-medium text-gray-700">
-      {label}
-    </label>
-    <div className="mt-1">
-      <div className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus-within:ring-blue-500 focus-within:border-blue-500">
-        {children}
+const StripeElementWrapper: React.FC<{ children: React.ReactNode; label: string; id: string }> = ({ children, label, id }) => {
+  const { primary } = useTheme();
+
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      <div className="mt-1">
+        <div className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus-within:ring-blue-500 focus-within:border-blue-500">
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const CreditCardForm: React.FC = () => {
   return (
@@ -72,7 +77,7 @@ export const CreditCardForm: React.FC = () => {
         </div>
       </div>
 
-      <div>
+      {/* <div>
         <label htmlFor="installments" className="block text-sm font-medium text-gray-700">
           Parcelas
         </label>
@@ -81,9 +86,8 @@ export const CreditCardForm: React.FC = () => {
           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
         >
           <option>6x de R$ 9,33</option>
-          {/* Você vai querer carregar isso dinamicamente */}
         </select>
-      </div>
+      </div> */}
     </div>
   );
 };
