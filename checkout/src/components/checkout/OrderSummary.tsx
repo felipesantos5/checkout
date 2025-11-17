@@ -107,7 +107,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
 
           {bumpsTotal > 0 && (
             <div className="flex justify-between text-green-600">
-              <span>Order Bumps</span>
+              <span>Produto Extra</span>
               <span>+ {formatCurrency(bumpsTotal, currency)}</span>
             </div>
           )}
