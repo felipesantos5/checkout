@@ -30,6 +30,6 @@ router.use("/stripe", stripeRoutes); // 2. Adicione
 
 router.use("/sales", saleRoutes);
 
-router.use("/webhooks/stripe", stripeWebhookRoutes);
+// router.use("/webhooks/stripe", stripeWebhookRoutes);
 
 export default router;

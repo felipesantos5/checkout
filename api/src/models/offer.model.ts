@@ -32,6 +32,7 @@ export interface IOffer extends Document {
   bannerImageUrl?: string;
   currency: string;
   language: string; // Idioma da oferta (pt, en, fr)
+  collectAddress: boolean; // Se deve coletar dados de endereço no checkout
 
   primaryColor: string; // Cor principal (textos, bordas)
   buttonColor: string; // Cor do botão de compra
@@ -80,6 +81,10 @@ const offerSchema = new Schema<IOffer>(
       required: true,
       enum: ["pt", "en", "fr"],
       default: "pt",
+    },
+    collectAddress: {
+      type: Boolean,
+      default: false,
     },
 
     // --- MUDANÇA PRINCIPAL ---

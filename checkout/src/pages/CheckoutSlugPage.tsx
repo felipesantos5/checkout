@@ -12,6 +12,7 @@ export interface OfferData {
   slug: string;
   name: string;
   language?: Language; // Idioma do checkout (pt, en, fr)
+  collectAddress?: boolean; // Se deve coletar endereço
   bannerImageUrl?: string;
   currency: string;
   primaryColor: string;

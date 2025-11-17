@@ -1,0 +1,16 @@
+{
+"customInstructions": "Ao trabalhar neste projeto, sempre siga estas práticas:
+
+1. SEMPRE rode um build após qualquer alteração de código para verificar erros
+2. Execute os testes relevantes antes de considerar a tarefa concluída
+3. Confirme que não há erros de compilação
+4. Se houver erros, corrija-os antes de prosseguir
+5. Documente mudanças significativas
+6. Mantenha o código limpo e bem formatado
+
+Para projetos Node.js/TypeScript:
+
+- Rode 'npm run build' após mudanças para ver se os types, libs, e importações estão no padrão
+
+Sempre me informe sobre o resultado dos builds e testes."
+}

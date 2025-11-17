@@ -3,6 +3,7 @@ import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-
 import type { OfferData } from "../../pages/CheckoutSlugPage";
 import { OrderSummary } from "./OrderSummary";
 import { ContactInfo } from "./ContactInfo";
+import { AddressInfo } from "./AddressInfo";
 import { PaymentMethods } from "./PaymentMethods";
 import { OrderBump } from "./OrderBump";
 import { Banner } from "./Banner";
@@ -133,6 +134,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
       />
 
       <ContactInfo />
+
+      {offerData.collectAddress && <AddressInfo />}
 
       <PaymentMethods method={method} setMethod={setMethod} />
 

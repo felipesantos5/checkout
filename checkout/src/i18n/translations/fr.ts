@@ -28,8 +28,29 @@ export const fr: Translation = {
     emailPlaceholder: "votreemail@exemple.com",
     name: "Nom complet*",
     namePlaceholder: "Votre nom",
-    phone: "Téléphone*",
-    phonePlaceholder: "(XX) XXXXX-XXXX",
+    phone: "Téléphone",
+    phonePlaceholder: "(00) 00000-0000",
+  },
+
+  // Address Info
+  address: {
+    title: "Adresse de Livraison",
+    zipCode: "Code Postal*",
+    zipCodePlaceholder: "00000-000",
+    street: "Rue*",
+    streetPlaceholder: "Nom de la rue",
+    number: "Numéro*",
+    numberPlaceholder: "123",
+    complement: "Complément",
+    complementPlaceholder: "Appt, bâtiment, etc",
+    neighborhood: "Quartier*",
+    neighborhoodPlaceholder: "Nom du quartier",
+    city: "Ville*",
+    cityPlaceholder: "Nom de la ville",
+    state: "État*",
+    statePlaceholder: "État",
+    country: "Pays*",
+    countryPlaceholder: "Pays",
   },
 
   // Credit Card Form

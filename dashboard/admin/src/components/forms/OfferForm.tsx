@@ -13,6 +13,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { ImageUpload } from "./ImageUpload";
 import { API_URL } from "@/config/BackendUrl";
@@ -42,6 +43,7 @@ const offerFormSchema = z.object({
   bannerImageUrl: optionalUrl,
   currency: z.string().default("BRL"), // Input: string | undefined, Output: string
   language: z.string().default("pt"), // Idioma da oferta (pt, en, fr)
+  collectAddress: z.boolean().default(false), // Se deve coletar endereço
   primaryColor: colorSchema,
   buttonColor: colorSchema,
   mainProduct: productSchema, // Input: priceInCents: unknown, Output: number
@@ -82,6 +84,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       bannerImageUrl: "",
       currency: "BRL",
       language: "pt",
+      collectAddress: false,
       mainProduct: {
         name: "",
         description: "",
@@ -227,6 +230,29 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                   </SelectContent>
                 </Select>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="collectAddress"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    Coletar endereço de entrega
+                  </FormLabel>
+                  <FormDescription>
+                    Ative esta opção se deseja coletar o endereço completo do cliente no checkout
+                  </FormDescription>
+                </div>
               </FormItem>
             )}
           />

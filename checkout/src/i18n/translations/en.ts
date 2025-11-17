@@ -28,8 +28,29 @@ export const en: Translation = {
     emailPlaceholder: "youremail@example.com",
     name: "Full name*",
     namePlaceholder: "Your name",
-    phone: "Phone*",
-    phonePlaceholder: "(XX) XXXXX-XXXX",
+    phone: "Phone",
+    phonePlaceholder: "(00) 00000-0000",
+  },
+
+  // Address Info
+  address: {
+    title: "Shipping Address",
+    zipCode: "ZIP Code*",
+    zipCodePlaceholder: "00000-000",
+    street: "Street*",
+    streetPlaceholder: "Street name",
+    number: "Number*",
+    numberPlaceholder: "123",
+    complement: "Complement",
+    complementPlaceholder: "Apt, suite, etc",
+    neighborhood: "Neighborhood*",
+    neighborhoodPlaceholder: "Neighborhood name",
+    city: "City*",
+    cityPlaceholder: "City name",
+    state: "State*",
+    statePlaceholder: "State",
+    country: "Country*",
+    countryPlaceholder: "Country",
   },
 
   // Credit Card Form

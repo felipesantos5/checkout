@@ -9,6 +9,7 @@ import { handlePaymentIntentSucceeded } from "./payment-intent.handler";
 export const handleStripeEvent = async (event: Stripe.Event): Promise<void> => {
   switch (event.type) {
     case "payment_intent.succeeded":
+      console.log(`✅ Pagamento APROVADO`);
       await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
       break;
 

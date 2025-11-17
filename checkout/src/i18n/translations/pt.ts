@@ -26,8 +26,29 @@ export const pt = {
     emailPlaceholder: "seuemail@exemplo.com",
     name: "Nome completo*",
     namePlaceholder: "Seu nome",
-    phone: "Celular*",
-    phonePlaceholder: "(XX) XXXXX-XXXX",
+    phone: "Celular",
+    phonePlaceholder: "(00) 00000-0000",
+  },
+
+  // Address Info
+  address: {
+    title: "Endereço de Entrega",
+    zipCode: "CEP*",
+    zipCodePlaceholder: "00000-000",
+    street: "Rua*",
+    streetPlaceholder: "Nome da rua",
+    number: "Número*",
+    numberPlaceholder: "123",
+    complement: "Complemento",
+    complementPlaceholder: "Apto, bloco, etc",
+    neighborhood: "Bairro*",
+    neighborhoodPlaceholder: "Nome do bairro",
+    city: "Cidade*",
+    cityPlaceholder: "Nome da cidade",
+    state: "Estado*",
+    statePlaceholder: "UF",
+    country: "País*",
+    countryPlaceholder: "Brasil",
   },
 
   // Credit Card Form

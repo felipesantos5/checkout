@@ -3,6 +3,7 @@ import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import "dotenv/config"; // Garante que o .env seja lido
 import mainRouter from "./routes"; // Nosso roteador principal
+import stripeWebhookRouter from "./webhooks/stripe/stripe-webhook.routes";
 
 const app: Express = express();
 
@@ -14,6 +15,8 @@ const app: Express = express();
 // );
 
 app.use(cors({ origin: "*" }));
+
+app.use("/api/webhooks/stripe", stripeWebhookRouter);
 
 // Middleware para parsear JSON
 app.use(express.json());

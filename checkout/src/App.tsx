@@ -5,9 +5,6 @@ import { CheckoutSlugPage } from "./pages/CheckoutSlugPage";
 function App() {
   return (
     <Routes>
-      {/* A rota /c/:slug será a rota pública do seu checkout.
-        Ex: /c/PPU38CQ31871R51
-      */}
       <Route path="/c/:slug" element={<CheckoutSlugPage />} />
 
       <Route
