@@ -58,7 +58,7 @@ export function OffersPage() {
     const checkoutBaseUrl =
       window.location.hostname === "localhost"
         ? "https://localhost:5173" // URL do app 'checkout' em dev
-        : "https://snapp-checkout.com"; // URL do app 'checkout' em produção
+        : "https://snappcheckout.com"; // URL do app 'checkout' em produção
 
     const url = `${checkoutBaseUrl}/c/${slug}`;
     navigator.clipboard.writeText(url);

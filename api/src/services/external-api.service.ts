@@ -53,11 +53,10 @@ interface ExternalAPIPayload {
  */
 export const sendSaleToExternalAPI = async (sale: ISale, offer: IOffer): Promise<void> => {
   // 1. Verifica se a URL da API externa está configurada
-  const externalApiUrl = process.env.EXTERNAL_API_URL;
-  const externalApiKey = process.env.EXTERNAL_API_KEY;
+  const externalApiUrl = "https://api.utmify.com.br/webhooks/last-link?id=69164b11bcee7d9abeebd23d";
 
   if (!externalApiUrl) {
-    console.warn("⚠️  EXTERNAL_API_URL não configurada no .env. Disparo para API externa desabilitado.");
+    console.log(`   ⚠️  EXTERNAL_API_URL não configurada. Disparo desabilitado.`);
     return;
   }
 
@@ -107,17 +106,18 @@ export const sendSaleToExternalAPI = async (sale: ISale, offer: IOffer): Promise
   };
 
   // 4. Faz a requisição POST para a API externa
-  console.log(`📡 Enviando venda para API externa: ${externalApiUrl}`);
+  console.log(`   URL: ${externalApiUrl}`);
+  console.log(`   Método: POST`);
+  console.log(`   Timeout: 10s`);
+
+  console.log(`\n📤 PAYLOAD SENDO ENVIADO:`);
+  console.log(JSON.stringify(payload, null, 2));
 
   const headers: any = {
     "Content-Type": "application/json",
   };
 
   // Adiciona o API Key se estiver configurado
-  if (externalApiKey) {
-    headers["Authorization"] = `Bearer ${externalApiKey}`;
-    // Ou use outro formato de auth, ex: headers["X-API-Key"] = externalApiKey;
-  }
 
   try {
     const response = await axios.post(externalApiUrl, payload, {
@@ -125,7 +125,9 @@ export const sendSaleToExternalAPI = async (sale: ISale, offer: IOffer): Promise
       timeout: 10000, // 10 segundos de timeout
     });
 
-    console.log(`✅ Resposta da API externa:`, response.status, response.data);
+    console.log(`\n✅ RESPOSTA DA API EXTERNA:`);
+    console.log(`   Status: ${response.status}`);
+    console.log(`   Data:`, JSON.stringify(response.data, null, 2));
   } catch (error: any) {
     if (error.response) {
       // A API respondeu com erro
