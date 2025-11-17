@@ -23,6 +23,8 @@ export interface OfferData {
     description?: string;
     imageUrl?: string;
     priceInCents: number;
+    originalPriceInCents?: number; // Preço original antes do desconto
+    discountPercentage?: number; // Porcentagem de desconto
   };
   orderBumps: {
     _id: string;

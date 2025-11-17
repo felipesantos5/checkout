@@ -152,6 +152,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         currency={offerData.currency}
         quantity={quantity}
         setQuantity={setQuantity}
+        originalPriceInCents={offerData.mainProduct.originalPriceInCents}
+        discountPercentage={offerData.mainProduct.discountPercentage}
       />
 
       <ContactInfo />

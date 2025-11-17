@@ -13,6 +13,8 @@ interface OrderSummaryProps {
   basePriceInCents: number; // O preço do produto principal
   quantity: number; // A quantidade atual
   setQuantity: (qty: number) => void; // Função para mudar a quantidade
+  originalPriceInCents?: number; // Preço original antes do desconto
+  discountPercentage?: number; // Porcentagem de desconto
 }
 
 // Helper de formatação
@@ -32,6 +34,8 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
   basePriceInCents,
   quantity,
   setQuantity,
+  originalPriceInCents,
+  discountPercentage,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { primary } = useTheme();
@@ -84,7 +88,18 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
           <div className="ml-4 flex-1">
             <h3 className="text-sm font-medium text-gray-800">{productName}</h3>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-lg font-bold text-gray-900">{formatCurrency(basePriceInCents, currency)}</span>
+              <div className="flex flex-col">
+                {/* Se houver preço original e desconto, mostra o preço original cortado */}
+                {originalPriceInCents && originalPriceInCents > basePriceInCents && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500 line-through">{formatCurrency(originalPriceInCents, currency)}</span>
+                    {discountPercentage && (
+                      <span className="text-xs font-semibold text-white bg-green-600 px-2 py-0.5 rounded">{discountPercentage}% OFF</span>
+                    )}
+                  </div>
+                )}
+                <span className="text-lg font-bold text-gray-900">{formatCurrency(basePriceInCents, currency)}</span>
+              </div>
 
               {/* Input de Quantidade */}
               <div className="flex items-center border rounded">
