@@ -28,6 +28,11 @@ import { Link, useLocation } from "react-router-dom";
 // Menu items.
 const items = [
   {
+    title: "DashBoard",
+    url: "/",
+    icon: ChartColumnIncreasing,
+  },
+  {
     title: "Ofertas",
     url: "/offers",
     icon: ChartNoAxesCombined,
@@ -36,11 +41,6 @@ const items = [
     title: "Criar Oferta",
     url: "/offers/new",
     icon: ShoppingBasket,
-  },
-  {
-    title: "DashBoard",
-    url: "/",
-    icon: ChartColumnIncreasing,
   },
 ];
 
@@ -119,7 +119,8 @@ export function AppSidebar() {
                   isActive = location.pathname === "/offers/new" || location.pathname.startsWith("/offers/new/");
                 } else if (item.url === "/offers") {
                   // "Ofertas" fica ativo em /offers e /offers/:id (mas não em /offers/new)
-                  isActive = location.pathname === "/offers" || (location.pathname.startsWith("/offers/") && !location.pathname.startsWith("/offers/new"));
+                  isActive =
+                    location.pathname === "/offers" || (location.pathname.startsWith("/offers/") && !location.pathname.startsWith("/offers/new"));
                 } else {
                   // Para outras rotas, usa match exato ou startsWith
                   isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
