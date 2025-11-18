@@ -161,21 +161,21 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
   }
 
   const ColorInput = ({ field }: { field: any }) => (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full max-w-full">
       <FormControl>
-        <Input type="color" className="w-10 h-10 p-1 cursor-pointer" {...field} />
+        <Input type="color" className="w-10 h-10 p-1 cursor-pointer flex-shrink-0" {...field} />
       </FormControl>
       <FormControl>
-        <Input type="text" placeholder="#2563EB" className="font-mono w-32" {...field} />
+        <Input type="text" placeholder="#2563EB" className="font-mono w-full max-w-[120px]" {...field} />
       </FormControl>
     </div>
   );
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full overflow-x-hidden">
         {/* --- DADOS GERAIS --- */}
-        <div className="space-y-4 rounded-md border p-4">
+        <div className="space-y-4 rounded-md border p-4 w-full overflow-x-hidden">
           <FormField
             control={form.control}
             name="name"
@@ -203,7 +203,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               </FormItem>
             )}
           />
-          <div className="flex justify-between gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             <FormField
               control={form.control}
               name="currency"
@@ -250,7 +250,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             <FormField
               control={form.control}
               name="collectAddress"
@@ -283,7 +283,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
 
           <Separator />
           <h4 className="text-md font-medium">Personalização</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             <FormField
               control={form.control}
               name="primaryColor"
@@ -310,7 +310,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
 
           <Separator />
           <h4 className="text-md font-medium">Configurações de marketing</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             <FormField
               control={form.control}
               name="utmfyWebhookUrl"
@@ -343,7 +343,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
         </div>
 
         {/* --- PRODUTO PRINCIPAL --- */}
-        <div className="space-y-4 rounded-md border p-4">
+        <div className="space-y-4 rounded-md border p-4 w-full overflow-x-hidden">
           <h3 className="text-lg font-medium">Produto Principal</h3>
           <FormField
             control={form.control}
@@ -416,11 +416,11 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
         </div>
 
         {/* --- ORDER BUMPS --- */}
-        <div className="space-y-4">
+        <div className="space-y-4 w-full overflow-x-hidden">
           <h3 className="text-lg font-medium">Order Bumps</h3>
 
           {fields.map((field, index) => (
-            <div key={field.id} className="space-y-4 rounded-md border p-4 relative">
+            <div key={field.id} className="space-y-4 rounded-md border p-4 relative w-full overflow-x-hidden">
               <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(index)}>
                 <Trash2 className="h-4 w-4" />
               </Button>

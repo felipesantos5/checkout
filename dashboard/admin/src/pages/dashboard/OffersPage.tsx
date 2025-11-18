@@ -66,7 +66,7 @@ export function OffersPage() {
   };
 
   return (
-    <div className="max-w-7xl m-auto">
+    <div className="max-w-6xl m-auto">
       {/* Cabeçalho da Página (FORA do card, como no protótipo) */}
       <div className="flex justify-between items-center mb-6">
         <div>

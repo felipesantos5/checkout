@@ -59,7 +59,7 @@ export function DashboardOverview() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       <ConnectStripeCard />
 
       <h1 className="text-3xl font-bold">Bem-vindo, {user?.name || "Usuário"}!</h1>

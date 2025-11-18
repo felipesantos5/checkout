@@ -103,7 +103,7 @@ export function OfferEditPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 px-4 w-full overflow-x-hidden">
       <Link to="/offers" className="hover:underline mb-4 font-semibold flex gap-1 items-center">
         <ChevronLeft size={20} />
         Voltar para ofertas
@@ -111,12 +111,12 @@ export function OfferEditPage() {
       {/* 6. Passar o 'formData' (tipo Input) para o Resumo */}
       <CheckoutOfferSummary offer={formData} slug={offerData.slug} />
       <Separator />
-      <Card>
+      <Card className="w-full overflow-x-hidden">
         <CardHeader>
           <CardTitle>Editar Oferta</CardTitle>
           <CardDescription>Ajuste os campos abaixo para editar sua oferta.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="w-full overflow-x-hidden">
           <OfferForm
             offerId={offerId}
             initialData={formData}

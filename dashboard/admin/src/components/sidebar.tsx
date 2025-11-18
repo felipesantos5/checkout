@@ -23,7 +23,7 @@ import {
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { getShortName } from "@/helper/shortName";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 // Menu items.
 const items = [
@@ -98,6 +98,7 @@ function UserMenu() {
 
 export function AppSidebar() {
   // const [isApprovalOpen, setIsApprovalOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <Sidebar>
@@ -106,16 +107,35 @@ export function AppSidebar() {
           <img src={logo} alt="logo" className="mt-12 ml-2 mb-10 w-36" />
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                // Lógica de active state
+                let isActive = false;
+
+                if (item.url === "/") {
+                  // Dashboard só fica ativo na rota exata "/"
+                  isActive = location.pathname === "/";
+                } else if (item.url === "/offers/new") {
+                  // "Criar Oferta" fica ativo em /offers/new e /offers/new/*
+                  isActive = location.pathname === "/offers/new" || location.pathname.startsWith("/offers/new/");
+                } else if (item.url === "/offers") {
+                  // "Ofertas" fica ativo em /offers e /offers/:id (mas não em /offers/new)
+                  isActive = location.pathname === "/offers" || (location.pathname.startsWith("/offers/") && !location.pathname.startsWith("/offers/new"));
+                } else {
+                  // Para outras rotas, usa match exato ou startsWith
+                  isActive = location.pathname === item.url || location.pathname.startsWith(item.url + "/");
+                }
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive}>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
 
               {/* <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => setIsApprovalOpen(!isApprovalOpen)} className="cursor-pointer">
@@ -142,7 +162,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarFooter>
+        <SidebarFooter className="mb-1">
           <UserMenu />
         </SidebarFooter>
       </SidebarContent>

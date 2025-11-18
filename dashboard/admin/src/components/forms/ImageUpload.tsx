@@ -16,11 +16,14 @@ interface ImageUploadProps {
 
 export function ImageUpload({ value, onChange }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const { token } = useAuth(); // Pega o token para autenticar o upload
 
-  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const uploadFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, envie apenas imagens.");
+      return;
+    }
 
     setIsUploading(true);
 
@@ -49,6 +52,41 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
     }
   };
 
+  const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await uploadFile(file);
+  };
+
+  // Drag and Drop handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    await uploadFile(file);
+  };
+
   // Limpa a imagem (apenas limpa a URL no formulário)
   const handleRemove = () => {
     onChange("");
@@ -66,16 +104,26 @@ export function ImageUpload({ value, onChange }: ImageUploadProps) {
         </div>
       ) : (
         // --- 2. Estado "Sem Imagem" (Upload) ---
-        <div className="w-full h-40 rounded-md border-dashed border-2 flex items-center justify-center p-4">
+        <div
+          className={`w-full h-40 rounded-md border-dashed border-2 flex items-center justify-center p-4 transition-colors ${
+            isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+          }`}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           {isUploading ? (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="text-sm text-muted-foreground">Enviando...</p>
             </div>
           ) : (
-            <label htmlFor="file-upload" className="flex flex-col items-center gap-2 cursor-pointer">
-              <Upload className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Clique ou arraste para enviar</p>
+            <label htmlFor="file-upload" className="flex flex-col items-center gap-2 cursor-pointer w-full h-full justify-center">
+              <Upload className={`h-8 w-8 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+              <p className={`text-sm ${isDragging ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                {isDragging ? "Solte a imagem aqui" : "Clique ou arraste para enviar"}
+              </p>
               <Input id="file-upload" type="file" className="sr-only" onChange={handleUpload} accept="image/png, image/jpeg, image/webp" />
             </label>
           )}
