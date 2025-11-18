@@ -202,7 +202,8 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
             },
             Payment: {
               NumberOfInstallments: 1,
-              PaymentMethod: paymentIntent.payment_method_types[0] || "unknown",
+              PaymentMethod: "credit_card",
+              InterestRateAmount: 0,
             },
           },
           Offer: {
