@@ -17,7 +17,6 @@ export function OfferCreatePage() {
         <CardContent>
           <OfferForm
             onSuccess={() => {
-              // Callback de sucesso: avisa e redireciona
               toast.success("Oferta criada com sucesso!");
               navigate("/offers"); // Volta para a lista
             }}

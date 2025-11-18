@@ -38,6 +38,8 @@ export interface IOffer extends Document {
   utmfyWebhookUrl?: string;
   upsellLink?: string;
 
+  collectPhone: boolean;
+
   mainProduct: IProductSubDocument;
   orderBumps: IProductSubDocument[];
 }
@@ -94,6 +96,10 @@ const offerSchema = new Schema<IOffer>(
     collectAddress: {
       type: Boolean,
       default: false,
+    },
+    collectPhone: {
+      type: Boolean,
+      default: true,
     },
 
     // --- MUDANÇA PRINCIPAL ---

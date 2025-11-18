@@ -13,6 +13,7 @@ export interface OfferData {
   name: string;
   language?: Language; // Idioma do checkout (pt, en, fr)
   collectAddress?: boolean; // Se deve coletar endereço
+  collectPhone?: boolean; // Se deve coletar telefone
   bannerImageUrl?: string;
   currency: string;
   primaryColor: string;

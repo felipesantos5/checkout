@@ -44,6 +44,7 @@ const offerFormSchema = z.object({
   currency: z.string().default("BRL"), // Input: string | undefined, Output: string
   language: z.string().default("pt"), // Idioma da oferta (pt, en, fr)
   collectAddress: z.boolean().default(false), // Se deve coletar endereço
+  collectPhone: z.boolean().default(true), // Se deve coletar telefone
   primaryColor: colorSchema,
   buttonColor: colorSchema,
   mainProduct: productSchema,
@@ -102,21 +103,30 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
     name: "orderBumps",
   });
 
-  // 4. Tipar a submissão com o tipo Output (dados validados)
   async function onSubmit(values: OfferFormData) {
     setIsLoading(true);
 
-    // Esta função interna ainda espera o tipo Output (correto)
+    // 1. Defina a função helper para transformar os preços
     const transformPrices = (data: OfferFormOutput) => {
-      // O 'doc' aqui terá 'priceInCents' como 'number'
-      const cleanSubDoc = (doc: { priceInCents: number; _id?: string; [key: string]: any }) => {
+      // Helper interno para limpar cada produto/bump
+      const cleanSubDoc = (doc: { priceInCents: number; compareAtPriceInCents?: number; _id?: string; [key: string]: any }) => {
         const { _id, ...rest } = doc;
+
+        // Multiplica o preço de venda
+        const priceInCents = Math.round(doc.priceInCents * 100);
+
+        // Multiplica o preço de comparação (se existir e for maior que zero)
+        const compareAtPriceInCents =
+          typeof doc.compareAtPriceInCents === "number" && doc.compareAtPriceInCents > 0 ? Math.round(doc.compareAtPriceInCents * 100) : undefined; // Garante que não envie 0
+
         return {
           ...rest,
-          priceInCents: Math.round(doc.priceInCents * 100),
+          priceInCents,
+          compareAtPriceInCents,
         };
       };
 
+      // Retorna o objeto de dados completo e transformado
       return {
         ...data,
         mainProduct: cleanSubDoc(data.mainProduct),
@@ -124,23 +134,28 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       };
     };
 
-    // 2. FAÇA O CAST aqui.
-    // Nós sabemos que 'values' (que o TS acha que é Input)
-    // é, na verdade, o Output, pois o Zod já validou.
+    // 2. Chame a função helper PRIMEIRO para preparar os dados
     const dataToSubmit = transformPrices(values as OfferFormOutput);
 
+    // 3. AGORA, faça a requisição com os dados prontos
     try {
       if (isEditMode) {
+        // <-- CORREÇÃO: 'await' é essencial aqui
         await axios.put(`${API_URL}/offers/${offerId}`, dataToSubmit);
       } else {
+        // <-- CORREÇÃO: 'await' é essencial aqui
         await axios.post(`${API_URL}/offers`, dataToSubmit);
       }
+
+      // <-- CORREÇÃO: Isso agora só roda DEPOIS que o 'await' terminar
       onSuccess();
     } catch (error) {
+      // O catch agora vai pegar erros da requisição
       toast.error(isEditMode ? "Falha ao atualizar link." : "Falha ao criar link.", {
         description: (error as any).response?.data?.error?.message || (error as Error).message,
       });
     } finally {
+      // <-- CORREÇÃO: Isso agora só roda DEPOIS que o try/catch for concluído
       setIsLoading(false);
     }
   }
@@ -235,21 +250,36 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="collectAddress"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>Coletar endereço de entrega</FormLabel>
-                  <FormDescription>Ative esta opção se deseja coletar o endereço completo do cliente no checkout</FormDescription>
-                </div>
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="collectAddress"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Coletar endereço de entrega</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="collectPhone"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Coletar telefone</FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+          </div>
 
           <Separator />
           <h4 className="text-md font-medium">Personalização</h4>
@@ -333,10 +363,17 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             name="mainProduct.priceInCents"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço (Ex: 19.90)</FormLabel>
+                <FormLabel>Preço de Venda (Ex: 19,90)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" {...field} value={typeof field.value === "number" ? field.value : String(field.value ?? "")} />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="19.90"
+                    {...field}
+                    value={typeof field.value === "number" ? field.value : String(field.value ?? "")}
+                  />
                 </FormControl>
+                <FormDescription>O valor final que o cliente pagará.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -347,16 +384,17 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             name="mainProduct.compareAtPriceInCents"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Preço de Comparação (em centavos)</FormLabel>
+                <FormLabel>Preço Antigo / "De:" (Opcional)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
-                    placeholder="Ex: 9900 (para R$ 99,00)"
+                    step="0.01" // PADRONIZADO
+                    placeholder="29.90" // PADRONIZADO
                     {...field}
                     value={typeof field.value === "number" ? field.value : String(field.value ?? "")}
                   />
                 </FormControl>
-                <FormDescription>Opcional: O preço "antigo" (Ex: De R$ 99,00).</FormDescription>
+                <FormDescription>Se preenchido, será mostrado "De R$ 29,90 por R$ 19,90".</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

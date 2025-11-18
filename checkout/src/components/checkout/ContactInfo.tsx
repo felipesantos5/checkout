@@ -2,7 +2,11 @@ import React, { useState } from "react";
 import { Input } from "../ui/Input";
 import { useTranslation } from "../../i18n/I18nContext";
 
-export const ContactInfo: React.FC = () => {
+interface ContactInfoProps {
+  showPhone?: boolean; // Se deve mostrar o campo de telefone (padrão: true)
+}
+
+export const ContactInfo: React.FC<ContactInfoProps> = ({ showPhone = true }) => {
   const { t } = useTranslation();
   const [phone, setPhone] = useState("");
 
@@ -40,15 +44,17 @@ export const ContactInfo: React.FC = () => {
       <div className="space-y-4">
         <Input label={t.contact.email} id="email" type="email" placeholder={t.contact.emailPlaceholder} />
         <Input label={t.contact.name} id="name" type="text" placeholder={t.contact.namePlaceholder} />
-        <Input
-          label={t.contact.phone}
-          onChange={handlePhoneChange}
-          value={phone}
-          id="phone"
-          type="tel"
-          maxLength={15}
-          placeholder={t.contact.phonePlaceholder}
-        />
+        {showPhone && (
+          <Input
+            label={t.contact.phone}
+            onChange={handlePhoneChange}
+            value={phone}
+            id="phone"
+            type="tel"
+            maxLength={15}
+            placeholder={t.contact.phonePlaceholder}
+          />
+        )}
       </div>
     </div>
   );

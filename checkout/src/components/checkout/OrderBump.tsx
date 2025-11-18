@@ -67,13 +67,13 @@ export const OrderBump: React.FC<OrderBumpProps> = ({ bumps, selectedBumps, onTo
               {/* Imagem */}
 
               {/* Conteúdo */}
-              <div className="flex-1 gap-2">
+              <div className="flex-1 gap-2 min-w-0">
                 {/* Headline */}
-                <div className="flex justify-between">
-                  <h3 className="text-lg font-bold mb-2" style={{ color: primary }}>
+                <div className="flex justify-between gap-2 items-start">
+                  <h3 className="text-lg font-bold mb-2 break-words flex-1 min-w-0" style={{ color: primary }}>
                     {bump.headline ? bump.headline : bump.name}
                   </h3>
-                  <span className="text-2xl font-bold text-green-600">{formatCurrency(bump.priceInCents, currency)}</span>
+                  <span className="text-2xl font-bold text-green-600 flex-shrink-0">{formatCurrency(bump.priceInCents, currency)}</span>
                 </div>
                 <div className="flex justify-between gap-3">
                   {bump.imageUrl && (
@@ -81,11 +81,11 @@ export const OrderBump: React.FC<OrderBumpProps> = ({ bumps, selectedBumps, onTo
                       <img src={bump.imageUrl} alt={bump.name} className="w-24 h-24 rounded-lg object-cover border border-gray-200 " />
                     </div>
                   )}
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor={`order-bump-${bump._id}`} className="font-semibold text-gray-800 cursor-pointer block mb-1">
+                  <div className="flex flex-col gap-1 flex-1 min-w-0">
+                    <label htmlFor={`order-bump-${bump._id}`} className="font-semibold text-gray-800 cursor-pointer block mb-1 break-words">
                       {bump.name}
                     </label>
-                    {bump.description && <p className="text-sm text-gray-600 mb-3">{bump.description}</p>}
+                    {bump.description && <p className="text-sm text-gray-600 mb-3 break-words whitespace-normal">{bump.description}</p>}
                   </div>
                 </div>
               </div>

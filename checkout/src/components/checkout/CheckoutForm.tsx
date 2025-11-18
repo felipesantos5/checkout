@@ -95,7 +95,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
     const email = (document.getElementById("email") as HTMLInputElement).value;
     const fullName = (document.getElementById("name") as HTMLInputElement).value;
-    const phone = (document.getElementById("phone") as HTMLInputElement).value;
+    const phoneElement = document.getElementById("phone") as HTMLInputElement | null;
+    const phone = phoneElement ? phoneElement.value : "";
 
     const clientIp = await getClientIP();
 
@@ -197,7 +198,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
               discountPercentage={offerData.mainProduct.discountPercentage}
             />
 
-            <ContactInfo />
+            <ContactInfo showPhone={offerData.collectPhone} />
 
             {offerData.collectAddress && <AddressInfo />}
 

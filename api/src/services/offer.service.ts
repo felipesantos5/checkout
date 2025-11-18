@@ -44,6 +44,11 @@ export type CreateOfferPayload = {
   currency: string;
   primaryColor?: string;
   buttonColor?: string;
+  collectAddress?: boolean;
+  collectPhone?: boolean;
+  language?: string;
+  upsellLink?: string;
+  utmfyWebhookUrl?: string;
 };
 
 export type UpdateOfferPayload = Partial<CreateOfferPayload>;
