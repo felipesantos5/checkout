@@ -205,7 +205,9 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
         },
       };
 
-      console.log("nosso payload para testes", utmfyPayload);
+      console.log("---------------offer.utmfyWebhookUrl", offer.utmfyWebhookUrl);
+      console.log("nosso payload para testes");
+      console.dir(utmfyPayload, { depth: null, colors: true });
 
       // Envia para o webhook
       await sendPurchaseToUTMfyWebhook(offer.utmfyWebhookUrl, utmfyPayload);
