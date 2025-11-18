@@ -12,40 +12,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   typescript: true,
 });
 
-/**
- * Cria uma Intenção de Pagamento para Cartão de Crédito.
- */
-export const createCardPaymentIntent = async (amountInCents: number): Promise<Stripe.PaymentIntent> => {
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: 100,
-      currency: "usd",
-      payment_method_types: ["card"],
-    });
-    return paymentIntent;
-  } catch (error) {
-    console.error("Erro no Stripe Service (Card):", error);
-    throw new Error("Falha ao criar intenção de pagamento com cartão.");
-  }
-};
-
-/**
- * Cria uma Intenção de Pagamento para PIX.
- */
-export const createPixPaymentIntent = async (amountInCents: number): Promise<Stripe.PaymentIntent> => {
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents,
-      currency: "brl",
-      payment_method_types: ["pix"], // A mudança é aqui
-    });
-    return paymentIntent;
-  } catch (error) {
-    console.error("Erro no Stripe Service (PIX):", error);
-    throw new Error("Falha ao criar intenção de pagamento com PIX.");
-  }
-};
-
 export const getAccountBalance = async (stripeAccountId: string) => {
   if (!stripeAccountId) {
     throw new Error("Usuário não possui uma conta Stripe conectada.");

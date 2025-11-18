@@ -10,6 +10,7 @@ import { Banner } from "./Banner";
 import { API_URL } from "../../config/BackendUrl";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "../../i18n/I18nContext";
+import { getClientIP } from "../../service/getClientIP";
 
 interface CheckoutFormProps {
   offerData: OfferData;
@@ -96,6 +97,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     const fullName = (document.getElementById("name") as HTMLInputElement).value;
     const phone = (document.getElementById("phone") as HTMLInputElement).value;
 
+    const clientIp = await getClientIP();
+
     const payload = {
       offerSlug: offerData.slug,
       selectedOrderBumps: selectedBumps,
@@ -104,13 +107,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         name: fullName,
         phone,
       },
-      metadata: metadata,
-      // TODO: Enviar metadata (UTM, IP, UserAgent)
-      // metadata: {
-      //   ip: "...", (você precisaria de uma API para pegar isso)
-      //   userAgent: navigator.userAgent,
-      //   utm_source: "...", (pegar dos query params da URL)
-      // }
+
+      metadata: {
+        ...metadata,
+        ip: clientIp,
+        userAgent: navigator.userAgent,
+      },
     };
 
     try {

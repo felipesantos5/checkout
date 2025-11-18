@@ -109,9 +109,9 @@ export const handleCreatePaymentIntent = async (req: Request, res: Response) => 
           customerEmail: contactInfo.email,
           customerName: contactInfo.name,
           customerPhone: contactInfo.phone || "",
+          ...metadata,
         },
         receipt_email: contactInfo.email, // Email para enviar recibo do Stripe
-        ...metadata, // Adiciona metadados extras vindos do frontend
       },
       {
         stripeAccount: stripeAccountId,
