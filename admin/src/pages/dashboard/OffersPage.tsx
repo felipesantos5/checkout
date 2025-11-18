@@ -19,6 +19,7 @@ interface Offer {
   name: string;
   slug: string;
   mainProduct: product;
+  salesCount: number;
 }
 
 // Helper de formatação de moeda
@@ -89,6 +90,7 @@ export function OffersPage() {
               <TableHead className="w-2/5 px-6 py-3 text-xs font-semibold uppercase tracking-wider">Descrição</TableHead>
               <TableHead className="w-1/5 px-6 py-3 text-xs font-semibold uppercase tracking-wider">Valor</TableHead>
               <TableHead className="w-1/5 px-6 py-3 text-xs font-semibold uppercase tracking-wider">URL</TableHead>
+              <TableHead className="w-[100px] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-center">Vendas</TableHead>
               <TableHead className="w-[100px] px-6 py-3 text-xs font-semibold uppercase tracking-wider text-right">Status</TableHead>
               <TableHead className="w-[100px] px-6 py-3"></TableHead>
             </TableRow>
@@ -98,13 +100,13 @@ export function OffersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center">
+                <TableCell colSpan={7} className="h-48 text-center">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : offers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">
                   Nenhum link de pagamento encontrado.
                 </TableCell>
               </TableRow>
@@ -137,6 +139,11 @@ export function OffersPage() {
                       Copiar Link
                       <Copy className="h-3 w-3 ml-1.5" />
                     </Button>
+                  </TableCell>
+
+                  {/* VENDAS */}
+                  <TableCell className="px-6 py-4 text-center">
+                    <span className="text-sm font-medium text-foreground">{offer.salesCount || 0}</span>
                   </TableCell>
 
                   {/* STATUS (Mockado como "Ativo") */}

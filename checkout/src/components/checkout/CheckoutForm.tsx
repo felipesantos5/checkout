@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-js";
+import type { PaymentRequest, PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js"; // Tipos do Stripe
+// Tipos do Stripe
 import type { OfferData } from "../../pages/CheckoutSlugPage";
 import { OrderSummary } from "./OrderSummary";
 import { ContactInfo } from "./ContactInfo";
@@ -19,6 +22,7 @@ interface CheckoutFormProps {
 export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const navigate = useNavigate();
   const { button, buttonForeground } = useTheme();
   const { t } = useTranslation();
 
@@ -29,6 +33,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   const [selectedBumps, setSelectedBumps] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [totalAmount, setTotalAmount] = useState(offerData.mainProduct.priceInCents);
+
+  // [Alteração] Estado para armazenar o objeto de solicitação de pagamento (Wallet)
+  const [paymentRequest, setPaymentRequest] = useState<PaymentRequest | null>(null);
 
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
@@ -42,11 +49,11 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     };
   }, [urlParams]);
 
+  // Atualiza o total baseado em bumps e quantidade
   useEffect(() => {
     let newTotal = offerData.mainProduct.priceInCents * quantity;
 
     selectedBumps.forEach((bumpId) => {
-      // Usando optional chaining para segurança, caso o bump não seja encontrado
       const bump = offerData.orderBumps.find((b) => b?._id === bumpId);
       if (bump) {
         newTotal += bump.priceInCents;
@@ -56,32 +63,125 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     setTotalAmount(newTotal);
   }, [selectedBumps, quantity, offerData]);
 
-  // --- NOVA LÓGICA DE REDIRECIONAMENTO ---
-  // Este useEffect "escuta" a mudança do 'paymentSucceeded'
+  // [Alteração] Inicializa o Payment Request (Apple/Google Pay)
   useEffect(() => {
-    // Se o pagamento foi bem-sucedido...
+    if (!stripe) return;
+
+    const pr = stripe.paymentRequest({
+      country: "BR", // Ajuste conforme o país da conta Stripe conectada
+      currency: offerData.currency.toLowerCase(),
+      total: {
+        label: offerData.mainProduct.name,
+        amount: totalAmount,
+      },
+      requestPayerName: true,
+      requestPayerEmail: true,
+      requestPayerPhone: offerData.collectPhone,
+    });
+
+    // Verifica se o navegador suporta carteira digital
+    pr.canMakePayment().then((result) => {
+      if (result) {
+        setPaymentRequest(pr);
+      }
+    });
+
+    // Handler: Quando o usuário autoriza o pagamento na carteira (TouchID/FaceID)
+    pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
+      try {
+        // 1. Preparar payload usando dados retornados pela Wallet (ev.payer...)
+        const clientIp = await getClientIP();
+
+        const payload = {
+          offerSlug: offerData.slug,
+          selectedOrderBumps: selectedBumps,
+          contactInfo: {
+            email: ev.payerEmail, // Email vindo da Apple/Google
+            name: ev.payerName, // Nome vindo da Apple/Google
+            phone: ev.payerPhone || "",
+          },
+          metadata: {
+            ...utmData,
+            ip: clientIp,
+            userAgent: navigator.userAgent,
+          },
+        };
+
+        // 2. Criar PaymentIntent no backend
+        const res = await fetch(`${API_URL}/payments/create-intent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const { clientSecret, error: backendError } = await res.json();
+
+        if (backendError) {
+          ev.complete("fail");
+          setErrorMessage(backendError.message);
+          return;
+        }
+
+        // 3. Confirmar o pagamento no Stripe usando o método criado pela Wallet
+        const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+          clientSecret,
+          { payment_method: ev.paymentMethod.id },
+          { handleActions: false } // Deixe o Stripe lidar com confirmação extra se necessário
+        );
+
+        if (confirmError) {
+          ev.complete("fail");
+          setErrorMessage(confirmError.message || "Erro no pagamento");
+        } else {
+          // Sucesso!
+          ev.complete("success");
+          if (paymentIntent?.status === "succeeded") {
+            setPaymentSucceeded(true);
+          }
+        }
+      } catch (err: any) {
+        ev.complete("fail");
+        setErrorMessage(err.message || "Erro inesperado");
+      }
+    });
+  }, [stripe]); // Executa uma vez quando o Stripe carrega (não inclua dependências que mudam muito aqui)
+
+  // [Alteração] Atualiza o valor no botão da Wallet quando o usuário muda o carrinho
+  useEffect(() => {
+    if (paymentRequest) {
+      paymentRequest.update({
+        total: {
+          label: offerData.mainProduct.name,
+          amount: totalAmount,
+        },
+      });
+    }
+  }, [totalAmount, paymentRequest, offerData.mainProduct.name]);
+
+  // Efeito de redirecionamento para a página de sucesso
+  useEffect(() => {
     if (paymentSucceeded) {
-      // Pegamos o link de upsell da oferta
-      const upsellUrl = offerData.upsellLink;
+      const params = new URLSearchParams();
 
-      // Verificamos se o link existe e parece ser uma URL válida
-      if (upsellUrl && (upsellUrl.startsWith("http://") || upsellUrl.startsWith("https://"))) {
-        console.log(`Pagamento bem-sucedido. Redirecionando para upsell: ${upsellUrl}`);
-
-        // Redireciona o navegador do cliente
-        window.location.href = upsellUrl;
+      // Adicionar upsellLink se existir
+      if (offerData.upsellLink) {
+        params.append("upsellLink", offerData.upsellLink);
       }
 
-      // Se não houver upsellUrl, este useEffect não faz nada,
-      // e o componente simplesmente re-renderiza para mostrar a tela
-      // de sucesso padrão (definida no 'if (paymentSucceeded)' abaixo).
-    }
-  }, [paymentSucceeded, offerData.upsellLink]); // Depende do status e do link
+      // Adicionar nome da oferta
+      params.append("offerName", offerData.mainProduct.name);
 
+      // Navegar para a página de sucesso
+      navigate(`/success?${params.toString()}`);
+    }
+  }, [paymentSucceeded, offerData.upsellLink, offerData.mainProduct.name, navigate]);
+
+  // Toggle Bump (código existente)
   const handleToggleBump = (bumpId: string) => {
     setSelectedBumps((prev) => (prev.includes(bumpId) ? prev.filter((id) => id !== bumpId) : [...prev, bumpId]));
   };
 
+  // Submit do formulário normal (código existente)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
@@ -99,16 +199,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     const payload = {
       offerSlug: offerData.slug,
       selectedOrderBumps: selectedBumps,
-      contactInfo: {
-        email,
-        name: fullName,
-        phone,
-      },
-      metadata: {
-        ...utmData,
-        ip: clientIp,
-        userAgent: navigator.userAgent,
-      },
+      contactInfo: { email, name: fullName, phone },
+      metadata: { ...utmData, ip: clientIp, userAgent: navigator.userAgent },
     };
 
     try {
@@ -130,11 +222,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
-            billing_details: {
-              name: cardName,
-              email: email,
-              phone: phone,
-            },
+            billing_details: { name: cardName, email: email, phone: phone },
           },
           receipt_email: email,
         });
@@ -154,27 +242,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     setLoading(false);
   };
 
-  if (paymentSucceeded) {
-    const upsellUrl = offerData.upsellLink;
-
-    if (upsellUrl && (upsellUrl.startsWith("http://") || upsellUrl.startsWith("https://"))) {
-      return (
-        <div className="p-6 text-center">
-          <h2 className="text-2xl font-bold text-gray-800">{t.messages.success}</h2>
-          <p className="mt-2 text-gray-700">{t.messages.redirecting || "Redirecionando..."}</p>
-        </div>
-      );
-    }
-
-    // 2. Se NÃO TEMOS link, mostramos a tela de sucesso padrão.
-    return (
-      <div className="p-6 text-center">
-        <h2 className="text-2xl font-bold text-green-600">{t.messages.success}</h2>
-        <p className="mt-2 text-gray-700">{t.messages.successDescription}</p>
-      </div>
-    );
-  }
-
   return (
     <>
       <Banner imageUrl={offerData.bannerImageUrl} />
@@ -193,6 +260,23 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
               discountPercentage={offerData.mainProduct.discountPercentage}
             />
 
+            {/* [Alteração] Inserir Botão de Carteira Digital (Express Checkout) */}
+            {/* {paymentRequest && (
+              <div className="mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Checkout Expresso</span>
+                  </div>
+                </div>
+                <div className="mt-4 h-10">
+                  <PaymentRequestButtonElement options={{ paymentRequest }} className="w-full h-full" />
+                </div>
+              </div>
+            )} */}
+
             <ContactInfo showPhone={offerData.collectPhone} />
 
             {offerData.collectAddress && <AddressInfo />}
@@ -204,8 +288,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
             <button
               type="submit"
               disabled={!stripe || loading}
-              className="w-full mt-8 bg-button text-button-foreground font-bold py-3 px-4 rounded-lg text-lg transition-colors disabled:opacity-50
-                   hover:opacity-90 cursor-pointer"
+              className="w-full mt-8 bg-button text-button-foreground font-bold py-3 px-4 rounded-lg text-lg transition-colors disabled:opacity-50 hover:opacity-90 cursor-pointer"
               style={{
                 backgroundColor: loading ? "#ccc" : button,
                 color: buttonForeground,
