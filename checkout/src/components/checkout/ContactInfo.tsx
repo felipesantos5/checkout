@@ -42,8 +42,8 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({ showPhone = true }) =>
     <div className="w-full mt-6">
       <h2 className="text-lg font-semibold text-primary mb-4">{t.contact.title}</h2>
       <div className="space-y-4">
-        <Input label={t.contact.email} id="email" type="email" placeholder={t.contact.emailPlaceholder} />
-        <Input label={t.contact.name} id="name" type="text" placeholder={t.contact.namePlaceholder} />
+        <Input label={t.contact.email} id="email" type="email" required placeholder={t.contact.emailPlaceholder} />
+        <Input label={t.contact.name} id="name" type="text" required placeholder={t.contact.namePlaceholder} />
         {showPhone && (
           <Input
             label={t.contact.phone}
