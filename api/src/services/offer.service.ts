@@ -1,5 +1,6 @@
 // src/services/offer.service.ts
 import Offer, { IOffer, IProductSubDocument } from "../models/offer.model";
+import Sale from "../models/sale.model";
 // O model 'Product' não é mais necessário aqui
 import { customAlphabet } from "nanoid";
 
@@ -109,14 +110,29 @@ export const getOfferBySlug = async (slug: string): Promise<any> => {
 /**
  * Lista todas as ofertas de um usuário (para o dashboard)
  */
-export const listOffersByOwner = async (ownerId: string): Promise<IOffer[]> => {
+export const listOffersByOwner = async (ownerId: string): Promise<any[]> => {
   try {
     // --- MUDANÇA PRINCIPAL ---
     // Removemos o .populate() daqui também
     // O campo 'mainProduct' já contém o objeto com nome e preço
     const offers = await Offer.find({ ownerId }).sort({ createdAt: -1 });
 
-    return offers;
+    // Para cada oferta, busca o número de vendas
+    const offersWithSalesCount = await Promise.all(
+      offers.map(async (offer) => {
+        const salesCount = await Sale.countDocuments({
+          offerId: offer._id,
+          status: "succeeded", // Conta apenas vendas bem-sucedidas
+        });
+
+        return {
+          ...offer.toObject(),
+          salesCount,
+        };
+      })
+    );
+
+    return offersWithSalesCount;
   } catch (error) {
     throw new Error("Falha ao listar ofertas.");
   }
