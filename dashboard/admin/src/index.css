@@ -172,3 +172,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+* {
+  font-family: "Outfit", sans-serif;
+}

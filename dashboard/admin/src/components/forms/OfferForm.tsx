@@ -48,6 +48,7 @@ const offerFormSchema = z.object({
   buttonColor: colorSchema,
   mainProduct: productSchema,
   utmfyWebhookUrl: optionalUrl,
+  upsellLink: optionalUrl,
   orderBumps: z.array(productSchema).optional(),
 });
 
@@ -74,12 +75,8 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const isEditMode = !!offerId;
 
-  // 3. Tipar o useForm com OfferFormData (o tipo Input)
   const form = useForm<OfferFormData>({
-    resolver: zodResolver(offerFormSchema), // Esta linha agora funciona
-    // defaultValues são compatíveis com o tipo Input:
-    // number (0) é assignável a unknown (priceInCents)
-    // string ("BRL") é assignável a string | undefined (currency)
+    resolver: zodResolver(offerFormSchema),
     defaultValues: initialData || {
       name: "",
       bannerImageUrl: "",
@@ -87,6 +84,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       language: "pt",
       collectAddress: false,
       utmfyWebhookUrl: "",
+      upsellLink: "",
       mainProduct: {
         name: "",
         description: "",
@@ -274,6 +272,39 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                 <FormItem>
                   <FormLabel>Cor do Botão de Compra</FormLabel>
                   <ColorInput field={field} />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <Separator />
+          <h4 className="text-md font-medium">Configurações de marketing</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="utmfyWebhookUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>URL do Webhook UTMfy (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://webhook.utmfy.com/..." {...field} />
+                  </FormControl>
+                  <FormDescription>Link (POST) para enviar dados de conversão à UTMfy.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="upsellLink"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Link de Upsell (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://meu-site.com/pagina-de-upsell" {...field} />
+                  </FormControl>
+                  <FormDescription>Cliente será redirecionado para esta URL após a compra.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

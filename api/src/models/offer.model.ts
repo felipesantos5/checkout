@@ -36,6 +36,7 @@ export interface IOffer extends Document {
   buttonColor: string;
 
   utmfyWebhookUrl?: string;
+  upsellLink?: string;
 
   mainProduct: IProductSubDocument;
   orderBumps: IProductSubDocument[];
@@ -60,6 +61,10 @@ const offerSchema = new Schema<IOffer>(
       trim: true,
     },
     utmfyWebhookUrl: {
+      type: String,
+      default: "",
+    },
+    upsellLink: {
       type: String,
       default: "",
     },

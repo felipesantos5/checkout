@@ -117,13 +117,11 @@ export function OfferEditPage() {
           <CardDescription>Ajuste os campos abaixo para editar sua oferta.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* 7. Passar o 'formData' (tipo Input) para o Formulário */}
           <OfferForm
             offerId={offerId}
-            initialData={formData} // initialData é do tipo Input (OfferFormData)
+            initialData={formData}
             onSuccess={() => {
               toast.success("Oferta atualizada com sucesso!");
-              navigate("/offers");
             }}
           />
         </CardContent>

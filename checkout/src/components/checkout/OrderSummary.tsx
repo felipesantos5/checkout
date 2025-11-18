@@ -57,7 +57,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
 
   return (
     <Collapsible.Root open={isOpen} onOpenChange={setIsOpen} className="w-full bg-gray-50 rounded-lg shadow">
-      <Collapsible.Trigger className="w-full p-4 flex justify-between  cursor-pointer">
+      <Collapsible.Trigger className="w-full p-2 flex justify-between cursor-pointer">
         <div className="flex items-center">
           <ShoppingCart className="h-5 w-5 text-primary" />
           <span className="text-md font-semibold text-primary ml-2">{isOpen ? t.orderSummary.hideTitle : t.orderSummary.title}</span>
@@ -67,11 +67,13 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
         {!isOpen && (
           <div className="text-right">
             {totalOldPrice && <p className="text-sm line-through text-gray-500">{totalOldPrice}</p>}
-            <p className="text-xl font-semibold" style={{ color: primary }}>
+            <p className="text-[18px] font-semibold" style={{ color: primary }}>
               {totalSmallText}
             </p>
             {discountAmount > 0 && (
-              <p className="text-xs text-green-600 font-medium">{t.orderSummary.save} {formatCurrency(discountAmount, currency)}</p>
+              <p className="text-xs text-green-600 font-medium">
+                {t.orderSummary.save} {formatCurrency(discountAmount, currency)}
+              </p>
             )}
           </div>
         )}
@@ -82,13 +84,16 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({
           {productImageUrl && <img src={productImageUrl} alt={productName} className="w-20 h-20 rounded-md object-cover border" />}
           <div className="ml-4 flex-1">
             <h3 className="text-sm font-medium text-gray-800">{productName}</h3>
-            <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center justify-between mt-1 flex-wrap">
               <div className="flex flex-col">
                 {originalPriceInCents && originalPriceInCents > basePriceInCents && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-500 line-through">{formatCurrency(originalPriceInCents, currency)}</span>
                     {discountPercentage && (
-                      <span className="text-xs font-semibold text-white bg-green-600 px-2 py-0.5 rounded">{discountPercentage}{t.product.discount}</span>
+                      <span className="text-xs font-semibold text-white bg-green-600 px-2 py-0.5 rounded">
+                        {discountPercentage}
+                        {t.product.discount}
+                      </span>
                     )}
                   </div>
                 )}

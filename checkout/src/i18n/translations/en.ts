@@ -98,6 +98,7 @@ export const en: Translation = {
     cardElementNotFound: "Card component not found.",
     pixGenerated: "PIX generated successfully!",
     loading: "Loading...",
+    redirecting: "Redirecting securely...",
   },
 
   // Product

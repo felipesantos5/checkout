@@ -33,7 +33,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     let newTotal = offerData.mainProduct.priceInCents * quantity;
 
     selectedBumps.forEach((bumpId) => {
-      const bump = offerData.orderBumps.find((b) => b._id === bumpId);
+      // Usando optional chaining para segurança, caso o bump não seja encontrado
+      const bump = offerData.orderBumps.find((b) => b?._id === bumpId);
       if (bump) {
         newTotal += bump.priceInCents;
       }
@@ -41,6 +42,28 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
     setTotalAmount(newTotal);
   }, [selectedBumps, quantity, offerData]);
+
+  // --- NOVA LÓGICA DE REDIRECIONAMENTO ---
+  // Este useEffect "escuta" a mudança do 'paymentSucceeded'
+  useEffect(() => {
+    // Se o pagamento foi bem-sucedido...
+    if (paymentSucceeded) {
+      // Pegamos o link de upsell da oferta
+      const upsellUrl = offerData.upsellLink;
+
+      // Verificamos se o link existe e parece ser uma URL válida
+      if (upsellUrl && (upsellUrl.startsWith("http://") || upsellUrl.startsWith("https://"))) {
+        console.log(`Pagamento bem-sucedido. Redirecionando para upsell: ${upsellUrl}`);
+
+        // Redireciona o navegador do cliente
+        window.location.href = upsellUrl;
+      }
+
+      // Se não houver upsellUrl, este useEffect não faz nada,
+      // e o componente simplesmente re-renderiza para mostrar a tela
+      // de sucesso padrão (definida no 'if (paymentSucceeded)' abaixo).
+    }
+  }, [paymentSucceeded, offerData.upsellLink]); // Depende do status e do link
 
   const handleToggleBump = (bumpId: string) => {
     setSelectedBumps((prev) => (prev.includes(bumpId) ? prev.filter((id) => id !== bumpId) : [...prev, bumpId]));
@@ -65,6 +88,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         name: fullName,
         phone,
       },
+      // TODO: Enviar metadata (UTM, IP, UserAgent)
+      // metadata: {
+      //   ip: "...", (você precisaria de uma API para pegar isso)
+      //   userAgent: navigator.userAgent,
+      //   utm_source: "...", (pegar dos query params da URL)
+      // }
     };
 
     try {
@@ -96,9 +125,11 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         });
 
         if (error) throw error;
-        if (paymentIntent.status === "succeeded") setPaymentSucceeded(true);
+
+        if (paymentIntent.status === "succeeded") {
+          setPaymentSucceeded(true);
+        }
       } else if (method === "pix") {
-        // TODO: A lógica do PIX também usará o endpoint 'create-intent'
         setErrorMessage(t.messages.pixNotImplemented);
       }
     } catch (error: any) {
@@ -109,6 +140,18 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   };
 
   if (paymentSucceeded) {
+    const upsellUrl = offerData.upsellLink;
+
+    if (upsellUrl && (upsellUrl.startsWith("http://") || upsellUrl.startsWith("https://"))) {
+      return (
+        <div className="p-6 text-center">
+          <h2 className="text-2xl font-bold text-gray-800">{t.messages.success}</h2>
+          <p className="mt-2 text-gray-700">{t.messages.redirecting || "Redirecionando..."}</p>
+        </div>
+      );
+    }
+
+    // 2. Se NÃO TEMOS link, mostramos a tela de sucesso padrão.
     return (
       <div className="p-6 text-center">
         <h2 className="text-2xl font-bold text-green-600">{t.messages.success}</h2>
@@ -118,44 +161,49 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <>
       <Banner imageUrl={offerData.bannerImageUrl} />
+      <div className="min-h-screen bg-white p-4">
+        <div className="max-w-lg mx-auto bg-white rounded-xl shadow-xl p-4">
+          <form onSubmit={handleSubmit}>
+            <OrderSummary
+              productName={offerData.mainProduct.name}
+              productImageUrl={offerData.mainProduct.imageUrl}
+              totalAmountInCents={totalAmount}
+              basePriceInCents={offerData.mainProduct.priceInCents}
+              currency={offerData.currency}
+              quantity={quantity}
+              setQuantity={setQuantity}
+              originalPriceInCents={offerData.mainProduct.compareAtPriceInCents}
+              discountPercentage={offerData.mainProduct.discountPercentage}
+            />
 
-      <OrderSummary
-        productName={offerData.mainProduct.name}
-        productImageUrl={offerData.mainProduct.imageUrl}
-        totalAmountInCents={totalAmount}
-        basePriceInCents={offerData.mainProduct.priceInCents}
-        currency={offerData.currency}
-        quantity={quantity}
-        setQuantity={setQuantity}
-        originalPriceInCents={offerData.mainProduct.compareAtPriceInCents}
-        discountPercentage={offerData.mainProduct.discountPercentage}
-      />
+            <ContactInfo />
 
-      <ContactInfo />
+            {offerData.collectAddress && <AddressInfo />}
 
-      {offerData.collectAddress && <AddressInfo />}
+            <PaymentMethods method={method} setMethod={setMethod} />
 
-      <PaymentMethods method={method} setMethod={setMethod} />
+            <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
 
-      <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
-
-      <button
-        type="submit"
-        disabled={!stripe || loading}
-        className="w-full mt-8 bg-button text-button-foreground font-bold py-3 px-4 rounded-lg text-lg transition-colors disabled:opacity-50
+            <button
+              type="submit"
+              disabled={!stripe || loading}
+              className="w-full mt-8 bg-button text-button-foreground font-bold py-3 px-4 rounded-lg text-lg transition-colors disabled:opacity-50
                    hover:opacity-90 cursor-pointer"
-        style={{
-          backgroundColor: loading ? "#ccc" : button,
-          color: buttonForeground,
-          opacity: loading ? 0.7 : 1,
-        }}
-      >
-        {loading ? t.buttons.processing : method === "pix" ? t.buttons.submitPix : t.buttons.submit}
-      </button>
+              style={{
+                backgroundColor: loading ? "#ccc" : button,
+                color: buttonForeground,
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading ? t.buttons.processing : method === "pix" ? t.buttons.submitPix : t.buttons.submit}
+            </button>
 
-      {errorMessage && <div className="text-red-500 text-sm text-center mt-4">{errorMessage}</div>}
-    </form>
+            {errorMessage && <div className="text-red-500 text-sm text-center mt-4">{errorMessage}</div>}
+          </form>
+        </div>
+      </div>
+    </>
   );
 };

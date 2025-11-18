@@ -96,6 +96,7 @@ export const pt = {
     cardElementNotFound: "Componente do cartão não encontrado.",
     pixGenerated: "PIX gerado com sucesso!",
     loading: "Carregando...",
+    redirecting: "Redirecionando com segurança...",
   },
 
   // Product

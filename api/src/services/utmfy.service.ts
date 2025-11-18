@@ -123,13 +123,13 @@ export const sendRefundToUTMfy = async (transactionId: string): Promise<void> =>
  */
 export const sendPurchaseToUTMfyWebhook = async (webhookUrl: string, payload: any): Promise<void> => {
   try {
-    const utmfyApiKey = process.env.UTMFY_API_KEY;
+    // const utmfyApiKey = process.env.UTMFY_API_KEY;
 
     // Validação de configuração
-    if (!utmfyApiKey) {
-      console.warn("⚠️  UTMfy não configurada. Defina UTMFY_API_KEY no .env");
-      return;
-    }
+    // if (!utmfyApiKey) {
+    //   console.warn("⚠️  UTMfy não configurada. Defina UTMFY_API_KEY no .env");
+    //   return;
+    // }
 
     console.log(`📤 Enviando conversão (V2) para Webhook UTMfy: ${payload.Data.Purchase.PaymentId}`);
 
@@ -137,8 +137,6 @@ export const sendPurchaseToUTMfyWebhook = async (webhookUrl: string, payload: an
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Adiciona a autenticação Bearer, conforme o seu serviço antigo
-        Authorization: `Bearer ${utmfyApiKey}`,
       },
       body: JSON.stringify(payload),
     });

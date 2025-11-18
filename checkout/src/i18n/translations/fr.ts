@@ -98,6 +98,7 @@ export const fr: Translation = {
     cardElementNotFound: "Composant de carte introuvable.",
     pixGenerated: "PIX généré avec succès!",
     loading: "Chargement...",
+    redirecting: "Redirection sécurisée...",
   },
 
   // Product
