@@ -120,7 +120,7 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
 
     // 6. Integrações Externas
     // A: Webhook de Área de Membros (Husky/MemberKit) - Usa customId
-    await sendAccessWebhook(offer as any, sale, items);
+    await sendAccessWebhook(offer as any, sale, items, customerPhone || "");
 
     // B: Webhook de Rastreamento (UTMfy) - Usa lógica refatorada no Service
     await processUtmfyIntegration(offer as any, sale, items, paymentIntent, metadata);

@@ -105,6 +105,10 @@ export const pt = {
     price: "Preço",
     discount: "% OFF",
   },
+
+  orderBump: {
+    action: "Adicionar produto",
+  },
 };
 
 export type Translation = typeof pt;

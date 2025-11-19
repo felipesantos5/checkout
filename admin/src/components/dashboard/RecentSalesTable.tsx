@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { API_URL } from "@/config/BackendUrl";
 import { Link } from "react-router-dom"; // Importe o Link
 import { Button } from "../ui/button";
@@ -48,6 +48,8 @@ const formatDate = (dateString: string) => {
 export function RecentSalesTable() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   useEffect(() => {
     const fetchSales = async () => {
@@ -73,6 +75,25 @@ export function RecentSalesTable() {
 
     fetchSales();
   }, []);
+
+  // Calcular vendas paginadas
+  const totalPages = Math.ceil(sales.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSales = sales.slice(startIndex, endIndex);
+
+  // Funções de navegação
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   return (
     <Card className="w-full">
@@ -106,7 +127,7 @@ export function RecentSalesTable() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sales.map((sale) => (
+                paginatedSales.map((sale) => (
                   <TableRow key={sale._id}>
                     <TableCell>
                       <div className="font-medium">{sale.customerName || "N/A"}</div>
@@ -137,6 +158,28 @@ export function RecentSalesTable() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Paginação */}
+        {sales.length > 0 && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              Mostrando {startIndex + 1} a {Math.min(endIndex, sales.length)} de {sales.length} vendas
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={goToPreviousPage} disabled={currentPage === 1}>
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Anterior
+              </Button>
+              <div className="text-sm font-medium">
+                Página {currentPage} de {totalPages}
+              </div>
+              <Button variant="outline" size="sm" onClick={goToNextPage} disabled={currentPage === totalPages}>
+                Próxima
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

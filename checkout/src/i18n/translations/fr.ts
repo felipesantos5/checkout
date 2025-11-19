@@ -107,4 +107,8 @@ export const fr: Translation = {
     price: "Prix",
     discount: "% DE RÉDUCTION",
   },
+
+  orderBump: {
+    action: "Ajouter un produit",
+  },
 };

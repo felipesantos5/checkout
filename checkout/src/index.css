@@ -173,3 +173,8 @@
 [data-state="closed"][data-radix-collapsible-content] {
   animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.orderbump-checkbox {
+  width: calc(100% + 36px);
+  transform: translateX(-16px);
+}
