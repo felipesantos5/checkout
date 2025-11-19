@@ -32,7 +32,7 @@ export interface IOffer extends Document {
   currency: string;
   language: string;
   collectAddress: boolean;
-
+  thankYouPageUrl?: string;
   primaryColor: string;
   buttonColor: string;
 
@@ -85,6 +85,10 @@ const offerSchema = new Schema<IOffer>(
       price: { type: Number, default: 0 },
       redirectUrl: { type: String, default: "" },
       customId: { type: String, default: "" },
+    },
+    thankYouPageUrl: {
+      type: String,
+      default: "",
     },
     bannerImageUrl: {
       type: String,

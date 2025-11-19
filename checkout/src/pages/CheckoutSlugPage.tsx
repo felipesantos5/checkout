@@ -1,3 +1,4 @@
+// src/pages/CheckoutSlugPage.tsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import CheckoutPage from "./CheckoutPage";
@@ -11,9 +12,10 @@ export interface OfferData {
   _id: string;
   slug: string;
   name: string;
-  language?: Language; // Idioma do checkout (pt, en, fr)
-  collectAddress?: boolean; // Se deve coletar endereço
-  collectPhone?: boolean; // Se deve coletar telefone
+  thankYouPageUrl?: string; // NOVO CAMPO
+  language?: Language;
+  collectAddress?: boolean;
+  collectPhone?: boolean;
   bannerImageUrl?: string;
   currency: string;
   primaryColor: string;
@@ -24,8 +26,8 @@ export interface OfferData {
     description?: string;
     imageUrl?: string;
     priceInCents: number;
-    originalPriceInCents?: number; // Preço original antes do desconto
-    discountPercentage?: number; // Porcentagem de desconto
+    originalPriceInCents?: number;
+    discountPercentage?: number;
     compareAtPriceInCents?: number;
   };
   orderBumps: {
@@ -80,7 +82,6 @@ export function CheckoutSlugPage() {
   const primaryColor = offerData?.primaryColor || "#000000";
   const buttonColor = offerData?.buttonColor || "#2563eb";
 
-  // Calcular a cor do texto do botão (branco ou preto)
   const buttonTextColor = getContrast(buttonColor, "#FFF") > 2.5 ? "#FFFFFF" : "#000000";
 
   const themeValues: ThemeColors = {
@@ -113,7 +114,6 @@ export function CheckoutSlugPage() {
     );
   }
 
-  // Se tudo deu certo, renderiza o CheckoutPage com os dados
   return (
     <I18nProvider language={offerData.language || "pt"}>
       <ThemeContext.Provider value={themeValues}>

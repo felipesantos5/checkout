@@ -13,9 +13,7 @@ export const handleCreatePaymentIntent = async (req: Request, res: Response) => 
     const { offerSlug, selectedOrderBumps, quantity, contactInfo, metadata } = req.body;
     const stripeAccountId = await getStripeAccountId(offerSlug);
 
-    // Busca ou cria cliente para permitir salvar o cartão
     const customerId = await getOrCreateCustomer(stripeAccountId, contactInfo.email, contactInfo.name, contactInfo.phone);
-
     const totalAmount = await calculateTotalAmount(offerSlug, selectedOrderBumps, quantity || 1);
     const applicationFee = Math.round(totalAmount * 0.05);
 
@@ -47,119 +45,94 @@ export const handleCreatePaymentIntent = async (req: Request, res: Response) => 
 export const generateUpsellToken = async (req: Request, res: Response) => {
   try {
     const { paymentIntentId, offerSlug } = req.body;
-
-    if (!paymentIntentId || !offerSlug) {
-      return res.status(400).json({ error: "Dados insuficientes." });
-    }
+    if (!paymentIntentId || !offerSlug) return res.status(400).json({ error: "Dados insuficientes." });
 
     const stripeAccountId = await getStripeAccountId(offerSlug);
-
-    // Recupera a oferta para salvar o ID na sessão
     const offer = await Offer.findOne({ slug: offerSlug });
-    if (!offer) {
-      return res.status(404).json({ error: "Oferta não encontrada." });
-    }
+    if (!offer) return res.status(404).json({ error: "Oferta não encontrada." });
 
-    // Busca o PaymentIntent para garantir que o pagamento ocorreu e temos o método
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
-      stripeAccount: stripeAccountId,
-    });
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, { stripeAccount: stripeAccountId });
 
-    if (paymentIntent.status !== "succeeded") {
-      return res.status(400).json({ error: "Pagamento original não confirmado." });
-    }
-
-    if (!paymentIntent.customer || !paymentIntent.payment_method) {
-      return res.status(400).json({ error: "Cliente ou método de pagamento não identificados." });
-    }
+    if (paymentIntent.status !== "succeeded") return res.status(400).json({ error: "Pagamento não confirmado." });
+    if (!paymentIntent.customer || !paymentIntent.payment_method) return res.status(400).json({ error: "Método de pagamento ausente." });
 
     const token = uuidv4();
 
-    // Salvamos o offerId para saber qual produto de upsell cobrar depois
     await UpsellSession.create({
       token,
       accountId: stripeAccountId,
       customerId: paymentIntent.customer as string,
       paymentMethodId: paymentIntent.payment_method as string,
-      offerId: offer._id, // IMPORTANTE: Vínculo com a oferta original
+      offerId: offer._id,
     });
 
-    // Retorna o token e a URL de redirecionamento já montada
     const redirectUrl = `${offer.upsell?.redirectUrl}?token=${token}`;
-
     res.status(200).json({ token, redirectUrl });
   } catch (error: any) {
-    console.error("Erro generateUpsellToken:", error);
-    res.status(500).json({ error: { message: "Falha ao gerar link de upsell." } });
+    res.status(500).json({ error: { message: "Falha ao gerar link." } });
+  }
+};
+
+// --- NOVO: Rota de Recusa de Upsell ---
+export const handleRefuseUpsell = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ success: false, message: "Token inválido." });
+
+    const session: any = await UpsellSession.findOne({ token }).populate("offerId");
+    if (!session) return res.status(403).json({ success: false, message: "Sessão inválida." });
+
+    const offer = session.offerId as IOffer;
+
+    // Removemos a sessão pois o cliente recusou
+    await UpsellSession.deleteOne({ token });
+
+    // Retorna a URL configurada ou null (frontend decide fallback)
+    const redirectUrl = offer.thankYouPageUrl && offer.thankYouPageUrl.trim() !== "" ? offer.thankYouPageUrl : null;
+
+    res.status(200).json({ success: true, redirectUrl });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 export const handleOneClickUpsell = async (req: Request, res: Response) => {
   try {
-    // O cliente só precisa mandar o token. O preço e o produto vêm do banco.
     const { token } = req.body;
+    if (!token) throw new Error("Token inválido.");
 
-    if (!token) {
-      throw new Error("Token de sessão inválido.");
-    }
-
-    // 1. Busca a sessão válida e popula a oferta para pegarmos o preço
-    // Nota: Precisa garantir que no UpsellSession você tenha ref: 'Offer' no campo offerId
     const session: any = await UpsellSession.findOne({ token }).populate("offerId");
-
-    if (!session) {
-      return res.status(403).json({ success: false, message: "Sessão expirada ou inválida." });
-    }
+    if (!session) return res.status(403).json({ success: false, message: "Sessão expirada." });
 
     const offer = session.offerId as IOffer;
+    if (!offer?.upsell?.enabled) return res.status(400).json({ success: false, message: "Upsell inativo." });
 
-    // 2. Validações de segurança
-    if (!offer || !offer.upsell || !offer.upsell.enabled) {
-      return res.status(400).json({ success: false, message: "Upsell não está ativo para esta oferta." });
-    }
+    const amountToCharge = offer.upsell.price;
+    const applicationFee = Math.round(amountToCharge * 0.05);
 
-    // 3. Define o valor a ser cobrado com base na configuração do banco (Seguro)
-    const amountToCharge = offer.upsell.price; // Já deve estar em centavos
-    const applicationFee = Math.round(amountToCharge * 0.05); // Sua taxa de plataforma
-
-    // 4. Cria e Confirma o pagamento Off-Session (One Click)
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: amountToCharge,
         currency: offer.currency || "brl",
         customer: session.customerId,
         payment_method: session.paymentMethodId,
-        off_session: true, // Importante para cobrança sem interação
-        confirm: true, // Tenta cobrar imediatamente
+        off_session: true,
+        confirm: true,
         application_fee_amount: applicationFee,
         description: `Upsell: ${offer.upsell.name}`,
-        metadata: {
-          isUpsell: "true",
-          originalOfferSlug: offer.slug,
-          productName: offer.upsell.name,
-          originalSessionToken: token,
-        },
+        metadata: { isUpsell: "true", originalOfferSlug: offer.slug, originalSessionToken: token },
       },
       { stripeAccount: session.accountId }
     );
 
     if (paymentIntent.status === "succeeded") {
-      // Opcional: Queimar o token para evitar cobrança duplicada acidental
       await UpsellSession.deleteOne({ token });
-
-      res.status(200).json({ success: true, message: "Upsell comprado com sucesso!" });
+      const redirectUrl = offer.thankYouPageUrl && offer.thankYouPageUrl.trim() !== "" ? offer.thankYouPageUrl : null;
+      res.status(200).json({ success: true, message: "Sucesso!", redirectUrl });
     } else {
-      // Casos onde o banco pede autenticação 3DS (raro em upsell imediato, mas possível)
-      res.status(400).json({
-        success: false,
-        message: "Não foi possível cobrar automaticamente.",
-        status: paymentIntent.status,
-      });
+      res.status(400).json({ success: false, message: "Cobrança falhou.", status: paymentIntent.status });
     }
   } catch (error: any) {
-    console.error("Erro OneClickUpsell:", error.message);
-    // Tratamento específico para erros do Stripe (ex: cartão recusado)
-    const errorMessage = error.raw ? error.raw.message : error.message;
-    res.status(500).json({ success: false, message: errorMessage });
+    res.status(500).json({ success: false, message: error.message });
   }
 };

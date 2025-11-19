@@ -1,9 +1,10 @@
+// src/components/checkout/CheckoutForm.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-js";
 import type { PaymentRequest, PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
+import { Loader2, CheckCircle } from "lucide-react";
 
-// Tipos
 import type { OfferData } from "../../pages/CheckoutSlugPage";
 import { OrderSummary } from "./OrderSummary";
 import { ContactInfo } from "./ContactInfo";
@@ -32,7 +33,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
   // Estado de Sucesso
   const [paymentSucceeded, setPaymentSucceeded] = useState(false);
-  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null); // NOVO: Guarda o ID para o Upsell
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
 
   const [method, setMethod] = useState<"creditCard" | "pix" | "wallet">("creditCard");
   const [selectedBumps, setSelectedBumps] = useState<string[]>([]);
@@ -67,7 +68,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     setTotalAmount(newTotal);
   }, [selectedBumps, quantity, offerData]);
 
-  // Configuração da Carteira Digital (Apple/Google Pay)
+  // Configuração da Carteira Digital
   useEffect(() => {
     if (!stripe) return;
 
@@ -92,7 +93,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
       }
     });
 
-    // Handler: Pagamento via Carteira
     pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
       try {
         const clientIp = await getClientIP();
@@ -138,7 +138,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         } else {
           ev.complete("success");
           if (paymentIntent?.status === "succeeded") {
-            setPaymentIntentId(paymentIntent.id); // Salva o ID
+            setPaymentIntentId(paymentIntent.id);
             setPaymentSucceeded(true);
           }
         }
@@ -160,14 +160,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     }
   }, [totalAmount, paymentRequest, offerData.mainProduct.name]);
 
-  // --- LÓGICA DE SUCESSO E REDIRECIONAMENTO (UPSELL) ---
+  // --- LÓGICA DE SUCESSO E REDIRECIONAMENTO ---
   useEffect(() => {
-    const handleSuccessRedirect = async () => {
-      if (paymentSucceeded && paymentIntentId) {
-        // Verifica se existe link de upsell configurado
+    if (paymentSucceeded && paymentIntentId) {
+      const timer = setTimeout(async () => {
+        // 1. PRIORIDADE: Upsell Habilitado
         if (offerData.upsell?.enabled) {
           try {
-            // 1. Solicita o Token de Sessão Segura ao Backend
+            // Gera token para upsell
             const response = await fetch(`${API_URL}/payments/upsell-token`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -180,41 +180,43 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
             const data = await response.json();
 
             if (data.token) {
-              // 2. Se tiver token, redireciona para o site do cliente com o token na URL
               const params = new URLSearchParams();
               params.append("token", data.token);
-
-              // Redirecionamento externo
               window.location.href = `${offerData.upsell?.redirectUrl}?${params.toString()}`;
               return;
             }
           } catch (error) {
-            console.error("Falha ao gerar token de upsell, usando fallback.", error);
+            console.error("Falha ao gerar token de upsell, verificando fallback.", error);
           }
         }
 
-        // Fallback: Se não tiver upsell ou der erro, vai para página de sucesso interna
+        // 2. PRIORIDADE: Página de Obrigado Customizada do Cliente
+        // (Só executa se não houver upsell ou se o upsell falhar/estiver desabilitado)
+        if (offerData.thankYouPageUrl) {
+          window.location.href = offerData.thankYouPageUrl;
+          return;
+        }
+
+        // 3. PRIORIDADE: Página de Sucesso Padrão (Interna)
         const params = new URLSearchParams();
         params.append("offerName", offerData.mainProduct.name);
         navigate(`/success?${params.toString()}`);
-      }
-    };
+      }, 2000); // Delay de 2 segundos para exibir o check
 
-    handleSuccessRedirect();
+      return () => clearTimeout(timer);
+    }
   }, [paymentSucceeded, paymentIntentId, offerData, navigate]);
 
-  // Toggle Bump
   const handleToggleBump = (bumpId: string) => {
     setSelectedBumps((prev) => {
       if (prev.includes(bumpId)) {
-        return prev.filter((id) => id !== bumpId); // Remove
+        return prev.filter((id) => id !== bumpId);
       } else {
-        return [...prev, bumpId]; // Adiciona
+        return [...prev, bumpId];
       }
     });
   };
 
-  // Submit do formulário (Cartão de Crédito / PIX)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
@@ -222,7 +224,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     setLoading(true);
     setErrorMessage(null);
 
-    // Coleta de dados (Mantido igual)
     const email = (document.getElementById("email") as HTMLInputElement).value;
     const fullName = (document.getElementById("name") as HTMLInputElement).value;
     const phoneElement = document.getElementById("phone") as HTMLInputElement | null;
@@ -239,7 +240,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
     try {
       if (method === "creditCard") {
-        // 1. Cria a intenção de pagamento
         const res = await fetch(`${API_URL}/payments/create-intent`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -254,7 +254,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
         const cardName = (document.getElementById("card-name") as HTMLInputElement).value;
 
-        // 2. Confirma o pagamento no Stripe
         const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
             card: cardElement,
@@ -265,34 +264,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
         if (error) throw error;
 
-        // 3. Pagamento Aprovado! Lógica de Redirecionamento Inteligente
         if (paymentIntent.status === "succeeded") {
-          try {
-            // Tenta gerar o token de Upsell (Verifica se existe upsell ativo)
-            const upsellRes = await fetch(`${API_URL}/payments/upsell-token`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                paymentIntentId: paymentIntent.id,
-                offerSlug: offerData.slug,
-              }),
-            });
-
-            const upsellData = await upsellRes.json();
-
-            // SE tiver Upsell configurado, redireciona para a página externa do cliente com o token
-            if (upsellRes.ok && upsellData.redirectUrl) {
-              window.location.href = upsellData.redirectUrl;
-              return; // Interrompe a função aqui para o navegador carregar a nova página
-            }
-          } catch (err) {
-            // Se falhar a verificação de upsell, apenas loga e segue para o sucesso padrão
-            console.error("Erro ao verificar upsell, seguindo fluxo normal:", err);
-          }
-
-          // FALLBACK: Se não tiver upsell ou der erro, vai para a página de sucesso interna
-          // setPaymentSucceeded(true); // Se você usa useEffect para algo local
-          navigate(`/success?offerSlug=${offerData.slug}&paymentId=${paymentIntent.id}`);
+          setPaymentIntentId(paymentIntent.id);
+          setPaymentSucceeded(true);
         }
       } else if (method === "pix") {
         setErrorMessage(t.messages.pixNotImplemented);
@@ -304,6 +278,31 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full bg-white flex items-center justify-center z-50">
+        <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (paymentSucceeded) {
+    return (
+      <div className="min-h-screen w-full bg-white flex items-center justify-center z-50">
+        <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 bg-green-100 rounded-full animate-ping opacity-75"></div>
+            <div className="relative bg-white rounded-full p-2">
+              <CheckCircle className="h-24 w-24 text-green-500" />
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-2">Sucesso!</h2>
+          <p className="text-gray-500 text-lg animate-pulse">Finalizando seu pedido...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -324,11 +323,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
             />
 
             <ContactInfo showPhone={offerData.collectPhone} />
-
             {offerData.collectAddress && <AddressInfo />}
 
             <PaymentMethods method={method} setMethod={setMethod} paymentRequest={paymentRequest} walletLabel={walletLabel} />
-
             <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
 
             <button

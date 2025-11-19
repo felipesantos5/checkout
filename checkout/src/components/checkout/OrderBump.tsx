@@ -59,21 +59,24 @@ export const OrderBump: React.FC<OrderBumpProps> = ({ bumps, selectedBumps, onTo
               <div className="flex-1 gap-2 min-w-0">
                 {/* Headline */}
                 <div className="flex justify-between gap-1 items-start">
-                  <h3 className="text-md font-bold mb-2 wrap-break-word flex-1 min-w-0" style={{ color: primary }}>
+                  <h3 className="text-base font-bold mb-5 wrap-break-word flex-1 min-w-0" style={{ color: primary }}>
                     {bump.headline ? bump.headline : bump.name}
                   </h3>
                 </div>
                 <div className="flex justify-between gap-3">
                   {bump.imageUrl && (
                     <div className="flex-none">
-                      <img src={bump.imageUrl} alt={bump.name} className="w-24 h-24 rounded-lg object-cover border border-gray-200 " />
+                      <img src={bump.imageUrl} alt={bump.name} className="w-20 h-20 rounded-lg object-cover border border-gray-200 " />
                     </div>
                   )}
-                  <div className="flex flex-col gap-1 flex-1 min-w-0">
+                  <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                     {!bump.headline ? (
                       <></>
                     ) : (
-                      <label htmlFor={`order-bump-${bump._id}`} className="font-semibold text-gray-800 cursor-pointer block mb-1 wrap-break-word">
+                      <label
+                        htmlFor={`order-bump-${bump._id}`}
+                        className="font-semibold text-[13px] text-gray-800 cursor-pointer block wrap-break-word"
+                      >
                         {bump.name}
                       </label>
                     )}
