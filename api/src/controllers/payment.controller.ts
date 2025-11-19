@@ -73,7 +73,6 @@ export const generateUpsellToken = async (req: Request, res: Response) => {
   }
 };
 
-// --- NOVO: Rota de Recusa de Upsell ---
 export const handleRefuseUpsell = async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
@@ -84,13 +83,18 @@ export const handleRefuseUpsell = async (req: Request, res: Response) => {
 
     const offer = session.offerId as IOffer;
 
-    // Removemos a sessão pois o cliente recusou
+    // Removemos a sessão
     await UpsellSession.deleteOne({ token });
 
-    // Retorna a URL configurada ou null (frontend decide fallback)
+    // Busca URL de obrigado ou null
     const redirectUrl = offer.thankYouPageUrl && offer.thankYouPageUrl.trim() !== "" ? offer.thankYouPageUrl : null;
 
-    res.status(200).json({ success: true, redirectUrl });
+    // --- CORREÇÃO: Adicionada a message ---
+    res.status(200).json({
+      success: true,
+      message: "Oferta recusada.",
+      redirectUrl,
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -127,8 +131,10 @@ export const handleOneClickUpsell = async (req: Request, res: Response) => {
 
     if (paymentIntent.status === "succeeded") {
       await UpsellSession.deleteOne({ token });
+
       const redirectUrl = offer.thankYouPageUrl && offer.thankYouPageUrl.trim() !== "" ? offer.thankYouPageUrl : null;
-      res.status(200).json({ success: true, message: "Sucesso!", redirectUrl });
+
+      res.status(200).json({ success: true, message: "Compra realizada com sucesso!", redirectUrl });
     } else {
       res.status(400).json({ success: false, message: "Cobrança falhou.", status: paymentIntent.status });
     }

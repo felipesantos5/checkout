@@ -120,28 +120,44 @@ const UpsellScriptDialog = () => {
 <script>
   async function handleUpsell(isBuy) {
     const token = new URLSearchParams(window.location.search).get('token');
-    if (!token) return alert('Token inválido');
+    if (!token) return alert('Erro: Link inválido (Token ausente).');
 
     const btn = event.target;
     const originalText = btn.innerText;
-    btn.innerText = "Processando..."; btn.disabled = true;
+    
+    // Bloqueia ambos os botões
+    document.getElementById('btn-upsell-yes').disabled = true;
+    document.getElementById('btn-upsell-no').disabled = true;
+    btn.innerText = "PROCESSANDO...";
 
     try {
       const endpoint = isBuy ? 'one-click-upsell' : 'upsell-refuse';
-      const res = await fetch('${API_URL}/payments/' + endpoint, {
+      
+      const res = await fetch("https://backend.snappcheckout.com.br/api" + '/payments/' + endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token })
       });
       
       const data = await res.json();
-      if (data.redirectUrl) window.location.href = data.redirectUrl;
-      else alert(data.message || 'Erro ao processar');
+
+      if (data.success) {
+        if (data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+        } else {
+          // Fallback se não tiver página de obrigado configurada
+          alert(data.message || (isBuy ? 'Compra realizada!' : 'Oferta recusada.'));
+        }
+      } else {
+        throw new Error(data.message || 'Erro desconhecido');
+      }
       
     } catch (e) {
-      alert('Erro de conexão');
-    } finally {
-      btn.innerText = originalText; btn.disabled = false;
+      alert(e.message || 'Erro de conexão. Tente novamente.');
+      // Reativa os botões em caso de erro
+      document.getElementById('btn-upsell-yes').disabled = false;
+      document.getElementById('btn-upsell-no').disabled = false;
+      btn.innerText = originalText;
     }
   }
 </script>`.trim();
