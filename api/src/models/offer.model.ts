@@ -36,7 +36,12 @@ export interface IOffer extends Document {
   buttonColor: string;
 
   utmfyWebhookUrl?: string;
-  upsellLink?: string;
+  upsell?: {
+    enabled: boolean;
+    name: string;
+    price: number;
+    redirectUrl: string;
+  };
 
   collectPhone: boolean;
 
@@ -66,9 +71,11 @@ const offerSchema = new Schema<IOffer>(
       type: String,
       default: "",
     },
-    upsellLink: {
-      type: String,
-      default: "",
+    upsell: {
+      enabled: { type: Boolean, default: false },
+      name: { type: String, default: "" },
+      price: { type: Number, default: 0 },
+      redirectUrl: { type: String, default: "" },
     },
     bannerImageUrl: {
       type: String,
@@ -101,14 +108,11 @@ const offerSchema = new Schema<IOffer>(
       type: Boolean,
       default: true,
     },
-
-    // --- MUDANÇA PRINCIPAL ---
-    // Agora esperamos o productSubSchema, não um ObjectId
     mainProduct: {
       type: productSubSchema,
       required: true,
     },
-    orderBumps: [productSubSchema], // Um array de productSubSchema
+    orderBumps: [productSubSchema],
   },
   { timestamps: true }
 );

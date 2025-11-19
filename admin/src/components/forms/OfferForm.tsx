@@ -32,6 +32,13 @@ const productSchema = z.object({
   compareAtPriceInCents: z.coerce.number().optional(),
 });
 
+const upsellSchema = z.object({
+  enabled: z.boolean().default(false),
+  name: z.string().optional(),
+  price: z.coerce.number().min(0, { message: "Preço deve ser maior ou igual a 0." }).optional(),
+  redirectUrl: optionalUrl,
+});
+
 const colorSchema = z
   .string()
   .regex(/^#[0-9a-fA-F]{6}$/, { message: "Cor inválida" })
@@ -49,7 +56,7 @@ const offerFormSchema = z.object({
   buttonColor: colorSchema,
   mainProduct: productSchema,
   utmfyWebhookUrl: optionalUrl,
-  upsellLink: optionalUrl,
+  upsell: upsellSchema,
   orderBumps: z.array(productSchema).optional(),
 });
 
@@ -72,6 +79,13 @@ interface OfferFormProps {
   offerId?: string;
 }
 
+export interface SimpleOffer {
+  _id: string;
+  name: string;
+  slug: string;
+  price: number; // Apenas para mostrar no select "Nome (R$ 10,00)"
+}
+
 export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const isEditMode = !!offerId;
@@ -85,7 +99,12 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       language: "pt",
       collectAddress: false,
       utmfyWebhookUrl: "",
-      upsellLink: "",
+      upsell: {
+        enabled: false,
+        name: "",
+        price: 0,
+        redirectUrl: "",
+      },
       mainProduct: {
         name: "",
         description: "",
@@ -163,7 +182,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
   const ColorInput = ({ field }: { field: any }) => (
     <div className="flex items-center gap-2 w-full max-w-full">
       <FormControl>
-        <Input type="color" className="w-10 h-10 p-1 cursor-pointer flex-shrink-0" {...field} />
+        <Input type="color" className="w-10 h-10 p-1 cursor-pointer shrink-0" {...field} />
       </FormControl>
       <FormControl>
         <Input type="text" placeholder="#2563EB" className="font-mono w-full max-w-[120px]" {...field} />
@@ -179,7 +198,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           <FormField
             control={form.control}
             name="name"
-            render={({ field }) => (
+            render={({ field }: any) => (
               <FormItem>
                 <FormLabel>Nome do Link</FormLabel>
                 <FormControl>
@@ -193,7 +212,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           <FormField
             control={form.control}
             name="bannerImageUrl"
-            render={({ field }) => (
+            render={({ field }: any) => (
               <FormItem>
                 <FormLabel>Banner (Opcional)</FormLabel>
                 <FormControl>
@@ -207,7 +226,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             <FormField
               control={form.control}
               name="currency"
-              render={({ field }) => (
+              render={({ field }: any) => (
                 <FormItem className="w-full">
                   <FormLabel>Moeda</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -229,7 +248,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             <FormField
               control={form.control}
               name="language"
-              render={({ field }) => (
+              render={({ field }: any) => (
                 <FormItem className="w-full">
                   <FormLabel>Idioma</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -254,7 +273,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             <FormField
               control={form.control}
               name="collectAddress"
-              render={({ field }) => (
+              render={({ field }: any) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />
@@ -268,7 +287,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             <FormField
               control={form.control}
               name="collectPhone"
-              render={({ field }) => (
+              render={({ field }: any) => (
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />
@@ -287,7 +306,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             <FormField
               control={form.control}
               name="primaryColor"
-              render={({ field }) => (
+              render={({ field }: any) => (
                 <FormItem>
                   <FormLabel>Cor Principal (Textos, Bordas)</FormLabel>
                   <ColorInput field={field} />
@@ -298,7 +317,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             <FormField
               control={form.control}
               name="buttonColor"
-              render={({ field }) => (
+              render={({ field }: any) => (
                 <FormItem>
                   <FormLabel>Cor do Botão de Compra</FormLabel>
                   <ColorInput field={field} />
@@ -309,32 +328,17 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           </div>
 
           <Separator />
-          <h4 className="text-md font-medium">Configurações de marketing</h4>
+          {/* <h4 className="text-md font-medium">Configurações de marketing</h4> */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             <FormField
               control={form.control}
               name="utmfyWebhookUrl"
-              render={({ field }) => (
+              render={({ field }: any) => (
                 <FormItem>
                   <FormLabel>URL do Webhook UTMfy (Opcional)</FormLabel>
                   <FormControl>
                     <Input placeholder="https://webhook.utmfy.com/..." {...field} />
                   </FormControl>
-                  <FormDescription>Link (POST) para enviar dados de conversão à UTMfy.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="upsellLink"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Link de Upsell (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://meu-site.com/pagina-de-upsell" {...field} />
-                  </FormControl>
-                  <FormDescription>Cliente será redirecionado para esta URL após a compra.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -348,7 +352,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           <FormField
             control={form.control}
             name="mainProduct.name"
-            render={({ field }) => (
+            render={({ field }: any) => (
               <FormItem>
                 <FormLabel>Nome do Produto</FormLabel>
                 <FormControl>
@@ -361,7 +365,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           <FormField
             control={form.control}
             name="mainProduct.priceInCents"
-            render={({ field }) => (
+            render={({ field }: any) => (
               <FormItem>
                 <FormLabel>Preço de Venda (Ex: 19,90)</FormLabel>
                 <FormControl>
@@ -382,7 +386,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           <FormField
             control={form.control}
             name="mainProduct.compareAtPriceInCents"
-            render={({ field }) => (
+            render={({ field }: any) => (
               <FormItem>
                 <FormLabel>Preço Antigo / "De:" (Opcional)</FormLabel>
                 <FormControl>
@@ -403,7 +407,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           <FormField
             control={form.control}
             name="mainProduct.imageUrl"
-            render={({ field }) => (
+            render={({ field }: any) => (
               <FormItem>
                 <FormLabel>Imagem do Produto (Opcional)</FormLabel>
                 <FormControl>
@@ -415,11 +419,89 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           />
         </div>
 
+        <div className="space-y-4">
+          <div className="rounded-md border p-4 space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-wider">Upsell Pós-Compra (1-Click)</h4>
+
+            <FormField
+              control={form.control}
+              name="upsell.enabled"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 bg-white p-3 rounded-md border">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="font-semibold">Habilitar Upsell Pós-Compra</FormLabel>
+                    <FormDescription>Ao ativar, o cliente será redirecionado para uma oferta especial após a compra aprovada.</FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            {/* Renderiza os campos apenas se o Upsell estiver ativado */}
+            {form.watch("upsell.enabled") && (
+              <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2">
+                <FormField
+                  control={form.control}
+                  name="upsell.name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da Oferta de Upsell</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Pacote VIP Completo" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormDescription>Nome descritivo da oferta de upsell.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="upsell.price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Preço do Upsell (Ex: 47.00)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="47.00"
+                            {...field}
+                            value={typeof field.value === "number" ? field.value : String(field.value ?? "")}
+                          />
+                        </FormControl>
+                        <FormDescription>Valor que será cobrado no upsell.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="upsell.redirectUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL da Página de Upsell</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://seusite.com/oferta-especial" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormDescription>Página para onde o cliente será redirecionado.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* --- ORDER BUMPS --- */}
         <div className="space-y-4 w-full overflow-x-hidden">
           <h3 className="text-lg font-medium">Order Bumps</h3>
 
-          {fields.map((field, index) => (
+          {fields.map((field: any, index: number) => (
             <div key={field.id} className="space-y-4 rounded-md border p-4 relative w-full overflow-x-hidden">
               <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-6 w-6" onClick={() => remove(index)}>
                 <Trash2 className="h-4 w-4" />
@@ -429,7 +511,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               <FormField
                 control={form.control}
                 name={`orderBumps.${index}.name`}
-                render={({ field }) => (
+                render={({ field }: any) => (
                   <FormItem>
                     <FormLabel>Nome do Bump</FormLabel>
                     <FormControl>
@@ -443,7 +525,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               <FormField
                 control={form.control}
                 name={`orderBumps.${index}.headline`}
-                render={({ field }) => (
+                render={({ field }: any) => (
                   <FormItem>
                     <FormLabel>Headline (Opcional)</FormLabel>
                     <FormControl>
@@ -457,7 +539,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               <FormField
                 control={form.control}
                 name={`orderBumps.${index}.description`}
-                render={({ field }) => (
+                render={({ field }: any) => (
                   <FormItem>
                     <FormLabel>Descrição (Opcional)</FormLabel>
                     <FormControl>
@@ -471,7 +553,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               <FormField
                 control={form.control}
                 name={`orderBumps.${index}.priceInCents`}
-                render={({ field }) => (
+                render={({ field }: any) => (
                   <FormItem>
                     <FormLabel>Preço (Ex: 9.90)</FormLabel>
                     <FormControl>
@@ -485,7 +567,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               <FormField
                 control={form.control}
                 name={`orderBumps.${index}.imageUrl`}
-                render={({ field }) => (
+                render={({ field }: any) => (
                   <FormItem>
                     <FormLabel>Imagem do Bump (Opcional)</FormLabel>
                     <FormControl>

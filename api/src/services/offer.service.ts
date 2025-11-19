@@ -50,6 +50,12 @@ export type CreateOfferPayload = {
   language?: string;
   upsellLink?: string;
   utmfyWebhookUrl?: string;
+  upsell?: {
+    enabled: boolean;
+    name: string;
+    price: number;
+    redirectUrl: string;
+  };
 };
 
 export type UpdateOfferPayload = Partial<CreateOfferPayload>;
