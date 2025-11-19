@@ -48,6 +48,8 @@ export const sendAccessWebhook = async (offer: IOffer, sale: ISale, items: Array
       subscriptionId: null, // Como é venda única, enviamos null ou vazio
     };
 
+    console.log(`payload`, payload);
+
     console.log(`📤 Enviando para: ${offer.membershipWebhook.url}`);
     // console.log(JSON.stringify(payload, null, 2));
 
