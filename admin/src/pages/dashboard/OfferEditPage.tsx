@@ -64,6 +64,7 @@ const transformDataForForm = (data: ApiOfferData): OfferFormData => {
   return {
     name: data.name,
     bannerImageUrl: data.bannerImageUrl,
+    thankYouPageUrl: data.thankYouPageUrl,
     currency: data.currency,
     language: data.language,
     collectAddress: data.collectAddress,
