@@ -24,6 +24,7 @@ interface ApiProductData {
   headline?: string;
   priceInCents: number;
   compareAtPriceInCents?: number;
+  customId?: string;
 }
 
 // 2. Tipo para a Oferta vinda da API (preço em CENTAVOS)
@@ -44,23 +45,22 @@ interface ApiOfferData {
     name: string;
     price: number;
     redirectUrl: string;
+    customId?: string;
   };
   mainProduct: ApiProductData;
   orderBumps: ApiProductData[];
+  membershipWebhook?: {
+    enabled: boolean;
+    url: string;
+    authToken: string;
+  };
 }
-// --- FIM DA CORREÇÃO ---
-
-// Helper para converter centavos (int) para reais (float)
-// const centsToReais = (cents: number): number => {
-//   return parseFloat((cents / 100).toFixed(2));
-// };
 
 // 3. Esta função transforma os dados da API (cents) para o formato do formulário (reais)
 // O tipo de retorno é OfferFormData (Input type), onde priceInCents é 'unknown'
 // O 'number' (reais) que retornamos é assignável a 'unknown'.
 const transformDataForForm = (data: ApiOfferData): OfferFormData => {
   return {
-    // Copie os campos simples
     name: data.name,
     bannerImageUrl: data.bannerImageUrl,
     currency: data.currency,
@@ -71,42 +71,55 @@ const transformDataForForm = (data: ApiOfferData): OfferFormData => {
     buttonColor: data.buttonColor,
     utmfyWebhookUrl: data.utmfyWebhookUrl,
 
-    // --- A CORREÇÃO ESTÁ AQUI ---
-    // Se data.upsell existir, usamos os dados.
-    // Se NÃO existir (undefined), criamos um objeto padrão vazio.
+    // --- NOVO: Mapear Membership Webhook ---
+    membershipWebhook: data.membershipWebhook
+      ? {
+          enabled: data.membershipWebhook.enabled,
+          url: data.membershipWebhook.url,
+          authToken: data.membershipWebhook.authToken,
+        }
+      : {
+          enabled: false,
+          url: "",
+          authToken: "",
+        },
+
+    // Mapear Upsell (incluindo customId)
     upsell: data.upsell
       ? {
           enabled: data.upsell.enabled,
           name: data.upsell.name,
-          // IMPORTANTE: Se no banco está em centavos (ex: 100), dividimos por 100 para o input (1.00)
           price: data.upsell.price ? data.upsell.price / 100 : 0,
           redirectUrl: data.upsell.redirectUrl,
+          customId: data.upsell.customId, // <--- NOVO
         }
       : {
           enabled: false,
           name: "",
           price: 0,
           redirectUrl: "",
+          customId: "",
         },
 
-    // Mapeamento do Produto Principal
+    // Mapear Produto Principal (incluindo customId)
     mainProduct: {
       name: data.mainProduct.name,
       description: data.mainProduct.description,
       imageUrl: data.mainProduct.imageUrl,
-      // Convertendo centavos para reais
       priceInCents: data.mainProduct.priceInCents / 100,
       compareAtPriceInCents: data.mainProduct.compareAtPriceInCents ? data.mainProduct.compareAtPriceInCents / 100 : undefined,
+      customId: data.mainProduct.customId, // <--- NOVO
     },
 
-    // Mapeamento dos Order Bumps
+    // Mapear Order Bumps (incluindo customId)
     orderBumps:
       data.orderBumps?.map((bump) => ({
         name: bump.name,
         headline: bump.headline,
         description: bump.description,
         imageUrl: bump.imageUrl,
-        priceInCents: bump.priceInCents / 100, // Centavos -> Reais
+        priceInCents: bump.priceInCents / 100,
+        customId: bump.customId, // <--- NOVO
       })) || [],
   };
 };

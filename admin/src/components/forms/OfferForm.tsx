@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import axios from "axios";
@@ -30,6 +30,7 @@ const productSchema = z.object({
   imageUrl: optionalUrl,
   priceInCents: z.coerce.number().min(0.5, { message: "Preço deve ser ao menos R$ 0,50." }),
   compareAtPriceInCents: z.coerce.number().optional(),
+  customId: z.string().optional(),
 });
 
 const upsellSchema = z.object({
@@ -37,6 +38,13 @@ const upsellSchema = z.object({
   name: z.string().optional(),
   price: z.coerce.number().min(0, { message: "Preço deve ser maior ou igual a 0." }).optional(),
   redirectUrl: optionalUrl,
+  customId: z.string().optional(),
+});
+
+const membershipWebhookSchema = z.object({
+  enabled: z.boolean().default(false),
+  url: optionalUrl,
+  authToken: z.string().optional(),
 });
 
 const colorSchema = z
@@ -57,6 +65,7 @@ const offerFormSchema = z.object({
   mainProduct: productSchema,
   utmfyWebhookUrl: optionalUrl,
   upsell: upsellSchema,
+  membershipWebhook: membershipWebhookSchema,
   orderBumps: z.array(productSchema).optional(),
 });
 
@@ -110,6 +119,11 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
         description: "",
         imageUrl: "",
         priceInCents: 0,
+      },
+      membershipWebhook: {
+        enabled: false,
+        url: "",
+        authToken: "",
       },
       primaryColor: "#374151",
       buttonColor: "#2563EB",
@@ -179,6 +193,25 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
     }
   }
 
+  const CustomIdInput = ({ name }: { name: Path<OfferFormData> }) => (
+    <FormField
+      control={form.control}
+      name={name}
+      render={({ field }: any) => (
+        <FormItem>
+          <FormLabel>
+            ID customizado <span className="text-xs text-gray-500">(Opcional)</span>
+          </FormLabel>
+          <FormControl>
+            <Input placeholder="Ex: curso-xyz-123" {...field} value={field.value || ""} />
+          </FormControl>
+          <FormDescription className="text-xs">Identificador usado na integração (Webhook/Área de Membros).</FormDescription>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+
   const ColorInput = ({ field }: { field: any }) => (
     <div className="flex items-center gap-2 w-full max-w-full">
       <FormControl>
@@ -214,7 +247,9 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             name="bannerImageUrl"
             render={({ field }: any) => (
               <FormItem>
-                <FormLabel>Banner (Opcional)</FormLabel>
+                <FormLabel>
+                  Banner <span className="text-xs text-gray-500">(Opcional)</span>
+                </FormLabel>
                 <FormControl>
                   <ImageUpload value={field.value} onChange={field.onChange} />
                 </FormControl>
@@ -328,22 +363,78 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           </div>
 
           <Separator />
-          {/* <h4 className="text-md font-medium">Configurações de marketing</h4> */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-            <FormField
-              control={form.control}
-              name="utmfyWebhookUrl"
-              render={({ field }: any) => (
-                <FormItem>
-                  <FormLabel>URL do Webhook UTMfy (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://webhook.utmfy.com/..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="flex">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+              <FormField
+                control={form.control}
+                name="utmfyWebhookUrl"
+                render={({ field }: any) => (
+                  <FormItem>
+                    <FormLabel>
+                      URL do Webhook UTMfy <span className="text-xs text-gray-500">(Opcional)</span>
+                    </FormLabel>
+
+                    <FormControl>
+                      <Input placeholder="https://webhook.utmfy.com/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    <FormDescription className="text-xs">Envia eventos para de venda para UTMFY</FormDescription>
+                  </FormItem>
+                )}
+              />
+              <CustomIdInput name="mainProduct.customId" />
+            </div>
           </div>
+        </div>
+
+        <div className="rounded-md border p-4 space-y-4 bg-gray-50/50">
+          <FormField
+            control={form.control}
+            name="membershipWebhook.enabled"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel className="font-semibold">Habilitar Integração de Entrega (Webhook)</FormLabel>
+                  <FormDescription>Envie dados da compra para áreas de membros (ex: Husky, MemberKit) automaticamente.</FormDescription>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          {form.watch("membershipWebhook.enabled") && (
+            <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2">
+              <FormField
+                control={form.control}
+                name="membershipWebhook.url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL do Webhook</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://api.husky-app.com/api/webhook/native" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="membershipWebhook.authToken"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Token de Autenticação (Bearer)</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Cole seu token aqui" {...field} value={field.value || ""} />
+                    </FormControl>
+                    <FormDescription>O token será enviado no header Authorization.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          )}
         </div>
 
         {/* --- PRODUTO PRINCIPAL --- */}
@@ -388,7 +479,9 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             name="mainProduct.compareAtPriceInCents"
             render={({ field }: any) => (
               <FormItem>
-                <FormLabel>Preço Antigo / "De:" (Opcional)</FormLabel>
+                <FormLabel>
+                  Preço Antigo / "De:" <span className="text-xs text-gray-500">(Opcional)</span>
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -409,7 +502,9 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
             name="mainProduct.imageUrl"
             render={({ field }: any) => (
               <FormItem>
-                <FormLabel>Imagem do Produto (Opcional)</FormLabel>
+                <FormLabel>
+                  Imagem do Produto <span className="text-xs text-gray-500">(Opcional)</span>
+                </FormLabel>
                 <FormControl>
                   <ImageUpload value={field.value} onChange={field.onChange} />
                 </FormControl>
@@ -491,6 +586,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                       </FormItem>
                     )}
                   />
+                  <CustomIdInput name="upsell.customId" />
                 </div>
               </div>
             )}
@@ -527,7 +623,9 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                 name={`orderBumps.${index}.headline`}
                 render={({ field }: any) => (
                   <FormItem>
-                    <FormLabel>Headline (Opcional)</FormLabel>
+                    <FormLabel>
+                      Headline <span className="text-xs text-gray-500">(Opcional)</span>
+                    </FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: Sim! Quero turbinar minha compra!" {...field} />
                     </FormControl>
@@ -541,7 +639,9 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                 name={`orderBumps.${index}.description`}
                 render={({ field }: any) => (
                   <FormItem>
-                    <FormLabel>Descrição (Opcional)</FormLabel>
+                    <FormLabel>
+                      Descrição <span className="text-xs text-gray-500">(Opcional)</span>
+                    </FormLabel>
                     <FormControl>
                       <Input placeholder="Ex: Aprenda técnicas avançadas com este material exclusivo" {...field} />
                     </FormControl>
@@ -569,7 +669,9 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                 name={`orderBumps.${index}.imageUrl`}
                 render={({ field }: any) => (
                   <FormItem>
-                    <FormLabel>Imagem do Bump (Opcional)</FormLabel>
+                    <FormLabel>
+                      Imagem do Bump <span className="text-xs text-gray-500">(Opcional)</span>
+                    </FormLabel>
                     <FormControl>
                       <ImageUpload value={field.value} onChange={field.onChange} />
                     </FormControl>
@@ -577,6 +679,8 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                   </FormItem>
                 )}
               />
+
+              <CustomIdInput name={`orderBumps.${index}.customId`} />
             </div>
           ))}
 
