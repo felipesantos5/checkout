@@ -1,5 +1,8 @@
 // src/services/utmfy.service.ts
 import "dotenv/config";
+import { IOffer } from "../models/offer.model";
+import { ISale } from "../models/sale.model";
+import Stripe from "stripe";
 
 export interface UTMfyPayload {
   email: string;
@@ -158,5 +161,114 @@ export const sendPurchaseToUTMfyWebhook = async (webhookUrl: string, payload: an
     // IMPORTANTE: Não re-lançar o erro
     // Isso evita que o webhook do Stripe falhe se a UTMfy estiver fora do ar
     console.error("❌ Erro ao enviar conversão (V2) para Webhook UTMfy:", error);
+  }
+};
+
+export const processUtmfyIntegration = async (
+  offer: IOffer,
+  sale: ISale,
+  items: Array<{ _id?: string; name: string; priceInCents: number; isOrderBump: boolean; compareAtPriceInCents?: number }>,
+  paymentIntent: Stripe.PaymentIntent,
+  metadata: any
+) => {
+  // 1. Validação inicial (Fail fast)
+  if (!offer.utmfyWebhookUrl || !offer.utmfyWebhookUrl.startsWith("http")) {
+    return;
+  }
+
+  console.log(`\n📡 PREPARANDO ENVIO PARA UTMFY...`);
+
+  try {
+    const quantity = parseInt(metadata.quantity || "1", 10);
+    const isUpsell = metadata.isUpsell === "true";
+    const owner = (offer as any).ownerId; // Assumindo que o populate foi feito no handler
+
+    // 2. Mapeia os produtos (Usando IDs do Banco, regra da UTMfy)
+    const utmfyProducts = items.map((item) => {
+      let id = item._id ? item._id.toString() : crypto.randomUUID();
+
+      // Fallback para produto principal sem _id
+      if (!item.isOrderBump && !item._id) {
+        id = (offer._id as any)?.toString() || crypto.randomUUID();
+      }
+
+      return {
+        Id: id,
+        Name: item.name,
+      };
+    });
+
+    // 3. Calcula o preço original (para exibir descontos corretamente na UTMfy)
+    let originalTotalInCents = 0;
+
+    items.forEach((item) => {
+      const price = item.compareAtPriceInCents && item.compareAtPriceInCents > item.priceInCents ? item.compareAtPriceInCents : item.priceInCents;
+
+      // Lógica de quantidade: Bump e Upsell geralmente são qtd 1. Principal usa a qtd escolhida.
+      if (item.isOrderBump) {
+        originalTotalInCents += price;
+      } else {
+        originalTotalInCents += price * (isUpsell ? 1 : quantity);
+      }
+    });
+
+    // 4. Constrói o Payload Oficial
+    const utmfyPayload = {
+      Id: crypto.randomUUID(),
+      IsTest: !paymentIntent.livemode,
+      Event: "Purchase_Order_Confirmed",
+      CreatedAt: new Date().toISOString(),
+      Data: {
+        Products: utmfyProducts,
+        Buyer: {
+          Id: paymentIntent.customer?.toString() || crypto.randomUUID(),
+          Email: sale.customerEmail,
+          Name: sale.customerName,
+          PhoneNumber: metadata.customerPhone || null,
+        },
+        Seller: {
+          Id: owner._id ? owner._id.toString() : "unknown_seller",
+          Email: owner.email || "unknown@email.com",
+        },
+        Commissions: [
+          { Value: sale.platformFeeInCents / 100, Source: "MARKETPLACE" },
+          { Value: (sale.totalAmountInCents - sale.platformFeeInCents) / 100, Source: "PRODUCER" },
+        ],
+        Purchase: {
+          PaymentId: crypto.randomUUID(),
+          Recurrency: 1,
+          PaymentDate: new Date(paymentIntent.created * 1000).toISOString(),
+          OriginalPrice: { Value: originalTotalInCents / 100 },
+          Price: { Value: sale.totalAmountInCents / 100 },
+          Payment: {
+            NumberOfInstallments: 1,
+            PaymentMethod: "credit_card",
+            InterestRateAmount: 0,
+          },
+        },
+        Offer: {
+          Id: (offer._id as any)?.toString() || crypto.randomUUID(),
+          Name: offer.name,
+          Url: `${process.env.FRONTEND_URL || "https://checkout.abatools.pro"}/p/${offer.slug}`,
+        },
+        Utm: {
+          UtmSource: metadata.utm_source || null,
+          UtmMedium: metadata.utm_medium || null,
+          UtmCampaign: metadata.utm_campaign || null,
+          UtmTerm: metadata.utm_term || null,
+          UtmContent: metadata.utm_content || null,
+        },
+        DeviceInfo: {
+          UserAgent: metadata.userAgent || null,
+          ip: metadata.ip || null,
+        },
+      },
+    };
+
+    // 5. Chama o envio
+    await sendPurchaseToUTMfyWebhook(offer.utmfyWebhookUrl, utmfyPayload);
+  } catch (error) {
+    console.error("Erro na lógica do serviço UTMfy:", error);
+    // Não lança erro para não travar o webhook principal
   }
 };
