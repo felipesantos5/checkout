@@ -11,16 +11,24 @@ import { getStripeAccountId } from "../helper/getStripeAccountId";
 export const handleCreatePaymentIntent = async (req: Request, res: Response) => {
   try {
     const { offerSlug, selectedOrderBumps, quantity, contactInfo, metadata } = req.body;
+
+    // 1. Buscamos a oferta para pegar a MOEDA correta (Antes estava fixo em 'brl')
+    const offer = await Offer.findOne({ slug: offerSlug });
+    if (!offer) {
+      return res.status(404).json({ error: { message: "Oferta não encontrada." } });
+    }
+
     const stripeAccountId = await getStripeAccountId(offerSlug);
 
     const customerId = await getOrCreateCustomer(stripeAccountId, contactInfo.email, contactInfo.name, contactInfo.phone);
+
     const totalAmount = await calculateTotalAmount(offerSlug, selectedOrderBumps, quantity || 1);
     const applicationFee = Math.round(totalAmount * 0.05);
 
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: totalAmount,
-        currency: "brl",
+        currency: offer.currency || "brl", // <--- CORREÇÃO: Usa a moeda da oferta (USD ou BRL)
         customer: customerId,
         setup_future_usage: "off_session",
         payment_method_types: ["card"],
@@ -83,13 +91,10 @@ export const handleRefuseUpsell = async (req: Request, res: Response) => {
 
     const offer = session.offerId as IOffer;
 
-    // Removemos a sessão
     await UpsellSession.deleteOne({ token });
 
-    // Busca URL de obrigado ou null
     const redirectUrl = offer.thankYouPageUrl && offer.thankYouPageUrl.trim() !== "" ? offer.thankYouPageUrl : null;
 
-    // --- CORREÇÃO: Adicionada a message ---
     res.status(200).json({
       success: true,
       message: "Oferta recusada.",
@@ -117,7 +122,7 @@ export const handleOneClickUpsell = async (req: Request, res: Response) => {
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: amountToCharge,
-        currency: offer.currency || "brl",
+        currency: offer.currency || "brl", // Aqui já estava correto, mas é bom manter o padrão
         customer: session.customerId,
         payment_method: session.paymentMethodId,
         off_session: true,
