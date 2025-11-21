@@ -223,40 +223,37 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
     setErrorMessage(null);
 
-    const email = (document.getElementById("email") as HTMLInputElement).value;
-    const fullName = (document.getElementById("name") as HTMLInputElement).value;
-    const phoneElement = document.getElementById("phone") as HTMLInputElement | null;
-    const phone = phoneElement ? phoneElement.value : "";
+    // Coleta dados antes de qualquer loading
+    const emailInput = document.getElementById("email") as HTMLInputElement;
+    const nameInput = document.getElementById("name") as HTMLInputElement;
+    const phoneInput = document.getElementById("phone") as HTMLInputElement;
+    const cardNameInput = document.getElementById("card-name") as HTMLInputElement;
 
-    // Obter referência ao cardElement ANTES de setLoading(true)
-    // pois o loading remove o formulário do DOM
-    let cardElement = null;
-    if (method === "creditCard") {
-      cardElement = elements.getElement(CardNumberElement);
-      if (!cardElement) {
-        console.error("Erro Crítico: CardNumberElement não encontrado no DOM.");
-        setErrorMessage(t.messages.cardElementNotFound || "Erro ao processar cartão. Tente recarregar a página.");
-        return;
-      }
+    const email = emailInput?.value;
+    const fullName = nameInput?.value;
+    const phone = phoneInput?.value || "";
+    const cardName = cardNameInput?.value || "";
+
+    // Validação básica do elemento do cartão
+    const cardElement = elements.getElement(CardNumberElement);
+    if (method === "creditCard" && !cardElement) {
+      setErrorMessage("Erro interno: Campo de cartão não inicializado.");
+      return;
     }
 
+    // ATIVA LOADING (Isso agora só exibe o overlay, NÃO desmonta o form)
     setLoading(true);
 
-    const clientIp = await getClientIP();
-
-    const payload = {
-      offerSlug: offerData.slug,
-      selectedOrderBumps: selectedBumps,
-      contactInfo: { email, name: fullName, phone },
-      metadata: { ...utmData, ip: clientIp, userAgent: navigator.userAgent },
-    };
-
     try {
-      if (method === "creditCard") {
-        if (!cardElement) {
-          throw new Error(t.messages.cardElementNotFound || "Erro ao processar cartão. Tente recarregar a página.");
-        }
+      const clientIp = await getClientIP();
+      const payload = {
+        offerSlug: offerData.slug,
+        selectedOrderBumps: selectedBumps,
+        contactInfo: { email, name: fullName, phone },
+        metadata: { ...utmData, ip: clientIp, userAgent: navigator.userAgent },
+      };
 
+      if (method === "creditCard") {
         const res = await fetch(`${API_URL}/payments/create-intent`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -266,12 +263,11 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         const { clientSecret, error: backendError } = await res.json();
         if (backendError) throw new Error(backendError.message);
 
-        const cardName = (document.getElementById("card-name") as HTMLInputElement).value;
-
+        // O Stripe Elements ainda existe no DOM por baixo do overlay
         const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
           payment_method: {
-            card: cardElement,
-            billing_details: { name: cardName, email: email, phone: phone },
+            card: cardElement!, // Non-null assertion seguro pois validamos acima
+            billing_details: { name: cardName, email, phone },
           },
           receipt_email: email,
         });
@@ -289,17 +285,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
       console.error("Erro no checkout:", error);
       setErrorMessage(error.message || t.messages.error);
     } finally {
-      setLoading(false);
+      // Só remove o loading se NÃO teve sucesso (se teve sucesso, deixa o loading até o redirect/animação)
+      // Na verdade, como temos o paymentSucceeded que muda a tela, podemos tirar o loading
+      if (!paymentSucceeded) {
+        setLoading(false);
+      }
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen w-full bg-white flex items-center justify-center z-50">
-        <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
-      </div>
-    );
-  }
 
   if (paymentSucceeded) {
     return (
@@ -320,6 +312,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
   return (
     <>
+      {loading && (
+        <div className="fixed inset-0 bg-white/80 z-60 flex items-center justify-center backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
+            <p className="text-gray-600 font-medium animate-pulse">Processando pagamento...</p>
+          </div>
+        </div>
+      )}
       <Banner imageUrl={offerData.bannerImageUrl} />
       <div className="min-h-screen bg-white p-4">
         <div className="max-w-lg mx-auto bg-white rounded-xl shadow-xl p-4 pt-0">
