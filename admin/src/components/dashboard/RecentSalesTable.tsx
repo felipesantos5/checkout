@@ -109,7 +109,7 @@ export function RecentSalesTable() {
           {/* Área de Filtros */}
           <div className="flex items-center gap-2">
             <Select value={filterType} onValueChange={(val) => setFilterType(val as DateRangeFilter)}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -124,7 +124,7 @@ export function RecentSalesTable() {
             {filterType === "custom" && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant={"outline"} className={cn("w-[240px] justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                  <Button variant={"outline"} className={cn("w-60 justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange?.from ? (
                       dateRange.to ? (
@@ -202,7 +202,7 @@ export function RecentSalesTable() {
                           {sale.offerId ? (
                             <Link
                               to={`/offers/${sale.offerId._id}`}
-                              className="font-medium text-blue-600 hover:underline flex items-center gap-1 w-fit"
+                              className="font-medium text-yellow-600 hover:underline flex items-center gap-1 w-fit"
                             >
                               {sale.offerId.name}
                             </Link>

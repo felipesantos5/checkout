@@ -9,6 +9,7 @@ import { DollarSign } from "lucide-react";
 import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MonthlyRevenueChart } from "@/components/dashboard/MonthlyRevenueChart";
+import { SalesAreaChart } from "@/components/dashboard/SalesAreaChart";
 
 interface StripeBalance {
   available: { amount: number; currency: string }[];
@@ -102,9 +103,8 @@ export function DashboardOverview() {
         </Card>
       </div>
 
-      <MonthlyRevenueChart />
-      {/* )} */}
-      {/* {!user?.stripeOnboardingComplete && } */}
+      <SalesAreaChart />
+
       <RecentSalesTable />
     </div>
   );
