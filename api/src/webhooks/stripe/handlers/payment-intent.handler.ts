@@ -5,6 +5,7 @@ import Offer from "../../../models/offer.model";
 import { processUtmfyIntegration, sendPurchaseToUTMfyWebhook } from "../../../services/utmfy.service";
 import stripe from "../../../lib/stripe";
 import { sendAccessWebhook } from "../../../services/integration.service";
+import { createFacebookUserData, sendFacebookEvent } from "../../../services/facebook.service";
 
 /**
  * Handler para quando um pagamento é aprovado
@@ -134,6 +135,40 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
     });
 
     console.log(`✅ Venda ${sale._id} salva com sucesso.`);
+
+    // --- INTEGRAÇÃO FACEBOOK CAPI (PURCHASE) ---
+    if (offer.facebookPixelId && offer.facebookAccessToken) {
+      const totalValue = paymentIntent.amount / 100;
+      const userAgent = metadata.userAgent || "";
+      const fbc = metadata.fbc ?? undefined;
+      const fbp = metadata.fbp ?? undefined;
+
+      // User Data Rico (com hash)
+      const userData = createFacebookUserData(
+        clientIp,
+        userAgent, // Nota: Webhook Stripe não tem user-agent do cliente, mas temos o IP do metadata
+        finalCustomerEmail,
+        metadata.customerPhone ?? undefined,
+        finalCustomerName,
+        fbc,
+        fbp
+      );
+
+      // Envia evento Purchase
+      await sendFacebookEvent(offer.facebookPixelId, offer.facebookAccessToken, {
+        event_name: "Purchase",
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: "website",
+        user_data: userData,
+        custom_data: {
+          currency: offer.currency || "BRL",
+          value: totalValue,
+          order_id: String(sale._id), // ID interno da venda para deduplicação futura
+          content_ids: items.map((i) => i._id || i.customId || "unknown"),
+          content_type: "product",
+        },
+      });
+    }
 
     // 6. Integrações Externas
     // A: Webhook de Área de Membros (Husky/MemberKit) - Usa customId

@@ -38,7 +38,7 @@ const saleItemSchema = new Schema<ISaleItem>(
     isOrderBump: { type: Boolean, default: false },
     customId: { type: String, default: "" },
   },
-  { _id: false }
+  { _id: true }
 );
 
 const saleSchema = new Schema<ISale>(

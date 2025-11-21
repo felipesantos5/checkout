@@ -36,6 +36,9 @@ export interface IOffer extends Document {
   primaryColor: string;
   buttonColor: string;
 
+  facebookPixelId?: string;
+  facebookAccessToken?: string;
+
   utmfyWebhookUrl?: string;
   upsell?: {
     enabled: boolean;
@@ -73,6 +76,16 @@ const offerSchema = new Schema<IOffer>(
       required: true,
       unique: true,
       lowercase: true,
+      trim: true,
+    },
+    facebookPixelId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    facebookAccessToken: {
+      type: String,
+      default: "",
       trim: true,
     },
     utmfyWebhookUrl: {

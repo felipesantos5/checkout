@@ -21,44 +21,6 @@ import { ImageUpload } from "./ImageUpload";
 import { API_URL } from "@/config/BackendUrl";
 import { MoneyInput } from "./MoneyInput";
 
-// --- COMPONENTE DE INPUT DE MOEDA ---
-// interface MoneyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> {
-//   value: number | undefined | string;
-//   onChange: (value: number) => void;
-// }
-
-// const MoneyInput = ({ value, onChange, className, ...props }: MoneyInputProps) => {
-//   const formatCurrency = (val: number | string | undefined) => {
-//     if (val === undefined || val === "") return "";
-//     const numberVal = Number(val);
-//     if (isNaN(numberVal)) return "";
-
-//     return new Intl.NumberFormat("pt-BR", {
-//       style: "currency",
-//       currency: "BRL",
-//       minimumFractionDigits: 2,
-//     }).format(numberVal);
-//   };
-
-//   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const rawValue = e.target.value.replace(/\D/g, "");
-//     const numberValue = Number(rawValue) / 100;
-//     onChange(numberValue);
-//   };
-
-//   return (
-//     <Input
-//       {...props}
-//       type="text"
-//       inputMode="numeric"
-//       className={className}
-//       value={formatCurrency(value)}
-//       onChange={handleChange}
-//       placeholder="R$ 0,00"
-//     />
-//   );
-// };
-
 // --- COMPONENTE DE SEÇÃO (ACCORDION) ---
 interface FormSectionProps {
   title: string;
@@ -246,6 +208,8 @@ const offerFormSchema = z.object({
   buttonColor: colorSchema,
   mainProduct: productSchema,
   utmfyWebhookUrl: optionalUrl,
+  facebookPixelId: z.string().optional(),
+  facebookAccessToken: z.string().optional(),
   upsell: upsellSchema,
   membershipWebhook: membershipWebhookSchema,
   orderBumps: z.array(productSchema).optional(),
@@ -275,6 +239,8 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       language: "pt",
       collectAddress: false,
       utmfyWebhookUrl: "",
+      facebookPixelId: "",
+      facebookAccessToken: "",
       upsell: {
         enabled: false,
         name: "",
@@ -749,6 +715,44 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
         {/* --- 6. INTEGRAÇÕES --- */}
         <FormSection title="Integrações" icon={<LinkIcon className="w-5 h-5" />} description="Conecte com ferramentas externas (Webhooks).">
           <div className="space-y-6">
+            {/* --- BLOCO FACEBOOK --- */}
+            <div className="p-4 border rounded-md space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded">FACEBOOK</div>
+                <h4 className="font-medium text-sm">API de Conversões (CAPI)</h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="facebookPixelId"
+                  render={({ field }: any) => (
+                    <FormItem>
+                      <FormLabel>ID do Pixel</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: 1234567890" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormDescription className="text-xs">ㅤ</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="facebookAccessToken"
+                  render={({ field }: any) => (
+                    <FormItem>
+                      <FormLabel>Token de Acesso (Sistema/API)</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="EAAB..." {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormDescription className="text-xs">Gerado no Gerenciador de Negócios.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
             <FormField
               control={form.control}
               name="utmfyWebhookUrl"

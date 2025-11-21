@@ -48,6 +48,8 @@ export type CreateOfferPayload = {
   language?: string;
   upsellLink?: string;
   utmfyWebhookUrl?: string;
+  facebookPixelId?: string;
+  facebookAccessToken?: string;
   thankYouPageUrl?: string;
   upsell?: {
     enabled: boolean;

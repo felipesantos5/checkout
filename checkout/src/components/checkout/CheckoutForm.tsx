@@ -16,6 +16,7 @@ import { API_URL } from "../../config/BackendUrl";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "../../i18n/I18nContext";
 import { getClientIP } from "../../service/getClientIP";
+import { getCookie } from "../../helper/getCookie";
 
 interface CheckoutFormProps {
   offerData: OfferData;
@@ -244,13 +245,20 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     // ATIVA LOADING (Isso agora só exibe o overlay, NÃO desmonta o form)
     setLoading(true);
 
+    const fbCookies = useMemo(() => {
+      return {
+        fbc: getCookie("_fbc"),
+        fbp: getCookie("_fbp"),
+      };
+    }, []);
+
     try {
       const clientIp = await getClientIP();
       const payload = {
         offerSlug: offerData.slug,
         selectedOrderBumps: selectedBumps,
         contactInfo: { email, name: fullName, phone },
-        metadata: { ...utmData, ip: clientIp, userAgent: navigator.userAgent },
+        metadata: { ...utmData, ip: clientIp, userAgent: navigator.userAgent, fbc: fbCookies.fbc, fbp: fbCookies.fbp },
       };
 
       if (method === "creditCard") {
