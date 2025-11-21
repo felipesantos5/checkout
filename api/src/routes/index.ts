@@ -7,6 +7,7 @@ import paymentRoutes from "./payment.routes";
 import uploadRoutes from "./upload.routes"; // 1. Importe
 import saleRoutes from "./sale.routes";
 import stripeRoutes from "./stripe.routes";
+import metricsRoutes from "./metrics.routes";
 
 const router = Router();
 
@@ -28,5 +29,7 @@ router.use("/upload", uploadRoutes); // 2. Adicione
 router.use("/stripe", stripeRoutes); // 2. Adicione
 
 router.use("/sales", saleRoutes);
+
+router.use("/metrics", metricsRoutes);
 
 export default router;

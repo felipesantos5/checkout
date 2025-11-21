@@ -22,7 +22,7 @@ export interface ISale extends Document {
   platformFeeInCents: number;
 
   status: "succeeded" | "pending" | "refunded";
-
+  isUpsell: boolean;
   items: ISaleItem[]; // O que foi comprado
 }
 
@@ -44,6 +44,8 @@ const saleSchema = new Schema<ISale>(
 
     customerName: { type: String, required: true },
     customerEmail: { type: String, required: true, index: true },
+
+    isUpsell: { type: Boolean, default: false },
 
     totalAmountInCents: { type: Number, required: true },
     platformFeeInCents: { type: Number, required: true },
