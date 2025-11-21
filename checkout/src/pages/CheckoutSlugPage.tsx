@@ -114,11 +114,7 @@ export function CheckoutSlugPage() {
   }
 
   if (!offerData) {
-    return (
-      <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
-        <p>Nenhuma oferta encontrada.</p>
-      </div>
-    );
+    return;
   }
 
   return (
