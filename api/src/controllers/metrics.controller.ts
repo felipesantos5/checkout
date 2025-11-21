@@ -12,6 +12,9 @@ import { sendFacebookEvent, createFacebookUserData } from "../services/facebook.
 export const handleTrackMetric = async (req: Request, res: Response) => {
   try {
     const { offerId, type, fbc, fbp } = req.body;
+
+    res.status(200).send();
+
     const ip = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
     const userAgent = req.headers["user-agent"] || "";
     const referer = req.headers["referer"] || "";

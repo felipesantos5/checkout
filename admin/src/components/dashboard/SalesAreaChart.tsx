@@ -150,7 +150,7 @@ export function SalesAreaChart() {
                 }
               />
               <Area dataKey="revenue" type="natural" fill="url(#fillRevenue)" stroke="var(--color-revenue)" stackId="a" />
-              <ChartLegend content={<ChartLegendContent />} />
+              {/* <ChartLegend content={<ChartLegendContent />} /> */}
             </AreaChart>
           )}
         </ChartContainer>

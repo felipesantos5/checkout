@@ -537,7 +537,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <MoneyInput form={form} name="mainProduct.priceInCents" label="Preço" placeholder="0,00" />
-              <MoneyInput form={form} name="mainProduct.compareAtPriceInCents" label="Preço" placeholder="0,00" />
+              <MoneyInput form={form} name="mainProduct.compareAtPriceInCents" label="Preço antigo" placeholder="0,00" />
             </div>
 
             <CustomIdInput name="mainProduct.customId" />
@@ -822,7 +822,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
         </FormSection>
 
         <div className="sticky bottom-4 z-10 ">
-          <Button type="submit" size="lg" className="w-full shadow-lg mt-4" disabled={isLoading}>
+          <Button type="submit" size="lg" className="w-full shadow-lg mt-4 h-12" disabled={isLoading}>
             {isLoading ? "Salvando..." : isEditMode ? "Atualizar Configurações" : "Salvar Oferta"}
           </Button>
         </div>

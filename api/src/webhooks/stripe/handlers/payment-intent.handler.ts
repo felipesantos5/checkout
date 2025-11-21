@@ -22,6 +22,7 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
     if (!offerSlug) throw new Error("Metadata 'offerSlug' não encontrado.");
 
     // 1. Busca Oferta e Dono
+    // Precisamos dos campos do Facebook também
     const offer = await Offer.findOne({ slug: offerSlug }).populate("ownerId");
     if (!offer) throw new Error(`Oferta '${offerSlug}' não encontrada.`);
 
@@ -53,10 +54,8 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
 
     const clientIp = metadata.ip || "";
 
-    // Tenta pegar o país do cartão (mais preciso para bandeira)
+    // Tenta pegar o país do cartão
     let countryCode = "BR";
-
-    // CORREÇÃO AQUI: Usamos (paymentIntent as any) para acessar 'charges' sem erro de TS
     const intentWithCharges = paymentIntent as any;
 
     if (intentWithCharges.charges?.data?.[0]?.payment_method_details?.card?.country) {
@@ -136,48 +135,51 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
 
     console.log(`✅ Venda ${sale._id} salva com sucesso.`);
 
-    // --- INTEGRAÇÃO FACEBOOK CAPI (PURCHASE) ---
-    if (offer.facebookPixelId && offer.facebookAccessToken) {
-      const totalValue = paymentIntent.amount / 100;
-      const userAgent = metadata.userAgent || "";
-      const fbc = metadata.fbc ?? undefined;
-      const fbp = metadata.fbp ?? undefined;
+    // =================================================================
+    // 6. Integrações Externas
+    // =================================================================
 
-      // User Data Rico (com hash)
-      const userData = createFacebookUserData(
-        clientIp,
-        userAgent, // Nota: Webhook Stripe não tem user-agent do cliente, mas temos o IP do metadata
-        finalCustomerEmail,
-        metadata.customerPhone ?? undefined,
-        finalCustomerName,
-        fbc,
-        fbp
-      );
+    // A: FACEBOOK CAPI (PURCHASE) - BLINDADO COM TRY/CATCH
+    // Se der erro aqui, NÃO trava o resto do código
+    try {
+      if (offer.facebookPixelId && offer.facebookAccessToken) {
+        const totalValue = paymentIntent.amount / 100; // Stripe usa centavos
 
-      // Envia evento Purchase
-      await sendFacebookEvent(offer.facebookPixelId, offer.facebookAccessToken, {
-        event_name: "Purchase",
-        event_time: Math.floor(Date.now() / 1000),
-        action_source: "website",
-        user_data: userData,
-        custom_data: {
-          currency: offer.currency || "BRL",
-          value: totalValue,
-          order_id: String(sale._id), // ID interno da venda para deduplicação futura
-          content_ids: items.map((i) => i._id || i.customId || "unknown"),
-          content_type: "product",
-        },
-      });
+        // Dados do Metadata (vindos do frontend)
+        const userAgent = metadata.userAgent || "";
+        const fbc = metadata.fbc;
+        const fbp = metadata.fbp;
+
+        const userData = createFacebookUserData(clientIp, userAgent, finalCustomerEmail, metadata.customerPhone, finalCustomerName, fbc, fbp);
+
+        // Envia sem await bloqueante se preferir, ou com await protegido
+        await sendFacebookEvent(offer.facebookPixelId, offer.facebookAccessToken, {
+          event_name: "Purchase",
+          event_time: Math.floor(Date.now() / 1000),
+          action_source: "website",
+          user_data: userData,
+          custom_data: {
+            currency: offer.currency || "BRL",
+            value: totalValue,
+            order_id: String(sale._id), // ID único para deduplicação
+            content_ids: items.map((i) => i._id || i.customId || "unknown"),
+            content_type: "product",
+          },
+        });
+      }
+    } catch (fbError: any) {
+      console.error("⚠️ Falha no envio ao Facebook (Venda salva normalmente):", fbError.message);
     }
 
-    // 6. Integrações Externas
-    // A: Webhook de Área de Membros (Husky/MemberKit) - Usa customId
+    // B: Webhook de Área de Membros (Husky/MemberKit)
     await sendAccessWebhook(offer as any, sale, items, customerPhone || "");
 
-    // B: Webhook de Rastreamento (UTMfy) - Usa lógica refatorada no Service
+    // C: Webhook de Rastreamento (UTMfy)
     await processUtmfyIntegration(offer as any, sale, items, paymentIntent, metadata);
   } catch (error: any) {
     console.error(`❌ Erro ao processar venda: ${error.message}`);
-    throw error; // Relança para o Stripe tentar novamente
+    // Aqui relançamos o erro APENAS se for falha crítica de banco/stripe
+    // Para que o Stripe tente enviar o webhook novamente.
+    throw error;
   }
 };

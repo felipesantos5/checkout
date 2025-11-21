@@ -54,7 +54,7 @@ export const sendFacebookEvent = async (pixelId: string, accessToken: string, pa
 
   try {
     console.log(`🔵 Enviando evento Facebook: ${payload.event_name}`);
-    await axios.post(url, body);
+    await axios.post(url, body, { timeout: 10000 });
   } catch (error: any) {
     console.error("❌ Erro ao enviar evento Facebook:", error.response?.data?.error?.message || error.message);
   }
