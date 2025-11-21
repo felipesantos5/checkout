@@ -15,11 +15,25 @@ interface CheckoutPageProps {
 }
 
 const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
+  // CORREÇÃO CRÍTICA: Usar useMemo para evitar recriar o objeto Stripe a cada render
   const stripePromise = useMemo(() => {
+    // Verifica se tem o ID da conta conectada para evitar erros
+    const accountId = offerData.ownerId?.stripeAccountId;
+
+    if (!accountId) {
+      console.error("Stripe Account ID não encontrado na oferta.");
+      return null;
+    }
+
     return loadStripe(stripeKey, {
-      stripeAccount: offerData.ownerId.stripeAccountId,
+      stripeAccount: accountId,
     });
-  }, [offerData.ownerId.stripeAccountId]);
+  }, [offerData.ownerId?.stripeAccountId]);
+
+  // Se não tiver stripePromise (por falta de ID), não renderiza o Elements para evitar crash
+  if (!stripePromise) {
+    return <div className="p-4 text-red-500">Erro de configuração: Conta Stripe não vinculada.</div>;
+  }
 
   return (
     <Elements stripe={stripePromise}>
