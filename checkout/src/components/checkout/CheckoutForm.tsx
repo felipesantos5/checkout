@@ -220,7 +220,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements) {
+      setErrorMessage("Sistema de pagamento não carregado. Recarregue a página.");
+      return;
+    }
 
     setErrorMessage(null);
 
@@ -234,6 +237,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     const fullName = nameInput?.value;
     const phone = phoneInput?.value || "";
     const cardName = cardNameInput?.value || "";
+
+    // Validações básicas
+    if (!email || !fullName) {
+      setErrorMessage("Preencha todos os campos obrigatórios.");
+      return;
+    }
 
     // Validação básica do elemento do cartão
     const cardElement = elements.getElement(CardNumberElement);
@@ -262,14 +271,24 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
       };
 
       if (method === "creditCard") {
+        console.log("[DEBUG] Criando Payment Intent...");
         const res = await fetch(`${API_URL}/payments/create-intent`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
 
+        console.log("[DEBUG] Response status:", res.status);
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error?.message || "Erro ao criar pagamento");
+        }
+
         const { clientSecret, error: backendError } = await res.json();
         if (backendError) throw new Error(backendError.message);
+
+        console.log("[DEBUG] Client Secret obtido, confirmando pagamento...");
 
         // O Stripe Elements ainda existe no DOM por baixo do overlay
         const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
@@ -280,24 +299,25 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
           receipt_email: email,
         });
 
+        console.log("[DEBUG] Resultado confirmCardPayment:", { error, status: paymentIntent?.status });
+
         if (error) throw error;
 
         if (paymentIntent.status === "succeeded") {
+          console.log("[DEBUG] Pagamento aprovado!");
           setPaymentIntentId(paymentIntent.id);
           setPaymentSucceeded(true);
+        } else {
+          throw new Error(`Pagamento não aprovado. Status: ${paymentIntent.status}`);
         }
       } else if (method === "pix") {
         setErrorMessage(t.messages.pixNotImplemented);
-      }
-    } catch (error: any) {
-      console.error("Erro no checkout:", error);
-      setErrorMessage(error.message || t.messages.error);
-    } finally {
-      // Só remove o loading se NÃO teve sucesso (se teve sucesso, deixa o loading até o redirect/animação)
-      // Na verdade, como temos o paymentSucceeded que muda a tela, podemos tirar o loading
-      if (!paymentSucceeded) {
         setLoading(false);
       }
+    } catch (error: any) {
+      console.error("[ERROR] Erro no checkout:", error);
+      setErrorMessage(error.message || t.messages.error);
+      setLoading(false);
     }
   };
 

@@ -47,7 +47,7 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
         sendFacebookEvent(offer.facebookPixelId, offer.facebookAccessToken, {
           event_name: "InitiateCheckout",
           event_time: Math.floor(Date.now() / 1000),
-          event_source_url: referer || `https://seu-checkout.com/${offer.slug}`,
+          event_source_url: referer || `https://pay.spappcheckout.com/c/${offer.slug}`,
           action_source: "website",
           user_data: createFacebookUserData(ip, userAgent), // Aqui ainda não temos email/phone
           custom_data: {
