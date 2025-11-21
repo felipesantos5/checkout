@@ -172,7 +172,7 @@ const UpsellScriptDialog = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full gap-2 mt-4 border-dashed border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100">
+        <Button variant="outline" className="w-full gap-2 mt-4 border-dashed border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100">
           <Code className="w-4 h-4" />
           Pegar Script de Integração
         </Button>
@@ -860,8 +860,8 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           </div>
         </FormSection>
 
-        <div className="sticky bottom-4 z-10">
-          <Button type="submit" size="lg" className="w-full shadow-lg" disabled={isLoading}>
+        <div className="sticky bottom-4 z-10 ">
+          <Button type="submit" size="lg" className="w-full shadow-lg mt-4" disabled={isLoading}>
             {isLoading ? "Salvando..." : isEditMode ? "Atualizar Configurações" : "Salvar Oferta"}
           </Button>
         </div>
