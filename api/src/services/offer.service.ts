@@ -221,3 +221,56 @@ export const deleteOffer = async (id: string, ownerId: string): Promise<boolean>
     throw new Error(`Falha ao deletar oferta: ${(error as Error).message}`);
   }
 };
+
+/**
+ * Duplica uma oferta existente
+ */
+export const duplicateOffer = async (id: string, ownerId: string): Promise<IOffer | null> => {
+  try {
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return null;
+    }
+
+    // Busca a oferta original
+    const originalOffer = await Offer.findOne({ _id: id, ownerId: ownerId });
+
+    if (!originalOffer) {
+      return null;
+    }
+
+    // Cria uma cópia da oferta
+    const offerCopy = originalOffer.toObject();
+
+    // Remove campos que não devem ser duplicados
+    delete offerCopy._id;
+    delete offerCopy.__v;
+    delete offerCopy.createdAt;
+    delete offerCopy.updatedAt;
+
+    // Gera novo slug único
+    offerCopy.slug = generateSlug();
+
+    // Adiciona " (Cópia)" ao nome
+    offerCopy.name = `${offerCopy.name} (Cópia)`;
+
+    // Remove IDs dos subdocumentos (mainProduct e orderBumps)
+    if (offerCopy.mainProduct) {
+      delete offerCopy.mainProduct._id;
+    }
+
+    if (offerCopy.orderBumps && offerCopy.orderBumps.length > 0) {
+      offerCopy.orderBumps = offerCopy.orderBumps.map((bump: any) => {
+        const bumpCopy = { ...bump };
+        delete bumpCopy._id;
+        return bumpCopy;
+      });
+    }
+
+    // Cria a nova oferta
+    const duplicatedOffer = await Offer.create(offerCopy);
+
+    return duplicatedOffer;
+  } catch (error) {
+    throw new Error(`Falha ao duplicar oferta: ${(error as Error).message}`);
+  }
+};

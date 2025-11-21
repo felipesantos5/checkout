@@ -24,6 +24,9 @@ router.put("/:id", protectRoute, offerController.handleUpdateOffer);
 // DELETE /api/offers/:id (Deleta uma oferta)
 router.delete("/:id", protectRoute, offerController.handleDeleteOffer);
 
+// POST /api/offers/:id/duplicate (Duplica uma oferta)
+router.post("/:id/duplicate", protectRoute, offerController.handleDuplicateOffer);
+
 // --- Rota Pública (Checkout) ---
 
 // GET /api/offers/slug/:slug

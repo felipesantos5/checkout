@@ -102,3 +102,22 @@ export const handleDeleteOffer = async (req: Request, res: Response) => {
     res.status(400).json({ error: { message: (error as Error).message } });
   }
 };
+
+/**
+ * Controller para DUPLICAR uma oferta
+ */
+export const handleDuplicateOffer = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const ownerId = req.userId!;
+
+    const duplicatedOffer = await offerService.duplicateOffer(id, ownerId);
+
+    if (!duplicatedOffer) {
+      return res.status(404).json({ error: { message: "Oferta não encontrada ou não pertence a você." } });
+    }
+    res.status(201).json(duplicatedOffer);
+  } catch (error) {
+    res.status(400).json({ error: { message: (error as Error).message } });
+  }
+};

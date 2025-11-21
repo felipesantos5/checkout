@@ -9,10 +9,11 @@ import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { API_URL } from "@/config/BackendUrl";
 // import { Badge } from "@/components/ui/badge";
-import { BarChart3, Copy, ImageIcon, Loader2, Trash2 } from "lucide-react";
+import { BarChart3, Copy, ImageIcon, Loader2, MoreVertical, Trash2 } from "lucide-react";
 import type { product } from "@/types/product";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 // Tipo para os dados da oferta (sem alterações)
 interface Offer {
@@ -87,6 +88,22 @@ export function OffersPage() {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Função para duplicar a oferta
+  const handleDuplicate = async (offerId: string) => {
+    try {
+      toast.loading("Duplicando oferta...");
+      await axios.post(`${API_URL}/offers/${offerId}/duplicate`);
+      toast.dismiss();
+      toast.success("Oferta duplicada com sucesso!");
+      fetchOffers(); // Recarrega a lista
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Falha ao duplicar oferta.", {
+        description: (error as Error).message,
+      });
     }
   };
 
@@ -186,9 +203,25 @@ export function OffersPage() {
                       <Button variant="outline" size="icon" onClick={() => navigate(`/offers/${offer._id}/analytics`)} title="Ver Métricas">
                         <BarChart3 className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setOfferToDelete(offer)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+
+                      {/* Dropdown Menu com 3 pontinhos */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleDuplicate(offer._id)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Duplicar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setOfferToDelete(offer)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Deletar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
