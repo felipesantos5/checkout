@@ -133,7 +133,7 @@ export function DashboardOverview() {
           icon={ShoppingCart}
           subtext="Volume de transações"
           chartData={metrics?.charts.sales}
-          color="#fbe298"
+          color="#f5d578"
         />
 
         <KpiCard

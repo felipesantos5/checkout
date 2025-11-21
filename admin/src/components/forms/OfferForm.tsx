@@ -821,7 +821,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
           </div>
         </FormSection>
 
-        <div className="sticky bottom-4 z-10 ">
+        <div className="">
           <Button type="submit" size="lg" className="w-full shadow-lg mt-4 h-12" disabled={isLoading}>
             {isLoading ? "Salvando..." : isEditMode ? "Atualizar Configurações" : "Salvar Oferta"}
           </Button>
