@@ -221,13 +221,26 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     e.preventDefault();
     if (!stripe || !elements) return;
 
-    setLoading(true);
     setErrorMessage(null);
 
     const email = (document.getElementById("email") as HTMLInputElement).value;
     const fullName = (document.getElementById("name") as HTMLInputElement).value;
     const phoneElement = document.getElementById("phone") as HTMLInputElement | null;
     const phone = phoneElement ? phoneElement.value : "";
+
+    // Obter referência ao cardElement ANTES de setLoading(true)
+    // pois o loading remove o formulário do DOM
+    let cardElement = null;
+    if (method === "creditCard") {
+      cardElement = elements.getElement(CardNumberElement);
+      if (!cardElement) {
+        console.error("Erro Crítico: CardNumberElement não encontrado no DOM.");
+        setErrorMessage(t.messages.cardElementNotFound || "Erro ao processar cartão. Tente recarregar a página.");
+        return;
+      }
+    }
+
+    setLoading(true);
 
     const clientIp = await getClientIP();
 
@@ -240,10 +253,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
     try {
       if (method === "creditCard") {
-        const cardElement = elements.getElement(CardNumberElement);
-
         if (!cardElement) {
-          console.error("Erro Crítico: CardNumberElement não encontrado no DOM.");
           throw new Error(t.messages.cardElementNotFound || "Erro ao processar cartão. Tente recarregar a página.");
         }
 
