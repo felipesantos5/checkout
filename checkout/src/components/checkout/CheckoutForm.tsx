@@ -270,14 +270,11 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
       };
 
       if (method === "creditCard") {
-        console.log("[DEBUG] Criando Payment Intent...");
         const res = await fetch(`${API_URL}/payments/create-intent`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-
-        console.log("[DEBUG] Response status:", res.status);
 
         if (!res.ok) {
           const errorData = await res.json();
@@ -286,8 +283,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
         const { clientSecret, error: backendError } = await res.json();
         if (backendError) throw new Error(backendError.message);
-
-        console.log("[DEBUG] Client Secret obtido, confirmando pagamento...");
 
         // O Stripe Elements ainda existe no DOM por baixo do overlay
         const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
@@ -298,12 +293,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
           receipt_email: email,
         });
 
-        console.log("[DEBUG] Resultado confirmCardPayment:", { error, status: paymentIntent?.status });
-
         if (error) throw error;
 
         if (paymentIntent.status === "succeeded") {
-          console.log("[DEBUG] Pagamento aprovado!");
           setPaymentIntentId(paymentIntent.id);
           setPaymentSucceeded(true);
         } else {
