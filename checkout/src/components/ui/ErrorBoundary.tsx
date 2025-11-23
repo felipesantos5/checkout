@@ -1,4 +1,4 @@
-import React, { Component, ReactNode } from "react";
+import React, { Component, type ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -45,9 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error && (
               <details className="mt-6 text-left">
                 <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">Detalhes técnicos</summary>
-                <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-auto max-h-40 text-gray-700">
-                  {this.state.error.toString()}
-                </pre>
+                <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-auto max-h-40 text-gray-700">{this.state.error.toString()}</pre>
               </details>
             )}
           </div>
