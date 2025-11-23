@@ -65,65 +65,11 @@ const FormSection = ({ title, icon, description, children, defaultOpen = false, 
   );
 };
 
-// --- SCRIPT MINIMALISTA COM UI EMBUTIDA ---
-const UpsellScriptDialog = () => {
+// --- MODAL: APENAS O SCRIPT ---
+const UpsellScriptOnlyDialog = () => {
   const [copied, setCopied] = useState(false);
 
-  const scriptCode = `
-<style>
-  .chk-btn { height: 40px; width: 100%; max-width: 500px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; display: block; margin: 10px auto; }
-  .chk-btn:hover { opacity: 0.9; }
-  .chk-buy { background-color: #22c55e; color: white; }
-  .chk-refuse { background-color: #ef4444; color: white; }
-</style>
-
-<button onclick="handleUpsell(true)" class="chk-btn chk-buy">SIM, QUERO ADICIONAR!</button>
-<button onclick="handleUpsell(false)" class="chk-btn chk-refuse">NÃO, QUERO RECUSAR</button>
-
-<script>
-  async function handleUpsell(isBuy) {
-    const token = new URLSearchParams(window.location.search).get('token');
-    if (!token) return alert('Erro: Link inválido (Token ausente).');
-
-    const btn = event.target;
-    const originalText = btn.innerText;
-    
-    // Bloqueia ambos os botões
-    document.getElementById('btn-upsell-yes').disabled = true;
-    document.getElementById('btn-upsell-no').disabled = true;
-    btn.innerText = "PROCESSANDO...";
-
-    try {
-      const endpoint = isBuy ? 'one-click-upsell' : 'upsell-refuse';
-      
-      const res = await fetch("https://backend.snappcheckout.com.br/api" + '/payments/' + endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      });
-      
-      const data = await res.json();
-
-      if (data.success) {
-        if (data.redirectUrl) {
-          window.location.href = data.redirectUrl;
-        } else {
-          // Fallback se não tiver página de obrigado configurada
-          alert(data.message || (isBuy ? 'Compra realizada!' : 'Oferta recusada.'));
-        }
-      } else {
-        throw new Error(data.message || 'Erro desconhecido');
-      }
-      
-    } catch (e) {
-      alert(e.message || 'Erro de conexão. Tente novamente.');
-      // Reativa os botões em caso de erro
-      document.getElementById('btn-upsell-yes').disabled = false;
-      document.getElementById('btn-upsell-no').disabled = false;
-      btn.innerText = originalText;
-    }
-  }
-</script>`.trim();
+  const scriptCode = `<script src="https://backend.snappcheckout.com.br/api/v1/upsell.js" async></script>`.trim();
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(scriptCode);
@@ -135,26 +81,71 @@ const UpsellScriptDialog = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full gap-2 mt-4 border-dashed border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100">
+        <Button variant="outline" className="w-full gap-2 border-dashed border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100">
           <Code className="w-4 h-4" />
-          Pegar Script de Integração
+          Pegar Script
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
-        {" "}
-        {/* Aumentado para max-w-3xl */}
         <DialogHeader>
-          <DialogTitle>Integração One-Click</DialogTitle>
-          <DialogDescription>Copie e cole este código onde deseja que os botões apareçam.</DialogDescription>
+          <DialogTitle>Script de Integração</DialogTitle>
+          <DialogDescription>Copie e cole este script no &lt;head&gt; ou antes do &lt;/body&gt; da sua página.</DialogDescription>
         </DialogHeader>
         <div className="relative mt-2 group">
           <Button size="sm" onClick={copyToClipboard} className="absolute top-2 right-2 h-7 text-xs">
             {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
             {copied ? "Copiado" : "Copiar"}
           </Button>
-          {/* CORREÇÃO AQUI: Adicionado whitespace-pre-wrap, break-all e max-h com overflow */}
           <pre className="bg-slate-950 text-slate-50 p-4 rounded-lg text-xs font-mono border border-slate-800 max-h-[400px] overflow-auto whitespace-pre-wrap break-all">
             {scriptCode}
+          </pre>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// --- MODAL: APENAS OS BOTÕES ---
+const UpsellButtonsOnlyDialog = () => {
+  const [copied, setCopied] = useState(false);
+
+  const buttonsCode = `
+<button class="chk-buy" style="background:green; color:white; padding:10px; width:100%; max-width:500px;">
+  SIM, QUERO COMPRAR
+</button>
+
+<button class="chk-refuse" style="background:red; color:white; padding:10px; width:100%; max-width:500px;">
+  NÃO, OBRIGADO
+</button>
+`.trim();
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(buttonsCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success("Copiado!");
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full gap-2 border-dashed border-yellow-500 bg-yellow-400 text-yellow-100 hover:bg-yellow-100">
+          <Code className="w-4 h-4" />
+          Pegar Código dos Botões
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Código dos Botões</DialogTitle>
+          <DialogDescription>Copie e cole este código onde deseja que os botões de aceitar/recusar apareçam.</DialogDescription>
+        </DialogHeader>
+        <div className="relative mt-2 group">
+          <Button size="sm" onClick={copyToClipboard} className="absolute top-2 right-2 h-7 text-xs">
+            {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+            {copied ? "Copiado" : "Copiar"}
+          </Button>
+          <pre className="bg-slate-950 text-slate-50 p-4 rounded-lg text-xs font-mono border border-slate-800 max-h-[400px] overflow-auto whitespace-pre-wrap break-all">
+            {buttonsCode}
           </pre>
         </div>
       </DialogContent>
@@ -705,8 +696,11 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                 </div>
                 <CustomIdInput name="upsell.customId" />
 
-                {/* --- BOTÃO DE GERAR SCRIPT (AQUI) --- */}
-                <UpsellScriptDialog />
+                {/* --- BOTÕES DE GERAR SCRIPTS --- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <UpsellScriptOnlyDialog />
+                  <UpsellButtonsOnlyDialog />
+                </div>
               </div>
             )}
           </div>

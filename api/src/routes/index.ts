@@ -9,6 +9,7 @@ import saleRoutes from "./sale.routes";
 import stripeRoutes from "./stripe.routes";
 import metricsRoutes from "./metrics.routes";
 import healthRoutes from "./health.routes";
+import { getUpsellScript } from "../controllers/script.controller";
 
 const router = Router();
 
@@ -25,14 +26,16 @@ router.use("/offers", offerRoutes);
 router.use("/payments", paymentRoutes);
 
 // Rotas de Upload (protegido)
-router.use("/upload", uploadRoutes); // 2. Adicione
+router.use("/upload", uploadRoutes);
 
-router.use("/stripe", stripeRoutes); // 2. Adicione
+router.use("/stripe", stripeRoutes);
 
 router.use("/sales", saleRoutes);
 
 router.use("/metrics", metricsRoutes);
 
 router.use("/health", healthRoutes);
+
+router.get("/v1/upsell.js", getUpsellScript);
 
 export default router;
