@@ -17,7 +17,6 @@ interface OrderSummaryProps {
   originalPriceInCents?: number;
   discountPercentage?: number;
 }
-
 export const OrderSummary = memo<OrderSummaryProps>(
   ({
     productName,
