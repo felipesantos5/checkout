@@ -3,7 +3,6 @@
 import * as React from "react";
 import axios from "axios";
 import { Pie, PieChart, Label } from "recharts";
-import { TrendingUp } from "lucide-react"; // --- IMPORT ADICIONADO
 
 // --- CARDFOOTER ADICIONADO AOS IMPORTS ---
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
