@@ -4,12 +4,14 @@ import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 // import { optimizePlugin } from "./vite-plugin-optimize";
 import { compression } from "vite-plugin-compression2";
+import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     basicSsl(),
+    cssInjectedByJsPlugin(),
     compression({
       algorithms: ["gzip", "brotliCompress"], // Gera .gz e .br ao mesmo tempo
       exclude: [/\.(br)$/, /\.(gz)$/], // Evita comprimir o que já está comprimido
@@ -17,7 +19,7 @@ export default defineConfig({
     // optimizePlugin(), // Adicione se estiver usando o plugin que mostrou
   ],
   build: {
-    cssCodeSplit: true,
+    cssCodeSplit: false,
     minify: "esbuild",
     target: "es2020",
     reportCompressedSize: false,
