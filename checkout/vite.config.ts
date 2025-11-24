@@ -2,25 +2,55 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+import { optimizePlugin } from "./vite-plugin-optimize";
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     basicSsl(),
+    optimizePlugin(),
   ],
   build: {
     cssCodeSplit: true,
     minify: 'esbuild',
+    target: 'es2020',
+    reportCompressedSize: false,
     rollupOptions: {
+      treeshake: {
+        preset: 'recommended',
+        moduleSideEffects: false,
+      },
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'stripe': ['@stripe/stripe-js', '@stripe/react-stripe-js'],
-          'ui-components': [
-            '@radix-ui/react-collapsible',
-            'lucide-react',
-          ],
+        manualChunks(id) {
+          // React core separado
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-core';
+          }
+          // React Router separado
+          if (id.includes('node_modules/react-router-dom/')) {
+            return 'react-router';
+          }
+          // Stripe separado (carregado sob demanda)
+          if (id.includes('@stripe/stripe-js') || id.includes('@stripe/react-stripe-js')) {
+            return 'stripe';
+          }
+          // Radix UI separado
+          if (id.includes('@radix-ui/')) {
+            return 'radix-ui';
+          }
+          // Lucide icons separado
+          if (id.includes('lucide-react')) {
+            return 'icons';
+          }
+          // Polished (utils CSS) separado
+          if (id.includes('polished')) {
+            return 'css-utils';
+          }
+          // Outros node_modules em vendor
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
         assetFileNames: (assetInfo) => {
           if (!assetInfo.name) return 'assets/[name]-[hash][extname]';
