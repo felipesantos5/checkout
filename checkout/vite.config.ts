@@ -2,29 +2,57 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import basicSsl from "@vitejs/plugin-basic-ssl";
+// import { optimizePlugin } from "./vite-plugin-optimize";
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
     basicSsl(),
+    // optimizePlugin(), // Adicione se estiver usando o plugin que mostrou
   ],
   build: {
     cssCodeSplit: true,
-    minify: 'esbuild',
+    minify: "esbuild",
+    target: "es2020",
+    reportCompressedSize: false,
     rollupOptions: {
+      treeshake: {
+        preset: "recommended",
+        moduleSideEffects: "no-external",
+      },
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'stripe': ['@stripe/stripe-js', '@stripe/react-stripe-js'],
-          'ui-components': [
-            '@radix-ui/react-collapsible',
-            'lucide-react',
-          ],
+        // CORREÇÃO AQUI: Estratégia simplificada para evitar o erro de createContext
+        manualChunks(id) {
+          // Mantém React, Router e DOM juntos para garantir inicialização correta
+          if (
+            id.includes("node_modules/react") ||
+            id.includes("node_modules/react-dom") ||
+            id.includes("node_modules/react-router-dom") ||
+            id.includes("node_modules/@remix-run")
+          ) {
+            // Router v7 usa remix-run internamente às vezes
+            return "react-vendor";
+          }
+
+          // Separa Stripe pois é grande e raramente muda
+          if (id.includes("@stripe")) {
+            return "stripe";
+          }
+
+          // UI libs (Radix, Lucide) podem ficar juntas ou separadas
+          if (id.includes("@radix-ui") || id.includes("lucide-react")) {
+            return "ui-vendor";
+          }
+
+          // O resto vai para vendor genérico
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
         },
         assetFileNames: (assetInfo) => {
-          if (!assetInfo.name) return 'assets/[name]-[hash][extname]';
-          const info = assetInfo.name.split('.');
+          if (!assetInfo.name) return "assets/[name]-[hash][extname]";
+          const info = assetInfo.name.split(".");
           const ext = info[info.length - 1];
           if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
             return `assets/images/[name]-[hash][extname]`;
@@ -34,8 +62,8 @@ export default defineConfig({
           }
           return `assets/[name]-[hash][extname]`;
         },
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js',
+        chunkFileNames: "assets/js/[name]-[hash].js",
+        entryFileNames: "assets/js/[name]-[hash].js",
       },
     },
     chunkSizeWarningLimit: 1000,
