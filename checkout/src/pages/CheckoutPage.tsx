@@ -1,11 +1,9 @@
 // src/pages/CheckoutPage.tsx
-import React, { useMemo, lazy, Suspense } from "react";
+import React, { useMemo } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
+import { CheckoutForm } from "../components/checkout/CheckoutForm";
 import type { OfferData } from "./CheckoutSlugPage";
-
-// Lazy load do CheckoutForm para reduzir bundle inicial
-const CheckoutForm = lazy(() => import("../components/checkout/CheckoutForm").then(mod => ({ default: mod.CheckoutForm })));
 
 const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 if (!stripeKey) {
@@ -16,19 +14,10 @@ interface CheckoutPageProps {
   offerData: OfferData;
 }
 
-// Loader para Stripe Elements
-const StripeLoader = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center">
-      <div className="loading-skeleton w-16 h-16 mx-auto mb-4 rounded-full" />
-      <p className="text-gray-600">Carregando checkout seguro...</p>
-    </div>
-  </div>
-);
-
 const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
-  // Lazy load do Stripe apenas quando necessário
+  // CORREÇÃO CRÍTICA: Usar useMemo para evitar recriar o objeto Stripe a cada render
   const stripePromise = useMemo(() => {
+    // Verifica se tem o ID da conta conectada para evitar erros
     const accountId = offerData.ownerId?.stripeAccountId;
 
     if (!accountId) {
@@ -36,7 +25,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
       return null;
     }
 
-    // loadStripe já faz lazy loading do script internamente
     return loadStripe(stripeKey, {
       stripeAccount: accountId,
     });
@@ -49,9 +37,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
 
   return (
     <Elements stripe={stripePromise}>
-      <Suspense fallback={<StripeLoader />}>
-        <CheckoutForm offerData={offerData} />
-      </Suspense>
+      <CheckoutForm offerData={offerData} />
     </Elements>
   );
 };
