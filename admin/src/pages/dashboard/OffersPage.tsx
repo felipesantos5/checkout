@@ -22,13 +22,23 @@ interface Offer {
   slug: string;
   mainProduct: product;
   salesCount: number;
+  currency: string;
 }
 
 // Helper de formatação de moeda
-const formatCurrency = (amountInCents: number) => {
-  return new Intl.NumberFormat("pt-BR", {
+const formatCurrency = (amountInCents: number, currency: string) => {
+  const localeMap: Record<string, string> = {
+    BRL: "pt-BR",
+    USD: "en-US",
+    EUR: "de-DE",
+    GBP: "en-GB",
+  };
+
+  const locale = localeMap[currency.toUpperCase()] || "pt-BR";
+
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "BRL",
+    currency: currency.toUpperCase(),
   }).format(amountInCents / 100);
 };
 
@@ -171,7 +181,7 @@ export function OffersPage() {
                   </TableCell>
 
                   {/* VALOR */}
-                  <TableCell className="px-6 py-4 text-sm font-medium text-foreground">{formatCurrency(offer.mainProduct.priceInCents)}</TableCell>
+                  <TableCell className="px-6 py-4 text-sm font-medium text-foreground">{formatCurrency(offer.mainProduct.priceInCents, offer.currency)}</TableCell>
 
                   {/* URL */}
                   <TableCell className="px-6 py-4">

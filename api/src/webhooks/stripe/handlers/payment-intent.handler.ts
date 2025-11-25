@@ -6,6 +6,7 @@ import { processUtmfyIntegration, sendPurchaseToUTMfyWebhook } from "../../../se
 import stripe from "../../../lib/stripe";
 import { sendAccessWebhook } from "../../../services/integration.service";
 import { createFacebookUserData, sendFacebookEvent } from "../../../services/facebook.service";
+import { getCountryFromIP } from "../../../helper/getCountryFromIP";
 
 /**
  * Handler para quando um pagamento é aprovado
@@ -54,12 +55,16 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
 
     const clientIp = metadata.ip || "";
 
-    // Tenta pegar o país do cartão
+    // Detecta o país (prioridade: cartão > IP > fallback BR)
     let countryCode = "BR";
     const intentWithCharges = paymentIntent as any;
 
+    // 1. Tenta pegar do cartão (mais preciso)
     if (intentWithCharges.charges?.data?.[0]?.payment_method_details?.card?.country) {
       countryCode = intentWithCharges.charges.data[0].payment_method_details.card.country;
+    } else if (clientIp) {
+      // 2. Fallback: detecta pelo IP
+      countryCode = getCountryFromIP(clientIp);
     }
 
     const finalCustomerName = customerName || "Cliente Não Identificado";
