@@ -39,13 +39,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
         const response = await axios.get(`${API_URL}/auth/me`);
         setUser(response.data);
-      } catch (error) {
-        // Token inválido
-        destroyCookie(null, "auth_token", { path: "/" });
-        setToken(null);
-        setUser(null);
-        delete axios.defaults.headers.common["Authorization"];
-        navigate("/login", { state: { from: location }, replace: true });
+      } catch (error: any) {
+        // Só desloga se for erro de autenticação (401/403)
+        // Erros de rede ou servidor (5xx) não devem deslogar
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          console.warn("Token inválido ou expirado, fazendo logout...");
+          destroyCookie(null, "auth_token", { path: "/" });
+          localStorage.removeItem("auth_token");
+          setToken(null);
+          setUser(null);
+          delete axios.defaults.headers.common["Authorization"];
+          navigate("/login", { state: { from: location }, replace: true });
+        } else {
+          // Erro de rede ou servidor - mantém o usuário logado
+          console.error("Erro ao buscar usuário (mantendo sessão):", error.message);
+        }
       }
     },
     [navigate, location]
@@ -64,10 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await axios.post(`${API_URL}/auth/login`, { email, password });
       const { token } = response.data;
 
+      // Salva em cookie E localStorage para máxima persistência
       setCookie(null, "auth_token", token, {
-        maxAge: 7 * 24 * 60 * 60,
+        maxAge: 7 * 24 * 60 * 60, // 7 dias
         path: "/",
+        sameSite: "lax", // Permite o cookie em navegações normais
+        secure: window.location.protocol === "https:", // Secure apenas em HTTPS
       });
+      localStorage.setItem("auth_token", token);
       setToken(token);
 
       await fetchUser(token);
@@ -81,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 5. Estabilize 'logout' com useCallback
   const logout = useCallback(() => {
     destroyCookie(null, "auth_token", { path: "/" });
+    localStorage.removeItem("auth_token");
     setToken(null);
     setUser(null);
     delete axios.defaults.headers.common["Authorization"];
@@ -90,10 +103,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Efeito principal (para carregar o usuário)
   useEffect(() => {
     const cookies = parseCookies();
-    const storedToken = cookies.auth_token;
+    let storedToken = cookies.auth_token;
+
+    // Fallback: se não tiver cookie, tenta localStorage
+    if (!storedToken) {
+      storedToken = localStorage.getItem("auth_token") || "";
+    }
 
     if (storedToken) {
       setToken(storedToken);
+      // Salva em ambos os locais para máxima persistência
+      localStorage.setItem("auth_token", storedToken);
+      setCookie(null, "auth_token", storedToken, {
+        maxAge: 7 * 24 * 60 * 60,
+        path: "/",
+        sameSite: "lax",
+        secure: window.location.protocol === "https:",
+      });
       fetchUser(storedToken).finally(() => setIsLoading(false));
     } else {
       setIsLoading(false); // Não há token
