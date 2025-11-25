@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { TrendingUp } from "lucide-react";
 
 interface RevenueCardProps {
   currentRevenue: number;
