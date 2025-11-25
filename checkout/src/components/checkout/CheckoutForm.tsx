@@ -25,7 +25,7 @@ interface CheckoutFormProps {
   generateEventId: () => string;
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutSessionId, generateEventId }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutSessionId }) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -72,13 +72,18 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
       const eventId = `${checkoutSessionId}_initiate_checkout`;
       initiateCheckoutEventId.current = eventId;
 
-      window.fbq("track", "InitiateCheckout", {
-        content_name: offerData.mainProduct.name,
-        content_ids: [offerData.mainProduct._id],
-        content_type: "product",
-        value: offerData.mainProduct.priceInCents / 100,
-        currency: offerData.currency.toUpperCase(),
-      }, { eventID: eventId });
+      window.fbq(
+        "track",
+        "InitiateCheckout",
+        {
+          content_name: offerData.mainProduct.name,
+          content_ids: [offerData.mainProduct._id],
+          content_type: "product",
+          value: offerData.mainProduct.priceInCents / 100,
+          currency: offerData.currency.toUpperCase(),
+        },
+        { eventID: eventId }
+      );
 
       initiateCheckoutFired.current = true;
       console.log(`🔵 Facebook Event: InitiateCheckout [eventID: ${eventId}]`);
@@ -333,13 +338,18 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
       const eventId = `${checkoutSessionId}_add_payment_info`;
       addPaymentInfoEventId.current = eventId;
 
-      window.fbq("track", "AddPaymentInfo", {
-        content_name: offerData.mainProduct.name,
-        content_ids: [offerData.mainProduct._id],
-        content_type: "product",
-        value: totalAmount / 100,
-        currency: offerData.currency.toUpperCase(),
-      }, { eventID: eventId });
+      window.fbq(
+        "track",
+        "AddPaymentInfo",
+        {
+          content_name: offerData.mainProduct.name,
+          content_ids: [offerData.mainProduct._id],
+          content_type: "product",
+          value: totalAmount / 100,
+          currency: offerData.currency.toUpperCase(),
+        },
+        { eventID: eventId }
+      );
 
       console.log(`🔵 Facebook Event: AddPaymentInfo [eventID: ${eventId}]`);
     }
