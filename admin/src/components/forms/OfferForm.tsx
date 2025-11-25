@@ -395,7 +395,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                   <FormItem>
                     <FormLabel>Moeda</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
+                      <FormControl className="w-full">
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a moeda" />
                         </SelectTrigger>
@@ -419,7 +419,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                     <FormLabel>Idioma do Checkout</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Selecione o idioma" />
                         </SelectTrigger>
                       </FormControl>

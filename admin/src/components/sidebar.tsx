@@ -1,5 +1,8 @@
 import { ChartNoAxesCombined, ShoppingBasket, User, ChartColumnIncreasing } from "lucide-react";
 import logo from "../assets/logo.png";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { API_URL } from "@/config/BackendUrl";
 
 import {
   Sidebar,
@@ -12,6 +15,7 @@ import {
   SidebarMenuItem,
 } from "./ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
+import { RevenueCard } from "./RevenueCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,12 +103,37 @@ function UserMenu() {
 export function AppSidebar() {
   // const [isApprovalOpen, setIsApprovalOpen] = useState(false);
   const location = useLocation();
+  const { token } = useAuth();
+  const [totalRevenue, setTotalRevenue] = useState(0);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchRevenue = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/metrics/overview`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setTotalRevenue(response.data.kpis.totalRevenue || 0);
+      } catch (error) {
+        console.error("Erro ao carregar faturamento:", error);
+      }
+    };
+
+    fetchRevenue();
+  }, [token]);
 
   return (
     <Sidebar>
       <SidebarContent className="justify-between">
         <SidebarGroup>
-          <img src={logo} alt="logo" className="mt-12 ml-2 mb-10 w-36" />
+          <img src={logo} alt="logo" className="mt-10 ml-2 mb-10 w-28" />
+
+          {/* Revenue Card */}
+          <div className="px-2 mb-6">
+            <RevenueCard currentRevenue={totalRevenue} goalRevenue={10000000} />
+          </div>
+
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {

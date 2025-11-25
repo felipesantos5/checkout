@@ -39,17 +39,14 @@ export function RevenueCard({ currentRevenue, goalRevenue = 10000000 }: RevenueC
   };
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-yellow-200/50 bg-gradient-to-br from-yellow-50 via-white to-yellow-50/30 p-4 shadow-sm transition-all duration-300 hover:shadow-md">
+    <div className="relative overflow-hidden rounded-xl border border-sidebar-primary bg-linear-to-br from-yellow-50 via-white to-yellow-400/20 px-4 pt-1 shadow-sm transition-all duration-300 hover:shadow-md">
       {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-yellow-100/20 via-transparent to-transparent opacity-50" />
+      <div className="absolute inset-0 bg-linear-to-br from-yellow-100/20 via-transparent to-transparent opacity-50" />
 
-      <div className="relative space-y-3">
+      <div className="relative space-y-1">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-500 shadow-sm">
-              <TrendingUp className="h-4 w-4 text-white" />
-            </div>
             <h3 className="text-sm font-semibold text-gray-700">Faturamento</h3>
           </div>
         </div>
@@ -57,34 +54,28 @@ export function RevenueCard({ currentRevenue, goalRevenue = 10000000 }: RevenueC
         {/* Revenue Display */}
         <div className="space-y-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent">
+            <span className="text-sm font-bold bg-linear-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent">
               {formatCompact(currentRevenueInReais)}
             </span>
-            <span className="text-sm font-medium text-gray-500">/ {formatCompact(goalRevenueInReais)}</span>
+            {/* <span className="text-sm font-medium text-gray-500">/ {goalRevenueInReais}</span> */}
+            <span className="text-sm font-medium text-gray-500">/ R$ 100K</span>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-600">Progresso</span>
-            <span className="text-sm font-bold bg-gradient-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent">
-              {percentage.toFixed(1)}%
-            </span>
-          </div>
-
+        <div className="flex items-center gap-2 mb-0">
           {/* Progress bar container */}
-          <div className="relative h-2.5 overflow-hidden rounded-full bg-gradient-to-r from-gray-100 to-gray-200 shadow-inner">
+          <div className="w-full relative flex h-2.5 overflow-hidden rounded-full bg-linear-to-r from-gray-100 to-gray-200 shadow-inner">
             {/* Animated progress fill */}
             <div
-              className="h-full rounded-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 shadow-sm transition-all duration-1000 ease-out"
+              className="w-full h-full rounded-full bg-linear-to-r from-yellow-400 via-yellow-500 to-yellow-400 shadow-sm transition-all duration-1000 ease-out"
               style={{
                 width: `${animatedProgress}%`,
                 backgroundSize: "200% 100%",
               }}
             >
               {/* Shine effect */}
-              <div className="h-full w-full animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+              <div className="h-full w-full animate-shimmer bg-linear-to-r from-transparent via-white/30 to-transparent" />
             </div>
 
             {/* Glow on the progress */}
@@ -94,6 +85,11 @@ export function RevenueCard({ currentRevenue, goalRevenue = 10000000 }: RevenueC
                 style={{ width: `${animatedProgress}%` }}
               />
             )}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold bg-linear-to-r from-yellow-600 to-yellow-500 bg-clip-text text-transparent">
+              {percentage.toFixed(1)}%
+            </span>
           </div>
         </div>
 
