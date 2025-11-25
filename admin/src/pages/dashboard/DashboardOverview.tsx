@@ -186,7 +186,7 @@ export function DashboardOverview() {
 
           {/* Filtro de Período */}
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
