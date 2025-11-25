@@ -2,13 +2,14 @@
 import { Router } from "express";
 import * as offerController from "../controllers/offer.controller";
 import { protectRoute } from "../middleware/auth.middleware";
+import { createResourceLimiter } from "../middleware/rate-limit.middleware";
 
 const router = Router();
 
 // --- Rotas Protegidas (Dashboard) ---
 
 // POST /api/offers (Cria uma nova oferta)
-router.post("/", protectRoute, offerController.handleCreateOffer);
+router.post("/", protectRoute, createResourceLimiter, offerController.handleCreateOffer);
 
 // GET /api/offers (Lista todas as ofertas do usuário logado)
 router.get("/", protectRoute, offerController.handleListMyOffers);

@@ -2,6 +2,7 @@
 import { Router } from "express";
 import * as uploadController from "../controllers/upload.controller";
 import { protectRoute } from "../middleware/auth.middleware";
+import { uploadLimiter } from "../middleware/rate-limit.middleware";
 import upload from "../middleware/upload.middleware";
 
 const router = Router();
@@ -16,6 +17,7 @@ const router = Router();
 router.post(
   "/",
   protectRoute,
+  uploadLimiter,
   upload.single("image"), // 'image' é o 'name' do campo no formulário
   uploadController.handleUploadImage
 );
