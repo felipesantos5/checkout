@@ -187,12 +187,15 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
           hasState: !!userData.st,
           hasZipCode: !!userData.zp,
           hasCountry: !!userData.country,
+          hasEventId: !!metadata.purchaseEventId,
+          eventId: metadata.purchaseEventId,
         });
 
-        // Envia sem await bloqueante se preferir, ou com await protegido
+        // Envia evento Purchase para CAPI com event_id para deduplicação
         await sendFacebookEvent(offer.facebookPixelId, offer.facebookAccessToken, {
           event_name: "Purchase",
           event_time: Math.floor(Date.now() / 1000),
+          event_id: metadata.purchaseEventId, // event_id do frontend para deduplicação
           action_source: "website",
           user_data: userData,
           custom_data: {

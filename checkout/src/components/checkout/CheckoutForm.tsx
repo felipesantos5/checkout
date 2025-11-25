@@ -21,9 +21,11 @@ import { detectPlatform, shouldShowWallet, getWalletLabel } from "../../utils/pl
 
 interface CheckoutFormProps {
   offerData: OfferData;
+  checkoutSessionId: string;
+  generateEventId: () => string;
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutSessionId, generateEventId }) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -47,6 +49,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   // REF para controlar se InitiateCheckout já foi disparado
   const initiateCheckoutFired = useRef(false);
 
+  // Armazena event_ids gerados para cada evento
+  const initiateCheckoutEventId = useRef<string | null>(null);
+  const addPaymentInfoEventId = useRef<string | null>(null);
+
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
   const utmData = useMemo(() => {
@@ -62,17 +68,22 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   // Dispara InitiateCheckout uma única vez quando o componente carrega
   useEffect(() => {
     if (!initiateCheckoutFired.current && window.fbq) {
+      // Gera um event_id único para InitiateCheckout baseado no checkoutSessionId
+      const eventId = `${checkoutSessionId}_initiate_checkout`;
+      initiateCheckoutEventId.current = eventId;
+
       window.fbq("track", "InitiateCheckout", {
         content_name: offerData.mainProduct.name,
         content_ids: [offerData.mainProduct._id],
         content_type: "product",
         value: offerData.mainProduct.priceInCents / 100,
         currency: offerData.currency.toUpperCase(),
-      });
+      }, { eventID: eventId });
+
       initiateCheckoutFired.current = true;
-      console.log("🔵 Facebook Event: InitiateCheckout");
+      console.log(`🔵 Facebook Event: InitiateCheckout [eventID: ${eventId}]`);
     }
-  }, [offerData]);
+  }, [offerData, checkoutSessionId]);
 
   // Atualiza o total baseado em bumps e quantidade
   useEffect(() => {
@@ -317,16 +328,20 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
     // ATIVA LOADING (Isso agora só exibe o overlay, NÃO desmonta o form)
     setLoading(true);
 
-    // Dispara evento AddPaymentInfo do Facebook
+    // Dispara evento AddPaymentInfo do Facebook com event_id único
     if (window.fbq) {
+      const eventId = `${checkoutSessionId}_add_payment_info`;
+      addPaymentInfoEventId.current = eventId;
+
       window.fbq("track", "AddPaymentInfo", {
         content_name: offerData.mainProduct.name,
         content_ids: [offerData.mainProduct._id],
         content_type: "product",
         value: totalAmount / 100,
         currency: offerData.currency.toUpperCase(),
-      });
-      console.log("🔵 Facebook Event: AddPaymentInfo");
+      }, { eventID: eventId });
+
+      console.log(`🔵 Facebook Event: AddPaymentInfo [eventID: ${eventId}]`);
     }
 
     // Coleta cookies do Facebook (não usa useMemo aqui pois estamos dentro de um handler)
@@ -337,12 +352,26 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
     try {
       const clientIp = await getClientIP();
+
+      // Gera event_id para o evento Purchase (será usado no backend CAPI)
+      const purchaseEventId = `${checkoutSessionId}_purchase`;
+
       const payload = {
         offerSlug: offerData.slug,
         selectedOrderBumps: selectedBumps,
         contactInfo: { email, name: fullName, phone },
         addressInfo: addressData,
-        metadata: { ...utmData, ip: clientIp, userAgent: navigator.userAgent, fbc: fbCookies.fbc, fbp: fbCookies.fbp },
+        metadata: {
+          ...utmData,
+          ip: clientIp,
+          userAgent: navigator.userAgent,
+          fbc: fbCookies.fbc,
+          fbp: fbCookies.fbp,
+          // Envia os event_ids para o backend usar no CAPI
+          initiateCheckoutEventId: initiateCheckoutEventId.current,
+          addPaymentInfoEventId: addPaymentInfoEventId.current,
+          purchaseEventId: purchaseEventId,
+        },
       };
 
       if (method === "creditCard") {

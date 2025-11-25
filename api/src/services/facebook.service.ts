@@ -19,6 +19,7 @@ interface FacebookUserData {
 interface FacebookEventPayload {
   event_name: "InitiateCheckout" | "Purchase";
   event_time: number;
+  event_id?: string; // Para deduplicação entre Pixel e CAPI
   event_source_url?: string;
   action_source: "website";
   user_data: FacebookUserData;

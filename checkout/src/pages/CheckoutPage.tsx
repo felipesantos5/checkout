@@ -12,9 +12,11 @@ if (!stripeKey) {
 
 interface CheckoutPageProps {
   offerData: OfferData;
+  checkoutSessionId: string;
+  generateEventId: () => string;
 }
 
-const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
+const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData, checkoutSessionId, generateEventId }) => {
   // CORREÇÃO CRÍTICA: Usar useMemo para evitar recriar o objeto Stripe a cada render
   const stripePromise = useMemo(() => {
     // Verifica se tem o ID da conta conectada para evitar erros
@@ -37,7 +39,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData }) => {
 
   return (
     <Elements stripe={stripePromise}>
-      <CheckoutForm offerData={offerData} />
+      <CheckoutForm offerData={offerData} checkoutSessionId={checkoutSessionId} generateEventId={generateEventId} />
     </Elements>
   );
 };

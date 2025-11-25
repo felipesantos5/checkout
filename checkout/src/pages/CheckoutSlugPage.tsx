@@ -62,8 +62,22 @@ export function CheckoutSlugPage() {
   // REF DE CONTROLE: Guarda o slug da última oferta rastreada para evitar duplicação
   const trackedSlugRef = useRef<string | null>(null);
 
+  // Gera ou recupera um ID único para esta sessão de checkout
+  const checkoutSessionId = useRef<string>(
+    (() => {
+      const storageKey = `checkout_session_${slug}`;
+      const existingId = sessionStorage.getItem(storageKey);
+      if (existingId) {
+        return existingId;
+      }
+      const newId = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      sessionStorage.setItem(storageKey, newId);
+      return newId;
+    })()
+  ).current;
+
   // Carrega o Facebook Pixel se o pixelId estiver configurado
-  useFacebookPixel(offerData?.facebookPixelId);
+  const { generateEventId } = useFacebookPixel(offerData?.facebookPixelId);
 
   useEffect(() => {
     if (!slug) return;
@@ -142,7 +156,7 @@ export function CheckoutSlugPage() {
   return (
     <I18nProvider language={offerData.language || "pt"}>
       <ThemeContext.Provider value={themeValues}>
-        <CheckoutPage offerData={offerData} />
+        <CheckoutPage offerData={offerData} checkoutSessionId={checkoutSessionId} generateEventId={generateEventId} />
       </ThemeContext.Provider>
     </I18nProvider>
   );

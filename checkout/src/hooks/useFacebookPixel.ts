@@ -9,11 +9,19 @@ declare global {
 }
 
 /**
+ * Gera um ID único para a sessão de checkout
+ * Usado para deduplicação de eventos entre Pixel e CAPI
+ */
+const generateEventId = (): string => {
+  return `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+};
+
+/**
  * Hook para carregar o Facebook Pixel dinamicamente
  * Carrega o script SOMENTE se o pixelId for fornecido
  *
  * @param pixelId - ID do pixel do Facebook (opcional)
- * @returns Funções para disparar eventos manualmente
+ * @returns Funções para disparar eventos manualmente com event_id
  */
 export const useFacebookPixel = (pixelId?: string) => {
   const isInitialized = useRef(false);
@@ -56,19 +64,26 @@ export const useFacebookPixel = (pixelId?: string) => {
     console.log("✅ Facebook Pixel carregado e PageView disparado");
   }, [pixelId]);
 
-  // Retorna funções helper para disparar eventos manualmente
+  // Retorna funções helper para disparar eventos manualmente com event_id
   return {
-    trackEvent: (eventName: string, data?: any) => {
+    trackEvent: (eventName: string, data?: any, eventId?: string) => {
       if (window.fbq && pixelId) {
-        window.fbq("track", eventName, data);
-        console.log(`🔵 Facebook Event: ${eventName}`, data);
+        const finalEventId = eventId || generateEventId();
+        window.fbq("track", eventName, data, { eventID: finalEventId });
+        console.log(`🔵 Facebook Event: ${eventName} [eventID: ${finalEventId}]`, data);
+        return finalEventId;
       }
+      return null;
     },
-    trackCustomEvent: (eventName: string, data?: any) => {
+    trackCustomEvent: (eventName: string, data?: any, eventId?: string) => {
       if (window.fbq && pixelId) {
-        window.fbq("trackCustom", eventName, data);
-        console.log(`🔵 Facebook Custom Event: ${eventName}`, data);
+        const finalEventId = eventId || generateEventId();
+        window.fbq("trackCustom", eventName, data, { eventID: finalEventId });
+        console.log(`🔵 Facebook Custom Event: ${eventName} [eventID: ${finalEventId}]`, data);
+        return finalEventId;
       }
+      return null;
     },
+    generateEventId, // Expõe a função para uso externo
   };
 };
