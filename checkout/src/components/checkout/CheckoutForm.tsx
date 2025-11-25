@@ -1,5 +1,5 @@
 // src/components/checkout/CheckoutForm.tsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-js";
 import type { PaymentRequest, PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
@@ -44,6 +44,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
   const [paymentRequest, setPaymentRequest] = useState<PaymentRequest | null>(null);
   const [walletLabel, setWalletLabel] = useState<string | null>(null);
 
+  // REF para controlar se InitiateCheckout já foi disparado
+  const initiateCheckoutFired = useRef(false);
+
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
   const utmData = useMemo(() => {
@@ -55,6 +58,21 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
       utm_content: urlParams.get("utm_content") || null,
     };
   }, [urlParams]);
+
+  // Dispara InitiateCheckout uma única vez quando o componente carrega
+  useEffect(() => {
+    if (!initiateCheckoutFired.current && window.fbq) {
+      window.fbq("track", "InitiateCheckout", {
+        content_name: offerData.mainProduct.name,
+        content_ids: [offerData.mainProduct._id],
+        content_type: "product",
+        value: offerData.mainProduct.priceInCents / 100,
+        currency: offerData.currency.toUpperCase(),
+      });
+      initiateCheckoutFired.current = true;
+      console.log("🔵 Facebook Event: InitiateCheckout");
+    }
+  }, [offerData]);
 
   // Atualiza o total baseado em bumps e quantidade
   useEffect(() => {
@@ -103,12 +121,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
         let label = getWalletLabel(platform);
 
         // Valida se a plataforma suporta a carteira esperada
-        if (platform === 'ios' && !result.applePay) {
+        if (platform === "ios" && !result.applePay) {
           console.warn("iOS detected but Apple Pay not available");
           return; // Não mostra se iOS mas Apple Pay não disponível
         }
 
-        if (platform === 'android' && !result.googlePay) {
+        if (platform === "android" && !result.googlePay) {
           console.warn("Android detected but Google Pay not available");
           return; // Não mostra se Android mas Google Pay não disponível
         }
@@ -298,6 +316,18 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData }) => {
 
     // ATIVA LOADING (Isso agora só exibe o overlay, NÃO desmonta o form)
     setLoading(true);
+
+    // Dispara evento AddPaymentInfo do Facebook
+    if (window.fbq) {
+      window.fbq("track", "AddPaymentInfo", {
+        content_name: offerData.mainProduct.name,
+        content_ids: [offerData.mainProduct._id],
+        content_type: "product",
+        value: totalAmount / 100,
+        currency: offerData.currency.toUpperCase(),
+      });
+      console.log("🔵 Facebook Event: AddPaymentInfo");
+    }
 
     // Coleta cookies do Facebook (não usa useMemo aqui pois estamos dentro de um handler)
     const fbCookies = {

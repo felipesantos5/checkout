@@ -7,6 +7,7 @@ import { ThemeContext, type ThemeColors } from "../context/ThemeContext";
 import { I18nProvider } from "../i18n/I18nContext";
 import type { Language } from "../i18n/translations";
 import { SkeletonLoader } from "../components/ui/SkeletonLoader";
+import { useFacebookPixel } from "../hooks/useFacebookPixel";
 
 // ... (Interfaces OfferData mantidas iguais) ...
 export interface OfferData {
@@ -21,6 +22,7 @@ export interface OfferData {
   currency: string;
   primaryColor: string;
   buttonColor: string;
+  facebookPixelId?: string;
   mainProduct: {
     _id: string;
     name: string;
@@ -59,6 +61,9 @@ export function CheckoutSlugPage() {
 
   // REF DE CONTROLE: Guarda o slug da última oferta rastreada para evitar duplicação
   const trackedSlugRef = useRef<string | null>(null);
+
+  // Carrega o Facebook Pixel se o pixelId estiver configurado
+  useFacebookPixel(offerData?.facebookPixelId);
 
   useEffect(() => {
     if (!slug) return;
