@@ -9,6 +9,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { ArrowLeft, Eye, ShoppingCart, CreditCard, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/helper/formatCurrency";
 import { SalesHistoryTable } from "@/components/dashboard/SalesHistoryTable";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { DateRange } from "react-day-picker";
+import { subDays, startOfDay, endOfDay } from "date-fns";
 
 interface FunnelData {
   _id: string;
@@ -30,11 +34,48 @@ export default function OfferAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Estados dos filtros
+  const [dateFilter, setDateFilter] = useState<string>("30"); // "today", "7", "30", "custom"
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
-        // Buscamos o funil de TODAS as ofertas e filtramos aqui (ou crie uma rota específica no backend se preferir)
-        const response = await fetch(`${API_URL}/metrics/funnel`, {
+        // Calcula as datas baseado no filtro selecionado
+        const now = new Date();
+        let startDate: string;
+        let endDate: string;
+
+        if (dateFilter === "custom") {
+          // Período personalizado - só busca se ambas as datas estiverem selecionadas
+          if (!customDateRange?.from || !customDateRange?.to) {
+            setLoading(false);
+            return; // Aguarda seleção completa do range
+          }
+          startDate = startOfDay(customDateRange.from).toISOString();
+          endDate = endOfDay(customDateRange.to).toISOString();
+        } else {
+          // Filtros pré-definidos
+          endDate = endOfDay(now).toISOString();
+
+          if (dateFilter === "today") {
+            // Hoje: do início até o fim do dia atual
+            startDate = startOfDay(now).toISOString();
+          } else if (dateFilter === "7") {
+            // Últimos 7 dias: inclui hoje
+            startDate = startOfDay(subDays(now, 6)).toISOString();
+          } else {
+            // Últimos 30 dias (padrão): inclui hoje
+            startDate = startOfDay(subDays(now, 29)).toISOString();
+          }
+        }
+
+        console.log("📅 Filtro selecionado:", dateFilter);
+        console.log("📅 Período:", { startDate, endDate });
+
+        // Busca métricas com filtro de data
+        const response = await fetch(`${API_URL}/metrics/funnel?startDate=${startDate}&endDate=${endDate}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -56,7 +97,7 @@ export default function OfferAnalyticsPage() {
     };
 
     if (token && id) fetchData();
-  }, [token, id]);
+  }, [token, id, dateFilter, customDateRange]);
 
   if (loading) {
     return (
@@ -84,22 +125,46 @@ export default function OfferAnalyticsPage() {
   ];
 
   return (
-    <div className="p-6 space-y-8 animate-in fade-in duration-500">
+    <div className="p-6 space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/offers")} className="-ml-2 text-gray-500">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/offers")} className="-ml-2 text-gray-500">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+              </Button>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">{data.offerName}</h1>
+            <p className="text-muted-foreground">Análise detalhada de performance do funil.</p>
+          </div>
+
+          {/* Filtros de Data e Botão Ver Página */}
+          <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-start">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-full sm:w-[190px]">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Hoje</SelectItem>
+                  <SelectItem value="7">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30">Últimos 30 dias</SelectItem>
+                  <SelectItem value="custom">Período personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {dateFilter === "custom" && (
+                <div className="w-full sm:w-auto">
+                  <DateRangePicker value={customDateRange} onChange={setCustomDateRange} />
+                </div>
+              )}
+            </div>
+
+            <Button variant="outline" onClick={() => window.open(`http://localhost:5173/${data.slug}`, "_blank")}>
+              Ver Página
             </Button>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">{data.offerName}</h1>
-          <p className="text-muted-foreground">Análise detalhada de performance do funil.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => window.open(`http://localhost:5173/${data.slug}`, "_blank")}>
-            Ver Página
-          </Button>
         </div>
       </div>
 

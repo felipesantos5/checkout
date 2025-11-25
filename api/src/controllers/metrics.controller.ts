@@ -72,27 +72,48 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
 /**
  * Retorna o funil de conversão detalhado por oferta
  * Protegido: Apenas para o dono da oferta (Admin)
+ * Suporta filtros de data via query params: startDate e endDate
  */
 export const handleGetConversionFunnel = async (req: Request, res: Response) => {
   try {
     const ownerId = req.userId!;
 
+    // Filtros de data via query params
+    const startDateParam = req.query.startDate as string | undefined;
+    const endDateParam = req.query.endDate as string | undefined;
+
+    // Define o filtro de data (padrão: últimos 30 dias)
+    const endDate = endDateParam ? new Date(endDateParam) : new Date();
+    const startDate = startDateParam ? new Date(startDateParam) : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Validação de datas
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: "Datas inválidas. Use formato ISO 8601." });
+    }
+
     // 1. Buscar ofertas do usuário
     const offers = await Offer.find({ ownerId }).select("_id name slug").lean();
 
-    // 2. Para cada oferta, buscar métricas e vendas
+    // 2. Para cada oferta, buscar métricas e vendas com filtro de data
     const metricsPromises = offers.map(async (offer) => {
       const offerId = offer._id;
 
-      // Buscar métricas
-      const metrics = await CheckoutMetric.find({ offerId }).select("type").lean();
+      // Buscar métricas com filtro de data
+      const metrics = await CheckoutMetric.find({
+        offerId,
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .select("type")
+        .lean();
+
       const views = metrics.filter((m) => m.type === "view").length;
       const initiatedCheckout = metrics.filter((m) => m.type === "initiate_checkout").length;
 
-      // Buscar vendas aprovadas
+      // Buscar vendas aprovadas com filtro de data
       const sales = await Sale.find({
         offerId,
         status: "succeeded",
+        createdAt: { $gte: startDate, $lte: endDate },
       })
         .select("totalAmountInCents currency")
         .lean();
