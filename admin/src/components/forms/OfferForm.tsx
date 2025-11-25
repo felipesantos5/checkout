@@ -70,7 +70,9 @@ const FormSection = ({ title, icon, description, children, defaultOpen = false, 
 const UpsellScriptOnlyDialog = () => {
   const [copied, setCopied] = useState(false);
 
-  const scriptCode = `<script src="https://backend.snappcheckout.com.br/api/v1/upsell.js" async></script>`.trim();
+  // Usa a URL do backend da variável de ambiente
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4242";
+  const scriptCode = `<script src="${backendUrl}/api/v1/upsell.js" async></script>`.trim();
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(scriptCode);
@@ -111,11 +113,11 @@ const UpsellButtonsOnlyDialog = () => {
   const [copied, setCopied] = useState(false);
 
   const buttonsCode = `
-<button class="chk-buy" style="background:green; color:white; padding:10px; width:100%; max-width:500px;">
+<button class="chk-buy" style="background:#3CB371; color:white; font-weight:700; padding:10px; width:100%; max-width:500px; border-radius: 10px; font-size:16px; border:0; margin-bottom:16px;">
   SIM, QUERO COMPRAR
 </button>
 
-<button class="chk-refuse" style="background:red; color:white; padding:10px; width:100%; max-width:500px;">
+<button class="chk-refuse" style="background:unset;color:red; padding:10px; width:100%; max-width:500px; border:0; text-decoration: underline;">
   NÃO, OBRIGADO
 </button>
 `.trim();

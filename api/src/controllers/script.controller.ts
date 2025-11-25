@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 export const getUpsellScript = (req: Request, res: Response) => {
   const scriptContent = `
 (function() {
-  console.log("🚀 SnappCheckout Upsell Loaded");
 
   // 1. Injeta os Estilos Padrão (Opcional, o cliente pode querer estilizar do jeito dele)
   const style = document.createElement('style');
@@ -24,14 +23,14 @@ export const getUpsellScript = (req: Request, res: Response) => {
     const originalText = btnElement.innerText;
     btnElement.innerText = "PROCESSANDO...";
     btnElement.classList.add("chk-btn-loading");
-    
+
     // Desabilita todos os botões de upsell para evitar duplo clique
     document.querySelectorAll('.chk-buy, .chk-refuse').forEach(b => b.disabled = true);
 
     try {
       const endpoint = isBuy ? 'one-click-upsell' : 'upsell-refuse';
-      // Usa a URL de origem do script para saber onde chamar a API, ou fixa a URL da API
-      const apiUrl = "https://backend.snappcheckout.com.br/api"; // Ajuste para sua URL real
+      // Usa a URL da API configurada no servidor
+      const apiUrl = "https://backend.snappcheckout.com.br/api";
 
       const res = await fetch(apiUrl + '/payments/' + endpoint, {
         method: 'POST',
