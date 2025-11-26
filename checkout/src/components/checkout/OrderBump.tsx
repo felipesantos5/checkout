@@ -51,7 +51,7 @@ const BumpItem = memo<{ bump: Bump; isSelected: boolean; onToggle: () => void; c
             <div className="flex justify-between gap-3">
               {bump.imageUrl && (
                 <div className="flex-none">
-                  <OptimizedImage src={bump.imageUrl} alt={bump.name} className="w-20 h-20 border border-gray-200" width={80} aspectRatio="1/1" />
+                  <OptimizedImage src={bump.imageUrl} alt={bump.name} className="w-16 h-16 border border-gray-200" width={80} aspectRatio="1/1" />
                 </div>
               )}
               <div className="flex flex-col gap-1.5 flex-1 min-w-0">
