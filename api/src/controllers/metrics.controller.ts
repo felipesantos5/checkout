@@ -403,22 +403,129 @@ export const handleGetDashboardOverview = async (req: Request, res: Response) =>
       };
     });
 
+    // 6. Calcular checkouts iniciados e taxa de aprovação
+    const checkoutsInitiated = await CheckoutMetric.countDocuments({
+      offerId: { $in: offerIds },
+      type: "initiate_checkout",
+      createdAt: { $gte: startDate },
+    });
+
+    const checkoutApprovalRate = checkoutsInitiated > 0 ? (totalSales / checkoutsInitiated) * 100 : 0;
+
+    // 7. Top Ofertas (por receita)
+    const topOffersData = await Sale.aggregate([
+      {
+        $match: salesQuery,
+      },
+      {
+        $group: {
+          _id: "$offerId",
+          revenue: { $sum: "$totalAmountInCents" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 5 },
+    ]);
+
+    // Popular com nomes das ofertas
+    const topOffers = await Promise.all(
+      topOffersData.map(async (item) => {
+        const offer = await Offer.findById(item._id).select("name").lean();
+        const revenueInBRL = await convertToBRL(item.revenue, "BRL");
+        return {
+          name: offer?.name || "Oferta Removida",
+          value: revenueInBRL / 100, // Em reais
+          count: item.count,
+        };
+      })
+    );
+
+    // 8. Top Produtos (Order Bumps + Upsells)
+    const topProductsMap = new Map<string, { name: string; revenue: number; count: number }>();
+
+    for (const sale of allSales) {
+      // Se for upsell, considerar o produto principal
+      if (sale.isUpsell && sale.items.length > 0) {
+        const product = sale.items[0];
+        const productName = product.name || "Produto sem nome";
+        const revenueInBRL = await convertToBRL(product.priceInCents * product.quantity, sale.currency || "BRL");
+
+        const existing = topProductsMap.get(productName) || { name: productName, revenue: 0, count: 0 };
+        existing.revenue += revenueInBRL;
+        existing.count += product.quantity;
+        topProductsMap.set(productName, existing);
+      } else {
+        // Para vendas normais, pegar apenas order bumps
+        for (const item of sale.items) {
+          if (item.isOrderBump) {
+            const productName = item.name || "Produto sem nome";
+            const revenueInBRL = await convertToBRL(item.priceInCents * item.quantity, sale.currency || "BRL");
+
+            const existing = topProductsMap.get(productName) || { name: productName, revenue: 0, count: 0 };
+            existing.revenue += revenueInBRL;
+            existing.count += item.quantity;
+            topProductsMap.set(productName, existing);
+          }
+        }
+      }
+    }
+
+    // Converter para array e ordenar por receita
+    const topProducts = Array.from(topProductsMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+      .map((p) => ({
+        name: p.name,
+        value: p.revenue / 100, // Em reais
+        count: p.count,
+      }));
+
+    // 9. Top Países (Vendas por país)
+    const topCountriesMap = new Map<string, { revenue: number; count: number }>();
+
+    for (const sale of allSales) {
+      const country = sale.country || "BR"; // Padrão Brasil se não tiver país
+      const revenueInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+
+      const existing = topCountriesMap.get(country) || { revenue: 0, count: 0 };
+      existing.revenue += revenueInBRL;
+      existing.count += 1;
+      topCountriesMap.set(country, existing);
+    }
+
+    // Converter para array e ordenar por receita
+    const topCountries = Array.from(topCountriesMap.entries())
+      .sort((a, b) => b[1].revenue - a[1].revenue)
+      .slice(0, 5)
+      .map(([country, data]) => ({
+        name: country,
+        value: data.revenue / 100, // Em reais
+        count: data.count,
+      }));
+
     res.status(200).json({
       kpis: {
         totalRevenue: totalRevenueInBRL,
         totalSales,
         totalVisitors,
         averageTicket,
-        extraRevenue: extraRevenueInBRL, // Nova métrica
-        conversionRate, // Nova métrica
+        extraRevenue: extraRevenueInBRL,
+        conversionRate,
+        totalOrders: totalSales, // Total de pedidos (mesmo que totalSales)
+        checkoutsInitiated, // Checkouts iniciados
+        checkoutApprovalRate, // Taxa de aprovação do checkout
       },
       charts: {
         revenue: revenueChart,
         sales: salesChart,
         ticket: ticketChart,
         visitors: visitorsChart,
-        conversionRate: conversionRateChart, // Nova métrica de gráfico
+        conversionRate: conversionRateChart,
       },
+      topOffers, // Top 5 ofertas
+      topProducts, // Top 5 produtos (bumps + upsells)
+      topCountries, // Top 5 países
     });
   } catch (error) {
     console.error("Erro Dashboard Overview:", error);

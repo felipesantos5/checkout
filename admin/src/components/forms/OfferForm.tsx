@@ -554,7 +554,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               name="mainProduct.imageUrl"
               render={({ field }: any) => (
                 <FormItem>
-                  <FormLabel>Imagem do Produto (Capa)</FormLabel>
+                  <FormLabel>Imagem do Produto</FormLabel>
                   <FormControl>
                     <ImageUpload value={field.value} onChange={field.onChange} />
                   </FormControl>

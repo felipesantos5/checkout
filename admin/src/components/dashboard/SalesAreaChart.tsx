@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -21,8 +20,6 @@ interface SalesAreaChartProps {
 }
 
 export function SalesAreaChart({ chartData = [] }: SalesAreaChartProps) {
-  const [isLoading, setIsLoading] = React.useState(false);
-
   // Função para formatar moeda no Tooltip
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
