@@ -187,8 +187,25 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
     });
 
     pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
+      console.log("💳 [APPLE PAY] Evento paymentmethod disparado");
+      console.log("💳 [APPLE PAY] Dados do pagador:", {
+        email: ev.payerEmail,
+        name: ev.payerName,
+        phone: ev.payerPhone,
+      });
+
       try {
+        setLoading(true);
         const clientIp = await getClientIP();
+
+        // Coleta cookies do Facebook
+        const fbCookies = {
+          fbc: getCookie("_fbc"),
+          fbp: getCookie("_fbp"),
+        };
+
+        // Gera event_id para o evento Purchase
+        const purchaseEventId = `${checkoutSessionId}_applepay_purchase`;
 
         const payload = {
           offerSlug: offerData.slug,
@@ -202,8 +219,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
             ...utmData,
             ip: clientIp,
             userAgent: navigator.userAgent,
+            fbc: fbCookies.fbc,
+            fbp: fbCookies.fbp,
+            purchaseEventId: purchaseEventId,
           },
         };
+
+        console.log("🚀 [APPLE PAY] Criando PaymentIntent no backend...");
 
         const res = await fetch(`${API_URL}/payments/create-intent`, {
           method: "POST",
@@ -211,33 +233,66 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           body: JSON.stringify(payload),
         });
 
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error?.message || "Erro ao criar pagamento");
+        }
+
         const { clientSecret, error: backendError } = await res.json();
 
         if (backendError) {
+          console.error("❌ [APPLE PAY] Erro do backend:", backendError);
           ev.complete("fail");
           setErrorMessage(backendError.message);
+          setLoading(false);
           return;
         }
 
-        const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
-          clientSecret,
-          { payment_method: ev.paymentMethod.id },
-          { handleActions: false }
-        );
+        console.log("✅ [APPLE PAY] PaymentIntent criado, confirmando...");
+
+        // Para Apple Pay/Google Pay, usa confirmCardPayment com o payment_method
+        const { error: confirmError, paymentIntent } = await stripe!.confirmCardPayment(clientSecret, {
+          payment_method: ev.paymentMethod.id,
+        });
 
         if (confirmError) {
+          console.error("❌ [APPLE PAY] Erro ao confirmar:", confirmError);
           ev.complete("fail");
           setErrorMessage(confirmError.message || "Erro no pagamento");
+          setLoading(false);
         } else {
+          console.log("✅ [APPLE PAY] Pagamento confirmado:", paymentIntent?.status);
           ev.complete("success");
+
           if (paymentIntent?.status === "succeeded") {
+            console.log("🎉 [APPLE PAY] Pagamento bem-sucedido!");
             setPaymentIntentId(paymentIntent.id);
             setPaymentSucceeded(true);
+          } else if (paymentIntent?.status === "requires_action") {
+            console.log("⚠️ [APPLE PAY] Requer ação adicional");
+            // Tenta completar a ação
+            const { error: actionError } = await stripe!.confirmCardPayment(clientSecret);
+            if (actionError) {
+              ev.complete("fail");
+              setErrorMessage(actionError.message || "Erro na autenticação");
+              setLoading(false);
+            } else {
+              ev.complete("success");
+              setPaymentIntentId(paymentIntent.id);
+              setPaymentSucceeded(true);
+            }
+          } else {
+            console.warn("⚠️ [APPLE PAY] Status inesperado:", paymentIntent?.status);
+            ev.complete("fail");
+            setErrorMessage(`Pagamento não aprovado. Status: ${paymentIntent?.status}`);
+            setLoading(false);
           }
         }
       } catch (err: any) {
+        console.error("❌ [APPLE PAY] Erro inesperado:", err);
         ev.complete("fail");
         setErrorMessage(err.message || "Erro inesperado");
+        setLoading(false);
       }
     });
   }, [stripe, offerData, selectedBumps, totalAmount, utmData, t]);
@@ -293,6 +348,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         // 3. PRIORIDADE: Página de Sucesso Padrão (Interna)
         const params = new URLSearchParams();
         params.append("offerName", offerData.mainProduct.name);
+        params.append("lang", offerData.language || "pt"); // Passa a linguagem
         navigate(`/success?${params.toString()}`);
       }, 2000); // Delay de 2 segundos para exibir o check
 

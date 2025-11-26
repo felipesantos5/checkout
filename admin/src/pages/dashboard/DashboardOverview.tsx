@@ -14,6 +14,9 @@ import { formatCurrency } from "@/helper/formatCurrency";
 import { SalesAreaChart } from "@/components/dashboard/SalesAreaChart";
 import { TopOffersChart } from "@/components/dashboard/TopOffersChart";
 import { TopCountriesChart } from "@/components/dashboard/TopCountriesChart";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import type { DateRange } from "react-day-picker";
+import { subDays, startOfDay, endOfDay } from "date-fns";
 
 // --- Interfaces ---
 interface DashboardData {
@@ -93,10 +96,29 @@ export function DashboardOverview() {
   const [balance, setBalance] = useState<StripeBalance | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Filtros
-  const [period, setPeriod] = useState("30"); // 1 = hoje, 7 = 7 dias, 30 = 30 dias, 90 = 3 meses
-  const [selectedOfferId, setSelectedOfferId] = useState<string>("all");
+  // --- FILTROS COM PERSISTÊNCIA (LOCALSTORAGE) ---
+  // Inicializa lendo do LocalStorage ou usa o padrão
+  const [period, setPeriod] = useState(() => {
+    return localStorage.getItem("dashboard_period") || "30";
+  });
+
+  const [selectedOfferId, setSelectedOfferId] = useState(() => {
+    return localStorage.getItem("dashboard_offer_id") || "all";
+  });
+
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+
   const [offers, setOffers] = useState<Offer[]>([]);
+
+  // Salva no LocalStorage sempre que o valor mudar
+  useEffect(() => {
+    localStorage.setItem("dashboard_period", period);
+  }, [period]);
+
+  useEffect(() => {
+    localStorage.setItem("dashboard_offer_id", selectedOfferId);
+  }, [selectedOfferId]);
+  // -----------------------------------------------
 
   // Buscar lista de ofertas para o filtro
   useEffect(() => {
@@ -114,15 +136,64 @@ export function DashboardOverview() {
     fetchOffers();
   }, [token]);
 
+  // --- LÓGICA DE DATAS DO NAVEGADOR ---
+  // Calcula as datas exatas baseadas no fuso horário do usuário
+  const getDateRange = (days: string) => {
+    const now = new Date();
+    let startDate: string;
+    let endDate: string;
+
+    if (days === "custom") {
+      // Período personalizado - usa o customDateRange
+      if (!customDateRange?.from || !customDateRange?.to) {
+        // Se não tiver range completo, usa os últimos 30 dias como fallback
+        const start = new Date();
+        start.setDate(start.getDate() - 30);
+        start.setHours(0, 0, 0, 0);
+        return {
+          startDate: start.toISOString(),
+          endDate: now.toISOString(),
+        };
+      }
+      startDate = startOfDay(customDateRange.from).toISOString();
+      endDate = endOfDay(customDateRange.to).toISOString();
+    } else {
+      // Filtros pré-definidos
+      endDate = endOfDay(now).toISOString();
+
+      if (days === "1") {
+        // Hoje: do início até o fim do dia atual
+        startDate = startOfDay(now).toISOString();
+      } else if (days === "7") {
+        // Últimos 7 dias: inclui hoje
+        startDate = startOfDay(subDays(now, 6)).toISOString();
+      } else if (days === "90") {
+        // Últimos 3 meses
+        startDate = startOfDay(subDays(now, 89)).toISOString();
+      } else {
+        // Últimos 30 dias (padrão): inclui hoje
+        startDate = startOfDay(subDays(now, 29)).toISOString();
+      }
+    }
+
+    return {
+      startDate,
+      endDate,
+    };
+  };
+
   useEffect(() => {
     if (!token) return;
 
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Construir query params para filtros
+        const { startDate, endDate } = getDateRange(period);
+
+        // Envia as datas exatas para o backend
         const params = new URLSearchParams({
-          days: period,
+          startDate,
+          endDate,
           ...(selectedOfferId !== "all" && { offerId: selectedOfferId }),
         });
 
@@ -141,7 +212,7 @@ export function DashboardOverview() {
     };
 
     fetchData();
-  }, [token, period, selectedOfferId]);
+  }, [token, period, selectedOfferId, customDateRange]);
 
   const formatStripe = (bal: any[]) => {
     if (!bal?.length) return "R$ 0,00";
@@ -193,7 +264,7 @@ export function DashboardOverview() {
 
           {/* Filtro de Período */}
           <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="">
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
@@ -201,8 +272,16 @@ export function DashboardOverview() {
               <SelectItem value="7">Últimos 7 dias</SelectItem>
               <SelectItem value="30">Últimos 30 dias</SelectItem>
               <SelectItem value="90">Últimos 3 meses</SelectItem>
+              <SelectItem value="custom">Período personalizado</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* DateRangePicker (só aparece quando period === "custom") */}
+          {period === "custom" && (
+            <div className="w-[250px]">
+              <DateRangePicker value={customDateRange} onChange={setCustomDateRange} />
+            </div>
+          )}
 
           {/* Filtro de Oferta */}
           <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>

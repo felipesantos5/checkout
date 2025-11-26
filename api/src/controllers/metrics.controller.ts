@@ -24,7 +24,6 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Dados inválidos." });
     }
 
-    // Salva métrica local (sem await para não travar se não quiser, mas aqui vamos esperar para buscar a offer)
     await CheckoutMetric.create({
       offerId,
       type,
@@ -33,24 +32,20 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
     });
 
     // --- INTEGRAÇÃO FACEBOOK CAPI ---
-    // Se for initiate_checkout, buscamos a oferta para pegar o pixel
     if (type === "initiate_checkout") {
-      // Busca apenas os campos necessários para performance
       const offer = await Offer.findById(offerId, "facebookPixelId facebookAccessToken currency mainProduct name slug");
 
       if (offer && offer.facebookPixelId && offer.facebookAccessToken) {
         const userData = createFacebookUserData(ip, userAgent);
-
-        // Adicione fbc e fbp ao userData se existirem
         if (fbc) userData.fbc = fbc;
         if (fbp) userData.fbp = fbp;
-        // Dispara evento em background (sem await para não atrasar resposta ao cliente)
+
         sendFacebookEvent(offer.facebookPixelId, offer.facebookAccessToken, {
           event_name: "InitiateCheckout",
           event_time: Math.floor(Date.now() / 1000),
           event_source_url: referer || `https://pay.spappcheckout.com/c/${offer.slug}`,
           action_source: "website",
-          user_data: createFacebookUserData(ip, userAgent), // Aqui ainda não temos email/phone
+          user_data: userData,
           custom_data: {
             currency: offer.currency || "BRL",
             value: (offer.mainProduct as any).priceInCents ? (offer.mainProduct as any).priceInCents / 100 : 0,
@@ -77,58 +72,59 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
 export const handleGetConversionFunnel = async (req: Request, res: Response) => {
   try {
     const ownerId = req.userId!;
-
-    // Filtros de data via query params
     const startDateParam = req.query.startDate as string | undefined;
     const endDateParam = req.query.endDate as string | undefined;
 
-    // Define o filtro de data (padrão: últimos 30 dias)
     const endDate = endDateParam ? new Date(endDateParam) : new Date();
     const startDate = startDateParam ? new Date(startDateParam) : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Validação de datas
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return res.status(400).json({ error: "Datas inválidas. Use formato ISO 8601." });
+      return res.status(400).json({ error: "Datas inválidas." });
     }
 
-    // 1. Buscar ofertas do usuário
     const offers = await Offer.find({ ownerId }).select("_id name slug").lean();
+    if (!offers.length) return res.status(200).json([]);
 
-    // 2. Para cada oferta, buscar métricas e vendas com filtro de data
-    const metricsPromises = offers.map(async (offer) => {
-      const offerId = offer._id;
+    const offerIds = offers.map((offer) => offer._id);
 
-      // Buscar métricas com filtro de data
-      const metrics = await CheckoutMetric.find({
-        offerId,
+    const [allMetrics, allSales] = await Promise.all([
+      CheckoutMetric.find({
+        offerId: { $in: offerIds },
         createdAt: { $gte: startDate, $lte: endDate },
       })
-        .select("type")
-        .lean();
+        .select("offerId type")
+        .lean(),
 
-      const views = metrics.filter((m) => m.type === "view").length;
-      const initiatedCheckout = metrics.filter((m) => m.type === "initiate_checkout").length;
-
-      // Buscar vendas aprovadas com filtro de data
-      const sales = await Sale.find({
-        offerId,
+      Sale.find({
+        offerId: { $in: offerIds },
         status: "succeeded",
         createdAt: { $gte: startDate, $lte: endDate },
       })
-        .select("totalAmountInCents currency")
-        .lean();
+        .select("offerId totalAmountInCents currency")
+        .lean(),
+    ]);
 
-      // Converter receita para BRL
+    const metricsPromises = offers.map(async (offer) => {
+      const currentOfferId = offer._id.toString();
+      const offerMetrics = allMetrics.filter((m) => m.offerId.toString() === currentOfferId);
+      const offerSales = allSales.filter((s) => s.offerId && s.offerId.toString() === currentOfferId);
+
+      const views = offerMetrics.filter((m) => m.type === "view").length;
+      const initiatedCheckout = offerMetrics.filter((m) => m.type === "initiate_checkout").length;
+      const purchases = offerSales.length;
+
       let revenueInBRL = 0;
-      for (const sale of sales) {
-        revenueInBRL += await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
-      }
+      await Promise.all(
+        offerSales.map(async (sale) => {
+          const amount = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+          revenueInBRL += amount;
+        })
+      );
 
-      const purchases = sales.length;
       const conversionRate = views > 0 ? (purchases / views) * 100 : 0;
 
       return {
-        _id: offerId.toString(),
+        _id: currentOfferId,
         offerName: offer.name,
         slug: offer.slug,
         views,
@@ -140,13 +136,11 @@ export const handleGetConversionFunnel = async (req: Request, res: Response) => 
     });
 
     const metrics = await Promise.all(metricsPromises);
-
-    // Ordenar por receita
     metrics.sort((a, b) => b.revenue - a.revenue);
 
     res.status(200).json(metrics);
   } catch (error) {
-    console.error("Erro no funil de conversão:", error);
+    console.error("Erro no funil:", error);
     res.status(500).json({ error: { message: (error as Error).message } });
   }
 };
@@ -224,10 +218,7 @@ export const handleGetOffersRevenue = async (req: Request, res: Response) => {
     }
 
     // Buscar vendas com moeda e oferta (aplicando filtros)
-    const sales = await Sale.find(salesQuery)
-      .select("totalAmountInCents currency offerId")
-      .populate("offerId", "name")
-      .lean();
+    const sales = await Sale.find(salesQuery).select("totalAmountInCents currency offerId").populate("offerId", "name").lean();
 
     // Agrupar por oferta e converter para BRL
     const offerRevenueMap = new Map<string, { offerName: string; revenue: number; salesCount: number }>();
@@ -268,241 +259,232 @@ export const handleGetDashboardOverview = async (req: Request, res: Response) =>
   try {
     const ownerId = req.userId!;
 
-    // Filtros via query params
-    const days = parseInt(req.query.days as string) || 30; // Padrão: 30 dias
+    const daysParam = req.query.days ? parseInt(req.query.days as string) : 30;
+    const startDateParam = req.query.startDate as string | undefined;
+    const endDateParam = req.query.endDate as string | undefined;
     const filterOfferId = req.query.offerId as string | undefined;
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
+    let startDate: Date;
+    let endDate: Date;
 
-    // 1. IDs das ofertas (filtrar por oferta específica se fornecido)
-    let offerIds: any[];
-
-    if (filterOfferId && filterOfferId !== "all") {
-      // Filtrar por oferta específica
-      const offer = await Offer.findOne({ _id: filterOfferId, ownerId }, "_id");
-      if (!offer) {
-        return res.status(404).json({ error: "Oferta não encontrada" });
+    if (startDateParam && endDateParam) {
+      startDate = new Date(startDateParam);
+      endDate = new Date(endDateParam);
+    } else {
+      endDate = new Date();
+      startDate = new Date();
+      if (daysParam === 1) {
+        startDate.setHours(0, 0, 0, 0);
+      } else {
+        startDate.setDate(startDate.getDate() - daysParam);
+        startDate.setHours(0, 0, 0, 0);
       }
+    }
+
+    // --- LÓGICA DE GRANULARIDADE ---
+    // Se o intervalo for menor que 25 horas, agrupamos por hora. Se não, por dia.
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const hoursDiff = Math.ceil(diffTime / (1000 * 60 * 60));
+    const isHourly = hoursDiff <= 25; // Define se vamos mostrar horas ou dias
+    // -------------------------------
+
+    let offerIds: any[];
+    if (filterOfferId && filterOfferId !== "all") {
+      const offer = await Offer.findOne({ _id: filterOfferId, ownerId }, "_id");
+      if (!offer) return res.status(404).json({ error: "Oferta não encontrada" });
       offerIds = [offer._id];
     } else {
-      // Todas as ofertas do usuário
       const myOffers = await Offer.find({ ownerId }, "_id");
       offerIds = myOffers.map((o) => o._id);
     }
 
-    // 2. Buscar todas as vendas com moeda para conversão (aplicar filtros)
-    const salesQuery: any = {
-      ownerId: new mongoose.Types.ObjectId(ownerId),
-      status: "succeeded",
-      createdAt: { $gte: startDate },
-    };
+    const [allSales, allMetrics] = await Promise.all([
+      Sale.find({
+        ownerId: new mongoose.Types.ObjectId(ownerId),
+        status: "succeeded",
+        createdAt: { $gte: startDate, $lte: endDate },
+        offerId: filterOfferId && filterOfferId !== "all" ? filterOfferId : { $exists: true },
+      }).lean(),
 
-    // Filtrar por oferta se especificado
-    if (filterOfferId && filterOfferId !== "all") {
-      salesQuery.offerId = new mongoose.Types.ObjectId(filterOfferId);
-    }
+      CheckoutMetric.find({
+        offerId: { $in: offerIds },
+        createdAt: { $gte: startDate, $lte: endDate },
+      })
+        .select("type createdAt")
+        .lean(),
+    ]);
 
-    const allSales = await Sale.find(salesQuery).lean();
-
-    // 3. Converter e calcular totais
+    // Calcular KPIs Totais
     let totalRevenueInBRL = 0;
     let extraRevenueInBRL = 0;
     const totalSales = allSales.length;
 
-    for (const sale of allSales) {
-      // Converte o total da venda para BRL
-      const saleAmountInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
-      totalRevenueInBRL += saleAmountInBRL;
+    await Promise.all(
+      allSales.map(async (sale) => {
+        const saleAmountInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+        totalRevenueInBRL += saleAmountInBRL;
 
-      // Calcula receita extra (upsells e order bumps)
-      if (sale.isUpsell) {
-        extraRevenueInBRL += saleAmountInBRL;
-      } else {
-        // Soma apenas os order bumps
-        for (const item of sale.items) {
-          if (item.isOrderBump) {
-            const itemAmountInBRL = await convertToBRL(item.priceInCents, sale.currency || "BRL");
-            extraRevenueInBRL += itemAmountInBRL;
+        if (sale.isUpsell) {
+          extraRevenueInBRL += saleAmountInBRL;
+        } else {
+          if (sale.items && sale.items.length > 0) {
+            for (const item of sale.items) {
+              if (item.isOrderBump) {
+                const itemAmountInBRL = await convertToBRL(item.priceInCents, sale.currency || "BRL");
+                extraRevenueInBRL += itemAmountInBRL;
+              }
+            }
           }
         }
-      }
-    }
-
-    const averageTicket = totalSales > 0 ? totalRevenueInBRL / totalSales : 0;
-
-    // Cálculo da Taxa de Conversão (aplicar filtro de data)
-    const totalVisitors = await CheckoutMetric.countDocuments({
-      offerId: { $in: offerIds },
-      type: "view",
-      createdAt: { $gte: startDate },
-    });
-
-    const conversionRate = totalVisitors > 0 ? (totalSales / totalVisitors) * 100 : 0;
-
-    // 4. Gráficos (Histórico) - Buscar vendas por dia e converter (já aplicado filtro)
-    const salesByDate = await Sale.find(salesQuery)
-      .select("totalAmountInCents currency createdAt")
-      .lean();
-
-    // Agrupar vendas por data e converter para BRL
-    const dailyRevenueMap = new Map<string, { revenue: number; count: number }>();
-
-    for (const sale of salesByDate) {
-      const dateStr = sale.createdAt.toISOString().split("T")[0]; // YYYY-MM-DD
-      const revenueInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
-
-      const existing = dailyRevenueMap.get(dateStr) || { revenue: 0, count: 0 };
-      existing.revenue += revenueInBRL;
-      existing.count += 1;
-      dailyRevenueMap.set(dateStr, existing);
-    }
-
-    // Converter para array e ordenar
-    const salesDaily = Array.from(dailyRevenueMap.entries())
-      .map(([date, data]) => ({
-        _id: date,
-        dailyRevenue: data.revenue,
-        dailyCount: data.count,
-      }))
-      .sort((a, b) => a._id.localeCompare(b._id));
-
-    const visitorsDaily = await CheckoutMetric.aggregate([
-      {
-        $match: {
-          offerId: { $in: offerIds },
-          type: "view",
-          createdAt: { $gte: startDate },
-        },
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "America/Sao_Paulo" } },
-          dailyCount: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
-    const revenueChart = salesDaily.map((i) => ({ date: i._id, value: i.dailyRevenue / 100 })); // Envia em Reais para o gráfico
-    const salesChart = salesDaily.map((i) => ({ date: i._id, value: i.dailyCount }));
-    const ticketChart = salesDaily.map((i) => ({ date: i._id, value: i.dailyCount > 0 ? Math.round(i.dailyRevenue / i.dailyCount / 100) : 0 }));
-    const visitorsChart = visitorsDaily.map((i) => ({ date: i._id, value: i.dailyCount }));
-
-    // 5. Calcular taxa de conversão diária
-    // Para cada dia, calcular: (vendas / visitantes) * 100
-    const conversionRateChart = salesDaily.map((saleDay) => {
-      const visitorDay = visitorsDaily.find((v) => v._id === saleDay._id);
-      const dailyVisitors = visitorDay?.dailyCount || 0;
-      const dailyConversionRate = dailyVisitors > 0 ? (saleDay.dailyCount / dailyVisitors) * 100 : 0;
-
-      return {
-        date: saleDay._id,
-        value: parseFloat(dailyConversionRate.toFixed(2)), // Taxa em % com 2 decimais
-      };
-    });
-
-    // 6. Calcular checkouts iniciados e taxa de aprovação
-    const checkoutsInitiated = await CheckoutMetric.countDocuments({
-      offerId: { $in: offerIds },
-      type: "initiate_checkout",
-      createdAt: { $gte: startDate },
-    });
-
-    const checkoutApprovalRate = checkoutsInitiated > 0 ? (totalSales / checkoutsInitiated) * 100 : 0;
-
-    // 7. Top Ofertas (por receita)
-    const topOffersData = await Sale.aggregate([
-      {
-        $match: salesQuery,
-      },
-      {
-        $group: {
-          _id: "$offerId",
-          revenue: { $sum: "$totalAmountInCents" },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { revenue: -1 } },
-      { $limit: 5 },
-    ]);
-
-    // Popular com nomes das ofertas
-    const topOffers = await Promise.all(
-      topOffersData.map(async (item) => {
-        const offer = await Offer.findById(item._id).select("name").lean();
-        const revenueInBRL = await convertToBRL(item.revenue, "BRL");
-        return {
-          name: offer?.name || "Oferta Removida",
-          value: revenueInBRL / 100, // Em reais
-          count: item.count,
-        };
       })
     );
 
-    // 8. Top Produtos (Order Bumps + Upsells)
+    const averageTicket = totalSales > 0 ? totalRevenueInBRL / totalSales : 0;
+    const views = allMetrics.filter((m) => m.type === "view");
+    const checkoutsInitiatedCount = allMetrics.filter((m) => m.type === "initiate_checkout").length;
+    const totalVisitors = views.length;
+    const conversionRate = totalVisitors > 0 ? (totalSales / totalVisitors) * 100 : 0;
+    const checkoutApprovalRate = checkoutsInitiatedCount > 0 ? (totalSales / checkoutsInitiatedCount) * 100 : 0;
+
+    // --- GRÁFICOS (PREENCHIMENTO DE GAPS E FORMATAÇÃO) ---
+    const dailyMap = new Map<string, { revenue: number; salesCount: number; visitorsCount: number; label: string }>();
+
+    // Função auxiliar para gerar a chave de agrupamento e o label
+    const formatKeyAndLabel = (dateInput: Date | string) => {
+      const date = new Date(dateInput);
+      if (isHourly) {
+        // Chave única: YYYY-MM-DD-HH
+        const key = date.toISOString().slice(0, 13); // ex: 2023-10-25T10
+        // Label visual: HH:00
+        const label = date.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+        return { key, label };
+      } else {
+        // Chave única: YYYY-MM-DD (usando fuso BR para garantir dia correto)
+        const brDate = new Date(date.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+        const key = brDate.toISOString().split("T")[0];
+        // Label visual: DD/MM (ou YYYY-MM-DD)
+        const label = key; // O frontend já lida bem com YYYY-MM-DD
+        return { key, label };
+      }
+    };
+
+    // 1. Inicializar o mapa com ZEROS para todos os intervalos (Preencher Gaps)
+    // Isso garante que o gráfico não fique com buracos ou um ponto só
+    let current = new Date(startDate);
+    const endLoop = new Date(endDate);
+
+    // Pequena margem de segurança no loop
+    while (current <= endLoop || (isHourly && current.getDate() === endLoop.getDate() && current.getHours() <= endLoop.getHours())) {
+      const { key, label } = formatKeyAndLabel(current);
+      if (!dailyMap.has(key)) {
+        dailyMap.set(key, { revenue: 0, salesCount: 0, visitorsCount: 0, label });
+      }
+
+      // Incremento
+      if (isHourly) {
+        current.setHours(current.getHours() + 1);
+      } else {
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    // 2. Preencher com dados reais
+    for (const sale of allSales) {
+      const { key } = formatKeyAndLabel(sale.createdAt);
+      // Proteção: caso a venda esteja fora do range gerado (raro, mas possível com timezone)
+      if (dailyMap.has(key)) {
+        const amount = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+        const entry = dailyMap.get(key)!;
+        entry.revenue += amount;
+        entry.salesCount += 1;
+      }
+    }
+
+    for (const metric of views) {
+      const { key } = formatKeyAndLabel(metric.createdAt);
+      if (dailyMap.has(key)) {
+        dailyMap.get(key)!.visitorsCount += 1;
+      }
+    }
+
+    // Ordenar as chaves para o gráfico
+    const sortedKeys = Array.from(dailyMap.keys()).sort();
+
+    const revenueChart = sortedKeys.map((key) => ({ date: dailyMap.get(key)!.label, value: dailyMap.get(key)!.revenue / 100 }));
+    const salesChart = sortedKeys.map((key) => ({ date: dailyMap.get(key)!.label, value: dailyMap.get(key)!.salesCount }));
+    const visitorsChart = sortedKeys.map((key) => ({ date: dailyMap.get(key)!.label, value: dailyMap.get(key)!.visitorsCount }));
+
+    const ticketChart = sortedKeys.map((key) => {
+      const data = dailyMap.get(key)!;
+      return { date: data.label, value: data.salesCount > 0 ? Math.round(data.revenue / data.salesCount / 100) : 0 };
+    });
+
+    const conversionRateChart = sortedKeys.map((key) => {
+      const data = dailyMap.get(key)!;
+      return {
+        date: data.label,
+        value: data.visitorsCount > 0 ? parseFloat(((data.salesCount / data.visitorsCount) * 100).toFixed(2)) : 0,
+      };
+    });
+
+    // Top Lists (Mesma lógica de antes)
+    const offersMap = new Map<string, { name: string; revenue: number; count: number }>();
+    const allOfferDetails = await Offer.find({ _id: { $in: offerIds } }, "name").lean();
+    const offerNameMap = new Map(allOfferDetails.map((o) => [o._id.toString(), o.name]));
+
+    for (const sale of allSales) {
+      const oId = (sale.offerId as any)?.toString();
+      if (!oId) continue;
+      const name = offerNameMap.get(oId) || "Oferta Removida";
+      const amount = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+      const current = offersMap.get(oId) || { name, revenue: 0, count: 0 };
+      current.revenue += amount;
+      current.count += 1;
+      offersMap.set(oId, current);
+    }
+    const topOffers = Array.from(offersMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+      .map((o) => ({ ...o, value: o.revenue / 100 }));
+
+    const topCountriesMap = new Map<string, { revenue: number; count: number }>();
     const topProductsMap = new Map<string, { name: string; revenue: number; count: number }>();
 
     for (const sale of allSales) {
-      // Se for upsell, considerar o produto principal
-      if (sale.isUpsell && sale.items.length > 0) {
-        const product = sale.items[0];
-        const productName = product.name || "Produto sem nome";
-        const revenueInBRL = await convertToBRL(product.priceInCents, sale.currency || "BRL");
+      const country = sale.country || "BR";
+      const amount = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+      const cCurrent = topCountriesMap.get(country) || { revenue: 0, count: 0 };
+      cCurrent.revenue += amount;
+      cCurrent.count += 1;
+      topCountriesMap.set(country, cCurrent);
 
-        const existing = topProductsMap.get(productName) || { name: productName, revenue: 0, count: 0 };
-        existing.revenue += revenueInBRL;
-        existing.count += 1;
-        topProductsMap.set(productName, existing);
-      } else {
-        // Para vendas normais, pegar apenas order bumps
+      if (sale.isUpsell && sale.items && sale.items.length > 0) {
+        const pName = sale.items[0].name || "Produto sem nome";
+        const pCurrent = topProductsMap.get(pName) || { name: pName, revenue: 0, count: 0 };
+        pCurrent.revenue += amount;
+        pCurrent.count += 1;
+        topProductsMap.set(pName, pCurrent);
+      } else if (sale.items) {
         for (const item of sale.items) {
           if (item.isOrderBump) {
-            const productName = item.name || "Produto sem nome";
-            const revenueInBRL = await convertToBRL(item.priceInCents, sale.currency || "BRL");
-
-            const existing = topProductsMap.get(productName) || { name: productName, revenue: 0, count: 0 };
-            existing.revenue += revenueInBRL;
-            existing.count += 1;
-            topProductsMap.set(productName, existing);
+            const itemAmount = await convertToBRL(item.priceInCents, sale.currency || "BRL");
+            const pName = item.name || "Order Bump";
+            const pCurrent = topProductsMap.get(pName) || { name: pName, revenue: 0, count: 0 };
+            pCurrent.revenue += itemAmount;
+            pCurrent.count += 1;
+            topProductsMap.set(pName, pCurrent);
           }
         }
       }
     }
-
-    // Converter para array e ordenar por receita
-    const topProducts = Array.from(topProductsMap.values())
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5)
-      .map((p) => ({
-        name: p.name,
-        value: p.revenue / 100, // Em reais
-        count: p.count,
-      }));
-
-    // 9. Top Países (Vendas por país)
-    const topCountriesMap = new Map<string, { revenue: number; count: number }>();
-
-    for (const sale of allSales) {
-      const country = sale.country || "BR"; // Padrão Brasil se não tiver país
-      const revenueInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
-
-      const existing = topCountriesMap.get(country) || { revenue: 0, count: 0 };
-      existing.revenue += revenueInBRL;
-      existing.count += 1;
-      topCountriesMap.set(country, existing);
-    }
-
-    // Converter para array e ordenar por receita
     const topCountries = Array.from(topCountriesMap.entries())
       .sort((a, b) => b[1].revenue - a[1].revenue)
       .slice(0, 5)
-      .map(([country, data]) => ({
-        name: country,
-        value: data.revenue / 100, // Em reais
-        count: data.count,
-      }));
+      .map(([name, data]) => ({ name, value: data.revenue / 100, count: data.count }));
+    const topProducts = Array.from(topProductsMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+      .map((p) => ({ name: p.name, value: p.revenue / 100, count: p.count }));
 
     res.status(200).json({
       kpis: {
@@ -512,9 +494,9 @@ export const handleGetDashboardOverview = async (req: Request, res: Response) =>
         averageTicket,
         extraRevenue: extraRevenueInBRL,
         conversionRate,
-        totalOrders: totalSales, // Total de pedidos (mesmo que totalSales)
-        checkoutsInitiated, // Checkouts iniciados
-        checkoutApprovalRate, // Taxa de aprovação do checkout
+        totalOrders: totalSales,
+        checkoutsInitiated: checkoutsInitiatedCount,
+        checkoutApprovalRate,
       },
       charts: {
         revenue: revenueChart,
@@ -523,9 +505,9 @@ export const handleGetDashboardOverview = async (req: Request, res: Response) =>
         visitors: visitorsChart,
         conversionRate: conversionRateChart,
       },
-      topOffers, // Top 5 ofertas
-      topProducts, // Top 5 produtos (bumps + upsells)
-      topCountries, // Top 5 países
+      topOffers,
+      topProducts,
+      topCountries,
     });
   } catch (error) {
     console.error("Erro Dashboard Overview:", error);
