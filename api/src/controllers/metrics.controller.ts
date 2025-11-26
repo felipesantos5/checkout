@@ -14,6 +14,7 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
   try {
     const { offerId, type, fbc, fbp } = req.body;
 
+    // Resposta imediata para não travar o cliente (Fire and Forget)
     res.status(200).send();
 
     const ip = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
@@ -21,9 +22,32 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
     const referer = req.headers["referer"] || "";
 
     if (!offerId || !["view", "initiate_checkout"].includes(type)) {
-      return res.status(400).json({ error: "Dados inválidos." });
+      // Como já respondemos 200, apenas paramos a execução.
+      return;
     }
 
+    // --- PROTEÇÃO CONTRA DUPLICIDADE (ANTI-POLLUTION) ---
+    // Apenas para 'view'. Para 'initiate_checkout' geralmente queremos registrar todas as tentativas.
+    if (type === "view") {
+      // Define janela de 24 horas atrás
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const alreadyViewed = await CheckoutMetric.exists({
+        offerId,
+        type: "view",
+        ip: ip, // Verifica o mesmo IP
+        createdAt: { $gte: oneDayAgo }, // Nos últimos 24h
+      });
+
+      if (alreadyViewed) {
+        // Se já viu hoje, ignoramos (não salva no banco)
+        // Isso impede que um F5 suje as métricas
+        return;
+      }
+    }
+    // ----------------------------------------------------
+
+    // Salva métrica local (sem await para não travar se não quiser, mas aqui vamos esperar para buscar a offer)
     await CheckoutMetric.create({
       offerId,
       type,
@@ -32,20 +56,24 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
     });
 
     // --- INTEGRAÇÃO FACEBOOK CAPI ---
+    // Se for initiate_checkout, buscamos a oferta para pegar o pixel
     if (type === "initiate_checkout") {
+      // Busca apenas os campos necessários para performance
       const offer = await Offer.findById(offerId, "facebookPixelId facebookAccessToken currency mainProduct name slug");
 
       if (offer && offer.facebookPixelId && offer.facebookAccessToken) {
         const userData = createFacebookUserData(ip, userAgent);
+
+        // Adicione fbc e fbp ao userData se existirem
         if (fbc) userData.fbc = fbc;
         if (fbp) userData.fbp = fbp;
-
+        // Dispara evento em background (sem await para não atrasar resposta ao cliente)
         sendFacebookEvent(offer.facebookPixelId, offer.facebookAccessToken, {
           event_name: "InitiateCheckout",
           event_time: Math.floor(Date.now() / 1000),
           event_source_url: referer || `https://pay.spappcheckout.com/c/${offer.slug}`,
           action_source: "website",
-          user_data: userData,
+          user_data: createFacebookUserData(ip, userAgent), // Aqui ainda não temos email/phone
           custom_data: {
             currency: offer.currency || "BRL",
             value: (offer.mainProduct as any).priceInCents ? (offer.mainProduct as any).priceInCents / 100 : 0,
@@ -56,11 +84,9 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
       }
     }
     // -------------------------------
-
-    res.status(200).send();
   } catch (error) {
     console.error("Erro tracking:", error);
-    res.status(200).send();
+    // Não precisa responder res.status, pois já respondemos no início
   }
 };
 

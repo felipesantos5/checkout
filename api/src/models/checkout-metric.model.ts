@@ -27,8 +27,7 @@ const checkoutMetricSchema = new Schema<ICheckoutMetric>(
   { timestamps: { createdAt: true, updatedAt: false } } // Só precisamos da data de criação
 );
 
-// Expira documentos antigos automaticamente após 90 dias para economizar banco (Opcional, boas práticas)
-// checkoutMetricSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 });
+checkoutMetricSchema.index({ offerId: 1, ip: 1, type: 1, createdAt: -1 });
 
 const CheckoutMetric: Model<ICheckoutMetric> = mongoose.models.CheckoutMetric || model<ICheckoutMetric>("CheckoutMetric", checkoutMetricSchema);
 
