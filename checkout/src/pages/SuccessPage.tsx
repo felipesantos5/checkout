@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
-import { useTranslation } from "../i18n/I18nContext";
+import { useTranslation, I18nProvider } from "../i18n/I18nContext";
 
-const SuccessPage = () => {
+const SuccessPageContent = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [countdown, setCountdown] = useState(5);
@@ -29,7 +29,7 @@ const SuccessPage = () => {
   }, [upsellLink]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Card principal */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
@@ -89,6 +89,20 @@ const SuccessPage = () => {
         <p className="text-center text-gray-500 text-sm mt-6">Se você tiver alguma dúvida, verifique seu e-mail para mais informações.</p>
       </div>
     </div>
+  );
+};
+
+// Wrapper com I18nProvider
+const SuccessPage = () => {
+  const [searchParams] = useSearchParams();
+
+  // Tenta obter a linguagem dos parâmetros da URL, senão usa padrão "pt"
+  const language = (searchParams.get("lang") as "pt" | "en" | "fr" | "es") || "pt";
+
+  return (
+    <I18nProvider language={language}>
+      <SuccessPageContent />
+    </I18nProvider>
   );
 };
 
