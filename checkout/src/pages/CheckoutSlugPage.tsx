@@ -8,6 +8,7 @@ import { I18nProvider } from "../i18n/I18nContext";
 import type { Language } from "../i18n/translations";
 import { SkeletonLoader } from "../components/ui/SkeletonLoader";
 import { useFacebookPixel } from "../hooks/useFacebookPixel";
+import { logger } from "../utils/logger";
 
 // ... (Interfaces OfferData mantidas iguais) ...
 export interface OfferData {
@@ -125,7 +126,7 @@ export function CheckoutSlugPage() {
               offerId: data._id,
               type: "view",
             }),
-          }).catch((err) => console.error("Track view error", err));
+          }).catch((err) => logger.error("Track view error", err));
         }
         // ---------------------
       } catch (err) {

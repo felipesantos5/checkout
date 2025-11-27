@@ -1,5 +1,5 @@
 // src/components/checkout/CheckoutForm.tsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-js";
 import type { PaymentRequest, PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
@@ -8,16 +8,19 @@ import { Loader2, CheckCircle } from "lucide-react";
 import type { OfferData } from "../../pages/CheckoutSlugPage";
 import { OrderSummary } from "./OrderSummary";
 import { ContactInfo } from "./ContactInfo";
-import { AddressInfo } from "./AddressInfo";
 import { PaymentMethods } from "./PaymentMethods";
-import { OrderBump } from "./OrderBump";
 import { Banner } from "./Banner";
+
+// Lazy load componentes não críticos para melhorar performance inicial
+const AddressInfo = lazy(() => import("./AddressInfo").then(module => ({ default: module.AddressInfo })));
+const OrderBump = lazy(() => import("./OrderBump").then(module => ({ default: module.OrderBump })));
 import { API_URL } from "../../config/BackendUrl";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "../../i18n/I18nContext";
 import { getClientIP } from "../../service/getClientIP";
 import { getCookie } from "../../helper/getCookie";
 import { detectPlatform, isMobile } from "../../utils/platformDetection";
+import { logger } from "../../utils/logger";
 
 interface CheckoutFormProps {
   offerData: OfferData;
@@ -114,7 +117,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         { eventID: eventId }
       );
 
-      console.log(`🔵 Facebook Pixel: InitiateCheckout [eventID: ${eventId}] - Valor: ${totalValue} ${offerData.currency.toUpperCase()} - Produtos: ${contentIds.length} - Quantidade: ${quantity}`);
+      logger.pixel(`InitiateCheckout [eventID: ${eventId}] - Valor: ${totalValue} ${offerData.currency.toUpperCase()} - Produtos: ${contentIds.length} - Quantidade: ${quantity}`);
     }
 
     // 2. Envia evento para o backend (CAPI) com TODOS os dados
@@ -135,9 +138,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           fbp: fbCookies.fbp,
         }),
       });
-      console.log(`✅ Backend CAPI: InitiateCheckout enviado com todos os dados`);
+      logger.pixel('Backend CAPI: InitiateCheckout enviado com todos os dados');
     } catch (err) {
-      console.error("❌ Erro ao enviar InitiateCheckout para backend:", err);
+      logger.error("Erro ao enviar InitiateCheckout para backend:", err);
     }
   };
 
@@ -157,23 +160,23 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
 
   // Configuração simplificada da Carteira Digital - Deixa o Stripe decidir tudo
   useEffect(() => {
-    console.log("🔍 [WALLET] Setup iniciado");
+    logger.wallet("Setup iniciado");
 
     if (!stripe) {
-      console.log("⏳ [WALLET] Aguardando Stripe carregar...");
+      logger.wallet("Aguardando Stripe carregar...");
       return;
     }
 
-    console.log("✅ [WALLET] Stripe carregado");
-    console.log("📱 [WALLET] User Agent:", navigator.userAgent);
-    console.log("📱 [WALLET] Plataforma detectada:", detectPlatform());
-    console.log("📱 [WALLET] É mobile:", isMobile());
+    logger.wallet("Stripe carregado");
+    logger.wallet("User Agent", navigator.userAgent);
+    logger.wallet("Plataforma detectada", detectPlatform());
+    logger.wallet("É mobile", isMobile());
 
     // Normaliza configurações
     const normalizedCurrency = offerData.currency.toLowerCase();
     const countryCode = normalizedCurrency === "brl" ? "BR" : "US";
 
-    console.log("💰 [WALLET] Moeda:", normalizedCurrency, "| País:", countryCode);
+    logger.wallet(`Moeda: ${normalizedCurrency} | País: ${countryCode}`);
 
     // Cria PaymentRequest - Stripe decide internamente se Apple/Google Pay está disponível
     const pr = stripe.paymentRequest({
@@ -188,20 +191,20 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
       requestPayerPhone: offerData.collectPhone,
     });
 
-    console.log("💳 [WALLET] PaymentRequest criado, verificando disponibilidade...");
+    logger.wallet("PaymentRequest criado, verificando disponibilidade...");
 
     // Stripe verifica se carteiras digitais estão disponíveis
     pr.canMakePayment().then((result) => {
-      console.log("🔎 [WALLET] Resultado canMakePayment:", result);
+      logger.wallet("Resultado canMakePayment:", result);
 
       if (!result) {
-        console.log("❌ [WALLET] Nenhuma carteira digital disponível");
+        logger.wallet("Nenhuma carteira digital disponível");
         return;
       }
 
-      console.log("✅ [WALLET] Carteira disponível!");
-      console.log("   - Apple Pay:", result.applePay);
-      console.log("   - Google Pay:", result.googlePay);
+      logger.wallet("Carteira disponível!");
+      logger.wallet("Apple Pay", result.applePay);
+      logger.wallet("Google Pay", result.googlePay);
 
       // Detecta plataforma para priorizar corretamente
       const platform = detectPlatform();
@@ -211,35 +214,35 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
       if (platform === 'ios') {
         // iPhone/iPad SEMPRE mostra Apple Pay (mesmo que o Stripe reporte as duas)
         label = t.payment.applePay;
-        console.log("🍎 [WALLET] Plataforma iOS - Usando Apple Pay");
+        logger.wallet("Plataforma iOS - Usando Apple Pay");
       } else if (platform === 'android') {
         // Android SEMPRE mostra Google Pay
         label = t.payment.googlePay;
-        console.log("🤖 [WALLET] Plataforma Android - Usando Google Pay");
+        logger.wallet("Plataforma Android - Usando Google Pay");
       } else {
         // Desktop/Outros - usa o que o Stripe reportou
         if (result.applePay) {
           label = t.payment.applePay;
-          console.log("🍎 [WALLET] Desktop com Apple Pay disponível");
+          logger.wallet("Desktop com Apple Pay disponível");
         } else if (result.googlePay) {
           label = t.payment.googlePay;
-          console.log("🤖 [WALLET] Desktop com Google Pay disponível");
+          logger.wallet("Desktop com Google Pay disponível");
         } else {
-          console.log("💳 [WALLET] Usando label genérico (fallback)");
+          logger.wallet("Usando label genérico (fallback)");
         }
       }
 
       // Configura a carteira para uso
       setWalletLabel(label);
       setPaymentRequest(pr);
-      console.log("✅ [WALLET] Configuração concluída com sucesso!");
+      logger.wallet("Configuração concluída com sucesso!");
     }).catch((error) => {
-      console.error("❌ [WALLET] Erro ao verificar disponibilidade:", error);
+      logger.error("WALLET - Erro ao verificar disponibilidade:", error);
     });
 
     pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
-      console.log("💳 [APPLE PAY] Evento paymentmethod disparado");
-      console.log("💳 [APPLE PAY] Dados do pagador:", {
+      logger.payment("APPLE PAY - Evento paymentmethod disparado");
+      logger.payment("APPLE PAY - Dados do pagador:", {
         email: ev.payerEmail,
         name: ev.payerName,
         phone: ev.payerPhone,
@@ -276,7 +279,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           },
         };
 
-        console.log("🚀 [APPLE PAY] Criando PaymentIntent no backend...");
+        logger.payment("APPLE PAY - Criando PaymentIntent no backend...");
 
         const res = await fetch(`${API_URL}/payments/create-intent`, {
           method: "POST",
@@ -292,14 +295,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         const { clientSecret, error: backendError } = await res.json();
 
         if (backendError) {
-          console.error("❌ [APPLE PAY] Erro do backend:", backendError);
+          logger.error("APPLE PAY - Erro do backend:", backendError);
           ev.complete("fail");
           setErrorMessage(backendError.message);
           setLoading(false);
           return;
         }
 
-        console.log("✅ [APPLE PAY] PaymentIntent criado, confirmando...");
+        logger.payment("APPLE PAY - PaymentIntent criado, confirmando...");
 
         // Para Apple Pay/Google Pay, usa confirmCardPayment com o payment_method
         const { error: confirmError, paymentIntent } = await stripe!.confirmCardPayment(clientSecret, {
@@ -307,20 +310,20 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         });
 
         if (confirmError) {
-          console.error("❌ [APPLE PAY] Erro ao confirmar:", confirmError);
+          logger.error("APPLE PAY - Erro ao confirmar:", confirmError);
           ev.complete("fail");
           setErrorMessage(confirmError.message || "Erro no pagamento");
           setLoading(false);
         } else {
-          console.log("✅ [APPLE PAY] Pagamento confirmado:", paymentIntent?.status);
+          logger.payment("APPLE PAY - Pagamento confirmado:", paymentIntent?.status);
           ev.complete("success");
 
           if (paymentIntent?.status === "succeeded") {
-            console.log("🎉 [APPLE PAY] Pagamento bem-sucedido!");
+            logger.payment("APPLE PAY - Pagamento bem-sucedido!");
             setPaymentIntentId(paymentIntent.id);
             setPaymentSucceeded(true);
           } else if (paymentIntent?.status === "requires_action") {
-            console.log("⚠️ [APPLE PAY] Requer ação adicional");
+            logger.payment("APPLE PAY - Requer ação adicional");
             // Tenta completar a ação
             const { error: actionError } = await stripe!.confirmCardPayment(clientSecret);
             if (actionError) {
@@ -333,14 +336,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
               setPaymentSucceeded(true);
             }
           } else {
-            console.warn("⚠️ [APPLE PAY] Status inesperado:", paymentIntent?.status);
+            logger.warn("APPLE PAY - Status inesperado:", paymentIntent?.status);
             ev.complete("fail");
             setErrorMessage(`Pagamento não aprovado. Status: ${paymentIntent?.status}`);
             setLoading(false);
           }
         }
       } catch (err: any) {
-        console.error("❌ [APPLE PAY] Erro inesperado:", err);
+        logger.error("APPLE PAY - Erro inesperado:", err);
         ev.complete("fail");
         setErrorMessage(err.message || "Erro inesperado");
         setLoading(false);
@@ -385,7 +388,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
               return;
             }
           } catch (error) {
-            console.error("Falha ao gerar token de upsell, verificando fallback.", error);
+            logger.error("Falha ao gerar token de upsell, verificando fallback.", error);
           }
         }
 
@@ -485,7 +488,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         { eventID: eventId }
       );
 
-      console.log(`🔵 Facebook Event: AddPaymentInfo [eventID: ${eventId}]`);
+      logger.pixel(`AddPaymentInfo [eventID: ${eventId}]`);
     }
 
     // Coleta cookies do Facebook (não usa useMemo aqui pois estamos dentro de um handler)
@@ -555,7 +558,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         setLoading(false);
       }
     } catch (error: any) {
-      console.error("[ERROR] Erro no checkout:", error);
+      logger.error("Erro no checkout:", error);
       setErrorMessage(error.message || t.messages.error);
       setLoading(false);
     }
@@ -604,11 +607,19 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
               discountPercentage={offerData.mainProduct.discountPercentage}
             />
 
-            <ContactInfo showPhone={offerData.collectPhone} offerID={offerData._id} onEmailValidated={handleInitiateCheckout} />
-            {offerData.collectAddress && <AddressInfo />}
+            <ContactInfo showPhone={offerData.collectPhone} onEmailValidated={handleInitiateCheckout} />
+
+            {offerData.collectAddress && (
+              <Suspense fallback={<div className="animate-pulse bg-gray-100 h-40 rounded-lg mt-6"></div>}>
+                <AddressInfo />
+              </Suspense>
+            )}
 
             <PaymentMethods method={method} setMethod={setMethod} paymentRequest={paymentRequest} walletLabel={walletLabel} />
-            <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
+
+            <Suspense fallback={<div className="animate-pulse bg-gray-100 h-32 rounded-lg mt-6"></div>}>
+              <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
+            </Suspense>
 
             <button
               type="submit"
