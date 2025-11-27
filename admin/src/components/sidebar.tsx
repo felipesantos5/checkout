@@ -1,5 +1,6 @@
 import { ChartNoAxesCombined, ShoppingBasket, User, ChartColumnIncreasing, Moon, Sun } from "lucide-react";
 import logo from "../assets/logo.png";
+import logoWhite from "../assets/logo-white.png";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_URL } from "@/config/BackendUrl";
@@ -119,9 +120,11 @@ function UserMenu() {
 }
 
 export function AppSidebar() {
-  // const [isApprovalOpen, setIsApprovalOpen] = useState(false);
   const location = useLocation();
+
   const { token } = useAuth();
+  const { theme } = useTheme();
+
   const [totalRevenue, setTotalRevenue] = useState(0);
 
   useEffect(() => {
@@ -145,7 +148,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent className="justify-between">
         <SidebarGroup>
-          <img src={logo} alt="logo" className="mt-10 mb-10 w-36 mx-auto" />
+          <img src={theme === "dark" ? logoWhite : logo} alt="logo" className="mt-10 mb-10 w-36 mx-auto" />
 
           {/* Revenue Card */}
           <div className="px-2 mb-6">
