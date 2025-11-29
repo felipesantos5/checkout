@@ -195,6 +195,7 @@ const facebookPixelSchema = z.object({
 const offerFormSchema = z.object({
   name: z.string().min(3, { message: "Nome do link é obrigatório." }),
   bannerImageUrl: optionalUrl,
+  secondaryBannerImageUrl: optionalUrl,
   thankYouPageUrl: optionalUrl,
   currency: z.string().default("BRL"),
   language: z.string().default("pt"),
@@ -207,7 +208,20 @@ const offerFormSchema = z.object({
   utmfyWebhookUrls: z.array(z.string().url({ message: "URL inválida." }).or(z.literal(""))).optional(),
   facebookPixelId: z.string().optional(), // Mantido para retrocompatibilidade
   facebookAccessToken: z.string().optional(), // Mantido para retrocompatibilidade
-  facebookPixels: z.array(facebookPixelSchema).optional(),
+  facebookPixels: z
+    .array(facebookPixelSchema)
+    .optional()
+    .refine(
+      (pixels) => {
+        if (!pixels || pixels.length === 0) return true;
+        const pixelIds = pixels.map((p) => p.pixelId.trim()).filter((id) => id !== "");
+        const uniqueIds = new Set(pixelIds);
+        return pixelIds.length === uniqueIds.size;
+      },
+      {
+        message: "IDs de Pixel duplicados encontrados. Cada Pixel ID deve ser único.",
+      }
+    ),
   upsell: upsellSchema,
   membershipWebhook: membershipWebhookSchema,
   orderBumps: z.array(productSchema).optional(),
@@ -232,6 +246,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
     defaultValues: initialData || {
       name: "",
       bannerImageUrl: "",
+      secondaryBannerImageUrl: "",
       thankYouPageUrl: "",
       currency: "BRL",
       language: "pt",
@@ -414,6 +429,21 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                   <FormControl>
                     <ImageUpload value={field.value} onChange={field.onChange} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="secondaryBannerImageUrl"
+              render={({ field }: any) => (
+                <FormItem>
+                  <FormLabel>Banner Secundário (Opcional)</FormLabel>
+                  <FormControl>
+                    <ImageUpload value={field.value} onChange={field.onChange} />
+                  </FormControl>
+                  <FormDescription>Banner adicional para exibir no checkout.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

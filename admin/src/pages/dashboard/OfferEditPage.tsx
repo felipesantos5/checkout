@@ -32,6 +32,7 @@ interface ApiOfferData {
   slug: string;
   name: string;
   bannerImageUrl?: string;
+  secondaryBannerImageUrl?: string;
   thankYouPageUrl?: string;
   currency: string;
   language: string;
@@ -67,6 +68,7 @@ const transformDataForForm = (data: ApiOfferData): OfferFormData => {
   return {
     name: data.name,
     bannerImageUrl: data.bannerImageUrl,
+    secondaryBannerImageUrl: data.secondaryBannerImageUrl,
     thankYouPageUrl: data.thankYouPageUrl,
     currency: data.currency,
     language: data.language,

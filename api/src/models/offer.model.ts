@@ -30,6 +30,7 @@ export interface IOffer extends Document {
   name: string;
   slug: string;
   bannerImageUrl?: string;
+  secondaryBannerImageUrl?: string;
   currency: string;
   language: string;
   collectAddress: boolean;
@@ -124,6 +125,10 @@ const offerSchema = new Schema<IOffer>(
       default: "",
     },
     bannerImageUrl: {
+      type: String,
+      default: "",
+    },
+    secondaryBannerImageUrl: {
       type: String,
       default: "",
     },
