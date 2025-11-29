@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from "rea
 import { useNavigate } from "react-router-dom";
 import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-js";
 import type { PaymentRequest, PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
-import { Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle, Lock, ShieldCheck } from "lucide-react";
 
 import type { OfferData } from "../../pages/CheckoutSlugPage";
 import { OrderSummary } from "./OrderSummary";
@@ -12,8 +12,8 @@ import { PaymentMethods } from "./PaymentMethods";
 import { Banner } from "./Banner";
 
 // Lazy load componentes não críticos para melhorar performance inicial
-const AddressInfo = lazy(() => import("./AddressInfo").then(module => ({ default: module.AddressInfo })));
-const OrderBump = lazy(() => import("./OrderBump").then(module => ({ default: module.OrderBump })));
+const AddressInfo = lazy(() => import("./AddressInfo").then((module) => ({ default: module.AddressInfo })));
+const OrderBump = lazy(() => import("./OrderBump").then((module) => ({ default: module.OrderBump })));
 import { API_URL } from "../../config/BackendUrl";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "../../i18n/I18nContext";
@@ -21,6 +21,7 @@ import { getClientIP } from "../../service/getClientIP";
 import { getCookie } from "../../helper/getCookie";
 import { detectPlatform, isMobile } from "../../utils/platformDetection";
 import { logger } from "../../utils/logger";
+import { formatCurrency } from "../../helper/formatCurrency";
 
 interface CheckoutFormProps {
   offerData: OfferData;
@@ -117,7 +118,11 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         { eventID: eventId }
       );
 
-      logger.pixel(`InitiateCheckout [eventID: ${eventId}] - Valor: ${totalValue} ${offerData.currency.toUpperCase()} - Produtos: ${contentIds.length} - Quantidade: ${quantity}`);
+      logger.pixel(
+        `InitiateCheckout [eventID: ${eventId}] - Valor: ${totalValue} ${offerData.currency.toUpperCase()} - Produtos: ${
+          contentIds.length
+        } - Quantidade: ${quantity}`
+      );
     }
 
     // 2. Envia evento para o backend (CAPI) com TODOS os dados
@@ -138,7 +143,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           fbp: fbCookies.fbp,
         }),
       });
-      logger.pixel('Backend CAPI: InitiateCheckout enviado com todos os dados');
+      logger.pixel("Backend CAPI: InitiateCheckout enviado com todos os dados");
     } catch (err) {
       logger.error("Erro ao enviar InitiateCheckout para backend:", err);
     }
@@ -194,51 +199,53 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
     logger.wallet("PaymentRequest criado, verificando disponibilidade...");
 
     // Stripe verifica se carteiras digitais estão disponíveis
-    pr.canMakePayment().then((result) => {
-      logger.wallet("Resultado canMakePayment:", result);
+    pr.canMakePayment()
+      .then((result) => {
+        logger.wallet("Resultado canMakePayment:", result);
 
-      if (!result) {
-        logger.wallet("Nenhuma carteira digital disponível");
-        return;
-      }
-
-      logger.wallet("Carteira disponível!");
-      logger.wallet("Apple Pay", result.applePay);
-      logger.wallet("Google Pay", result.googlePay);
-
-      // Detecta plataforma para priorizar corretamente
-      const platform = detectPlatform();
-      let label = t.payment.wallet; // Padrão genérico
-
-      // PRIORIZA baseado na plataforma para evitar confusão
-      if (platform === 'ios') {
-        // iPhone/iPad SEMPRE mostra Apple Pay (mesmo que o Stripe reporte as duas)
-        label = t.payment.applePay;
-        logger.wallet("Plataforma iOS - Usando Apple Pay");
-      } else if (platform === 'android') {
-        // Android SEMPRE mostra Google Pay
-        label = t.payment.googlePay;
-        logger.wallet("Plataforma Android - Usando Google Pay");
-      } else {
-        // Desktop/Outros - usa o que o Stripe reportou
-        if (result.applePay) {
-          label = t.payment.applePay;
-          logger.wallet("Desktop com Apple Pay disponível");
-        } else if (result.googlePay) {
-          label = t.payment.googlePay;
-          logger.wallet("Desktop com Google Pay disponível");
-        } else {
-          logger.wallet("Usando label genérico (fallback)");
+        if (!result) {
+          logger.wallet("Nenhuma carteira digital disponível");
+          return;
         }
-      }
 
-      // Configura a carteira para uso
-      setWalletLabel(label);
-      setPaymentRequest(pr);
-      logger.wallet("Configuração concluída com sucesso!");
-    }).catch((error) => {
-      logger.error("WALLET - Erro ao verificar disponibilidade:", error);
-    });
+        logger.wallet("Carteira disponível!");
+        logger.wallet("Apple Pay", result.applePay);
+        logger.wallet("Google Pay", result.googlePay);
+
+        // Detecta plataforma para priorizar corretamente
+        const platform = detectPlatform();
+        let label = t.payment.wallet; // Padrão genérico
+
+        // PRIORIZA baseado na plataforma para evitar confusão
+        if (platform === "ios") {
+          // iPhone/iPad SEMPRE mostra Apple Pay (mesmo que o Stripe reporte as duas)
+          label = t.payment.applePay;
+          logger.wallet("Plataforma iOS - Usando Apple Pay");
+        } else if (platform === "android") {
+          // Android SEMPRE mostra Google Pay
+          label = t.payment.googlePay;
+          logger.wallet("Plataforma Android - Usando Google Pay");
+        } else {
+          // Desktop/Outros - usa o que o Stripe reportou
+          if (result.applePay) {
+            label = t.payment.applePay;
+            logger.wallet("Desktop com Apple Pay disponível");
+          } else if (result.googlePay) {
+            label = t.payment.googlePay;
+            logger.wallet("Desktop com Google Pay disponível");
+          } else {
+            logger.wallet("Usando label genérico (fallback)");
+          }
+        }
+
+        // Configura a carteira para uso
+        setWalletLabel(label);
+        setPaymentRequest(pr);
+        logger.wallet("Configuração concluída com sucesso!");
+      })
+      .catch((error) => {
+        logger.error("WALLET - Erro ao verificar disponibilidade:", error);
+      });
 
     pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
       logger.payment("APPLE PAY - Evento paymentmethod disparado");
@@ -591,50 +598,196 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           </div>
         </div>
       )}
-      <Banner imageUrl={offerData.bannerImageUrl} />
-      <div className="min-h-screen bg-white p-4">
-        <div className="max-w-lg mx-auto bg-white rounded-xl shadow-xl p-4 pt-0">
+      <Banner imageUrl={offerData.bannerImageUrl} secondaryBannerImageUrl={offerData.secondaryBannerImageUrl} />
+      <div className="min-h-screen bg-gray-50 py-4 md:py-8">
+        {/* Container principal com 2 colunas no desktop */}
+        <div className="max-w-7xl mx-auto px-4">
           <form onSubmit={handleSubmit}>
-            <OrderSummary
-              productName={offerData.mainProduct.name}
-              productImageUrl={offerData.mainProduct.imageUrl}
-              totalAmountInCents={totalAmount}
-              basePriceInCents={offerData.mainProduct.priceInCents}
-              currency={offerData.currency}
-              quantity={quantity}
-              setQuantity={setQuantity}
-              originalPriceInCents={offerData.mainProduct.compareAtPriceInCents}
-              discountPercentage={offerData.mainProduct.discountPercentage}
-            />
+            {/* OrderSummary no Mobile - Logo abaixo do banner */}
+            <div className="lg:hidden mb-6">
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <OrderSummary
+                  productName={offerData.mainProduct.name}
+                  productImageUrl={offerData.mainProduct.imageUrl}
+                  totalAmountInCents={totalAmount}
+                  basePriceInCents={offerData.mainProduct.priceInCents}
+                  currency={offerData.currency}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  originalPriceInCents={offerData.mainProduct.compareAtPriceInCents}
+                  discountPercentage={offerData.mainProduct.discountPercentage}
+                />
+              </div>
+            </div>
 
-            <ContactInfo showPhone={offerData.collectPhone} onEmailValidated={handleInitiateCheckout} />
+            {/* Grid 2 colunas: mobile = 1 col, desktop = 2 cols */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+              {/* COLUNA ESQUERDA: Formulário de Checkout */}
+              <div className="space-y-6">
+                <ContactInfo showPhone={offerData.collectPhone} onEmailValidated={handleInitiateCheckout} />
 
-            {offerData.collectAddress && (
-              <Suspense fallback={<div className="animate-pulse bg-gray-100 h-40 rounded-lg mt-6"></div>}>
-                <AddressInfo />
-              </Suspense>
+                {offerData.collectAddress && (
+                  <Suspense fallback={<div className="animate-pulse bg-gray-100 h-40 rounded-lg"></div>}>
+                    <AddressInfo />
+                  </Suspense>
+                )}
+
+                <PaymentMethods method={method} setMethod={setMethod} paymentRequest={paymentRequest} walletLabel={walletLabel} />
+
+                {/* Order Bumps aparecem na esquerda em mobile, escondidos em desktop */}
+                <div className="lg:hidden">
+                  <Suspense fallback={<div className="animate-pulse bg-gray-100 h-32 rounded-lg"></div>}>
+                    <OrderBump
+                      bumps={offerData.orderBumps}
+                      selectedBumps={selectedBumps}
+                      onToggleBump={handleToggleBump}
+                      currency={offerData.currency}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+
+              {/* COLUNA DIREITA: Resumo do Pedido + Botão */}
+              <div className="lg:sticky lg:top-4 lg:self-start space-y-6">
+                {/* Resumo do Produto - Desktop Only */}
+                <div className="hidden lg:block bg-white rounded-xl shadow-lg p-6">
+                  <OrderSummary
+                    productName={offerData.mainProduct.name}
+                    productImageUrl={offerData.mainProduct.imageUrl}
+                    totalAmountInCents={totalAmount}
+                    basePriceInCents={offerData.mainProduct.priceInCents}
+                    currency={offerData.currency}
+                    quantity={quantity}
+                    setQuantity={setQuantity}
+                    originalPriceInCents={offerData.mainProduct.compareAtPriceInCents}
+                    discountPercentage={offerData.mainProduct.discountPercentage}
+                  />
+
+                  {/* Order Bumps aparecem aqui em desktop */}
+                  <div className="mt-6">
+                    <Suspense fallback={<div className="animate-pulse bg-gray-100 h-32 rounded-lg"></div>}>
+                      <OrderBump
+                        bumps={offerData.orderBumps}
+                        selectedBumps={selectedBumps}
+                        onToggleBump={handleToggleBump}
+                        currency={offerData.currency}
+                      />
+                    </Suspense>
+                  </div>
+                </div>
+
+                {/* Botão e Trust Badges - Mobile e Desktop */}
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  {/*
+                    Botão de Compra Principal
+                    Só aparece quando NÃO for Apple Pay/Google Pay (wallet)
+                    Wallet tem seu próprio botão nativo no PaymentMethods
+                  */}
+                  {method !== "wallet" && (
+                    <>
+                      {/* CTA Button Melhorado */}
+                      <button
+                        type="submit"
+                        disabled={!stripe || loading || paymentSucceeded}
+                        className="w-full mt-6 bg-button text-button-foreground font-bold py-4 px-6 rounded-xl text-lg transition-all duration-300 disabled:opacity-50 hover:opacity-90 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-lg hover:shadow-xl relative overflow-hidden group"
+                        style={{
+                          backgroundColor: loading || paymentSucceeded ? "#ccc" : button,
+                          color: buttonForeground,
+                          opacity: loading || paymentSucceeded ? 0.7 : 1,
+                        }}
+                      >
+                        {/* Shimmer effect on hover */}
+                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+
+                        <span className="relative flex items-center justify-center gap-2">
+                          {loading || paymentSucceeded ? (
+                            <>
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                              {t.buttons.processing}
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="h-5 w-5" />
+                              <span>
+                                {method === "pix" ? t.buttons.submitPix : `${t.buttons.submit} - ${formatCurrency(totalAmount, offerData.currency)}`}
+                              </span>
+                            </>
+                          )}
+                        </span>
+                      </button>
+
+                      {/* Trust Indicators abaixo do botão */}
+                      <div className="mt-4 space-y-3">
+                        {/* SSL + Segurança */}
+                        <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                          <ShieldCheck className="h-4 w-4 text-green-600" />
+                          <span className="text-green-700 font-medium">Conexão 100% Segura e Criptografada</span>
+                        </div>
+
+                        {/* Trust Badges */}
+                        <div className="flex items-center justify-center gap-4 py-2">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                              <path d="M12 2L3 7V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V7L12 2Z" fill="#10B981" opacity="0.2" />
+                              <path
+                                d="M12 2L3 7V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V7L12 2Z"
+                                stroke="#10B981"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path d="M9 12L11 14L15 10" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span className="font-medium">SSL Seguro</span>
+                          </div>
+                          <div className="h-4 w-px bg-gray-300"></div>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                              <rect x="2" y="5" width="20" height="14" rx="2" stroke="#6366F1" strokeWidth="2" />
+                              <path d="M2 10H22" stroke="#6366F1" strokeWidth="2" />
+                              <circle cx="7" cy="15" r="1" fill="#6366F1" />
+                            </svg>
+                            <span className="font-medium">Stripe Verified</span>
+                          </div>
+                          <div className="h-4 w-px bg-gray-300"></div>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+                              <path
+                                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                                stroke="#059669"
+                                strokeWidth="2"
+                              />
+                              <path d="M8 12L11 15L16 9" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span className="font-medium">PCI Compliant</span>
+                          </div>
+                        </div>
+
+                        {/* Garantia */}
+                        <p className="text-xs text-center text-gray-500">Seus dados estão protegidos com criptografia de nível bancário</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Mensagem de Erro (fora do grid, abaixo de tudo) */}
+            {errorMessage && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <svg className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-red-700 text-sm font-medium">{errorMessage}</p>
+                    <button onClick={() => setErrorMessage(null)} className="text-red-600 text-xs underline mt-1 hover:text-red-800">
+                      Tentar novamente
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
-
-            <PaymentMethods method={method} setMethod={setMethod} paymentRequest={paymentRequest} walletLabel={walletLabel} />
-
-            <Suspense fallback={<div className="animate-pulse bg-gray-100 h-32 rounded-lg mt-6"></div>}>
-              <OrderBump bumps={offerData.orderBumps} selectedBumps={selectedBumps} onToggleBump={handleToggleBump} currency={offerData.currency} />
-            </Suspense>
-
-            <button
-              type="submit"
-              disabled={!stripe || loading || paymentSucceeded}
-              className="w-full mt-8 bg-button text-button-foreground font-bold py-3 px-4 rounded-lg text-lg transition-colors disabled:opacity-50 hover:opacity-90 cursor-pointer"
-              style={{
-                backgroundColor: loading || paymentSucceeded ? "#ccc" : button,
-                color: buttonForeground,
-                opacity: loading || paymentSucceeded ? 0.7 : 1,
-              }}
-            >
-              {loading || paymentSucceeded ? t.buttons.processing : method === "pix" ? t.buttons.submitPix : t.buttons.submit}
-            </button>
-
-            {errorMessage && <div className="text-red-500 text-sm text-center mt-4">{errorMessage}</div>}
           </form>
         </div>
       </div>
