@@ -1,5 +1,5 @@
 // src/components/checkout/CheckoutForm.tsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStripe, useElements, CardNumberElement } from "@stripe/react-stripe-js";
 import type { PaymentRequest, PaymentRequestPaymentMethodEvent } from "@stripe/stripe-js";
@@ -8,9 +8,7 @@ import { Loader2, CheckCircle, Lock } from "lucide-react";
 import type { OfferData } from "../../pages/CheckoutSlugPage";
 import { OrderSummary } from "./OrderSummary";
 import { ContactInfo } from "./ContactInfo";
-import { AddressInfo } from "./AddressInfo";
 import { PaymentMethods } from "./PaymentMethods";
-import { OrderBump } from "./OrderBump";
 import { Banner } from "./Banner";
 
 // Lazy load componentes não críticos para melhorar performance inicial
@@ -21,8 +19,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "../../i18n/I18nContext";
 import { getClientIP } from "../../service/getClientIP";
 import { getCookie } from "../../helper/getCookie";
-import { detectPlatform, isMobile } from "../../utils/platformDetection";
-import { logger } from "../../utils/logger";
+import { detectPlatform } from "../../utils/platformDetection";
 import { formatCurrency } from "../../helper/formatCurrency";
 
 interface CheckoutFormProps {
@@ -119,12 +116,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         },
         { eventID: eventId }
       );
-
-      logger.pixel(
-        `InitiateCheckout [eventID: ${eventId}] - Valor: ${totalValue} ${offerData.currency.toUpperCase()} - Produtos: ${
-          contentIds.length
-        } - Quantidade: ${quantity}`
-      );
     }
 
     // 2. Envia evento para o backend (CAPI) com TODOS os dados
@@ -145,10 +136,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           fbp: fbCookies.fbp,
         }),
       });
-      logger.pixel("Backend CAPI: InitiateCheckout enviado com todos os dados");
-    } catch (err) {
-      console.error("❌ Erro ao enviar InitiateCheckout para backend:", err);
-    }
+    } catch (err) {}
   };
 
   // Atualiza o total baseado em bumps e quantidade
@@ -191,20 +179,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
     // Stripe verifica se carteiras digitais estão disponíveis
     pr.canMakePayment()
       .then((result) => {
-        logger.wallet("Resultado canMakePayment:", result);
-
         if (!result) {
-          logger.wallet("Nenhuma carteira digital disponível");
           return;
         }
 
-        logger.wallet("Carteira disponível!");
-        logger.wallet("Apple Pay", result.applePay);
-        logger.wallet("Google Pay", result.googlePay);
-
-        // Detecta plataforma para priorizar corretamente
-        const platform = detectPlatform();
-        let label = t.payment.wallet; // Padrão genérico
         // Detecta plataforma para priorizar corretamente
         const platform = detectPlatform();
         let label = t.payment.wallet; // Padrão genérico
@@ -213,32 +191,24 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         if (platform === "ios") {
           // iPhone/iPad SEMPRE mostra Apple Pay (mesmo que o Stripe reporte as duas)
           label = t.payment.applePay;
-          logger.wallet("Plataforma iOS - Usando Apple Pay");
         } else if (platform === "android") {
           // Android SEMPRE mostra Google Pay
           label = t.payment.googlePay;
-          logger.wallet("Plataforma Android - Usando Google Pay");
         } else {
           // Desktop/Outros - usa o que o Stripe reportou
           if (result.applePay) {
             label = t.payment.applePay;
-            logger.wallet("Desktop com Apple Pay disponível");
           } else if (result.googlePay) {
             label = t.payment.googlePay;
-            logger.wallet("Desktop com Google Pay disponível");
           } else {
-            logger.wallet("Usando label genérico (fallback)");
           }
         }
 
         // Configura a carteira para uso
         setWalletLabel(label);
         setPaymentRequest(pr);
-        logger.wallet("Configuração concluída com sucesso!");
       })
-      .catch((error) => {
-        logger.error("WALLET - Erro ao verificar disponibilidade:", error);
-      });
+      .catch((_error) => {});
 
     pr.on("paymentmethod", async (ev: PaymentRequestPaymentMethodEvent) => {
       try {
@@ -286,7 +256,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         const { clientSecret, error: backendError } = await res.json();
 
         if (backendError) {
-          console.error("❌ [APPLE PAY] Erro do backend:", backendError);
           ev.complete("fail");
           setErrorMessage(backendError.message);
           setLoading(false);
@@ -299,7 +268,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         });
 
         if (confirmError) {
-          console.error("❌ [APPLE PAY] Erro ao confirmar:", confirmError);
           ev.complete("fail");
           setErrorMessage(confirmError.message || "Erro no pagamento");
           setLoading(false);
@@ -322,14 +290,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
               setPaymentSucceeded(true);
             }
           } else {
-            console.warn("⚠️ [APPLE PAY] Status inesperado:", paymentIntent?.status);
             ev.complete("fail");
             setErrorMessage(`Pagamento não aprovado. Status: ${paymentIntent?.status}`);
             setLoading(false);
           }
         }
       } catch (err: any) {
-        console.error("❌ [APPLE PAY] Erro inesperado:", err);
         ev.complete("fail");
         setErrorMessage(err.message || "Erro inesperado");
         setLoading(false);
@@ -373,9 +339,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
               window.location.href = `${offerData.upsell?.redirectUrl}?${params.toString()}`;
               return;
             }
-          } catch (error) {
-            console.error("Falha ao gerar token de upsell, verificando fallback.", error);
-          }
+          } catch (error) {}
         }
 
         // 2. PRIORIDADE: Página de Obrigado Customizada do Cliente
@@ -542,7 +506,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         setLoading(false);
       }
     } catch (error: any) {
-      console.error("[ERROR] Erro no checkout:", error);
       setErrorMessage(error.message || t.messages.error);
       setLoading(false);
     }
@@ -599,7 +562,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
               {/* COLUNA ESQUERDA: Formulário de Checkout */}
               <div className="space-y-6">
-                <ContactInfo showPhone={offerData.collectPhone} onEmailValidated={handleInitiateCheckout} />
+                <ContactInfo showPhone={offerData.collectPhone} onEmailValidated={handleInitiateCheckout} offerID={offerData._id} />
 
                 {offerData.collectAddress && (
                   <Suspense fallback={<div className="animate-pulse bg-gray-100 h-40 rounded-lg"></div>}>
