@@ -10,10 +10,28 @@ services:
     env_file: .env
     environment:
       - TZ=America/Sao_Paulo
+      # Sobrescreve a URI para usar o nome do serviço interno
+      - MONGO_URI=mongodb://root:${DB_PASSWORD}@mongodb:27017/checkout?authSource=admin
     restart: unless-stopped
+    depends_on:
+      - mongodb
+    networks:
+      - app_network
+
+  mongodb:
+    image: mongo:6.0
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
     networks:
       - app_network
 
 networks:
   app_network:
     driver: bridge
+
+volumes:
+  mongo_data:
