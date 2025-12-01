@@ -12,7 +12,6 @@ export const en: Translation = {
     extraProduct: "Extra Product",
     total: "Total",
     save: "Save",
-    quantity: "quantity",
   },
 
   // Payment Methods

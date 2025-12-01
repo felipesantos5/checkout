@@ -10,7 +10,6 @@ export const pt = {
     extraProduct: "Produto Extra",
     total: "Total",
     save: "Economize",
-    quantity: "quantidade",
   },
 
   // Payment Methods
