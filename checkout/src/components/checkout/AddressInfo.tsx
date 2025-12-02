@@ -73,7 +73,7 @@ export const AddressInfo: React.FC = () => {
 
   return (
     <div className="w-full mt-6">
-      <h2 className="text-lg font-semibold text-primary mb-4">{t.address.title}</h2>
+      <h2 className="text-lg font-semibold text-textcolor mb-4">{t.address.title}</h2>
       <div className="space-y-4">
         {/* CEP - Primeiro campo */}
         <div className="relative">
