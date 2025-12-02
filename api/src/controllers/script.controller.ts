@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 
 export const getUpsellScript = (req: Request, res: Response) => {
+  const backendUrl = process.env.BACKEND_URL || "https://backend2.snappcheckout.com";
+
   const scriptContent = `
 (function() {
 
@@ -30,7 +32,7 @@ export const getUpsellScript = (req: Request, res: Response) => {
     try {
       const endpoint = isBuy ? 'one-click-upsell' : 'upsell-refuse';
       // Usa a URL da API configurada no servidor
-      const apiUrl = "https://backend2.snappcheckout.com/api";
+     const apiUrl = "${backendUrl}/api";
 
       const res = await fetch(apiUrl + '/payments/' + endpoint, {
         method: 'POST',
