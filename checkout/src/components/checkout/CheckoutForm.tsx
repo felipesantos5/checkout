@@ -548,7 +548,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
       <Banner imageUrl={offerData.bannerImageUrl} secondaryBannerImageUrl={offerData.secondaryBannerImageUrl} />
 
       {/* Container Principal com Fundo e Texto Customizados */}
-      <div className="min-h-screen py-4 md:py-8" style={{ backgroundColor: backgroundColor, color: textColor }}>
+      <div className="min-h-screen pb-4 md:py-8" style={{ backgroundColor: backgroundColor, color: textColor }}>
         {/* Container centralizado */}
         <div className="max-w-7xl mx-auto px-4">
           {/* Formulário (Card) */}
@@ -558,7 +558,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
             style={{ backgroundColor: backgroundColor }} // Mantém consistência ou "flat" design se for igual
           >
             {/* OrderSummary no Mobile - Logo abaixo do banner */}
-            <div className="lg:hidden mb-6">
+            <div className="lg:hidden mb-2">
               <OrderSummary
                 productName={offerData.mainProduct.name}
                 productImageUrl={offerData.mainProduct.imageUrl}

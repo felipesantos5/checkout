@@ -148,7 +148,7 @@ const offerSchema = new Schema<IOffer>(
     },
     textColor: {
       type: String,
-      default: "#374151",
+      default: "#0a0a0a",
     },
     currency: {
       type: String,
