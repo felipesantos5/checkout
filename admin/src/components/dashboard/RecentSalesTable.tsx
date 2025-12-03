@@ -19,6 +19,7 @@ import type { Sale } from "@/types/sale";
 import { formatCurrency } from "@/helper/formatCurrency";
 import { formatDate } from "@/helper/formatDate";
 import { getCountryFlag, getCountryName } from "@/helper/getCountryFlag";
+import { CountryFlag } from "../CountryFlag";
 
 type DateRangeFilter = "all" | "today" | "week" | "month" | "custom";
 
@@ -198,11 +199,7 @@ export function RecentSalesTable() {
                       <TableCell className="text-center">
                         <TooltipProvider>
                           <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-2xl cursor-help" role="img" aria-label={getCountryName(sale.country)}>
-                                {getCountryFlag(sale.country)}
-                              </span>
-                            </TooltipTrigger>
+                            <TooltipTrigger asChild>{sale.country && <CountryFlag countryCode={sale.country} />}</TooltipTrigger>
                             <TooltipContent>
                               <p>{getCountryName(sale.country)}</p>
                             </TooltipContent>

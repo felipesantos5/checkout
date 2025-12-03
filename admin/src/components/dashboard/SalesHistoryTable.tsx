@@ -7,6 +7,7 @@ import { API_URL } from "@/config/BackendUrl";
 import { formatCurrency } from "@/helper/formatCurrency";
 import { useAuth } from "@/context/AuthContext"; // Importar contexto de Auth se precisar de token
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { CountryFlag } from "../CountryFlag";
 
 interface SaleItem {
   name: string;
@@ -39,14 +40,6 @@ const formatDate = (dateString: string) => {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-};
-
-// Componente para renderizar a bandeira (usando API CDN pública para não pesar o bundle)
-const CountryFlag = ({ countryCode }: { countryCode?: string }) => {
-  if (!countryCode) return <span>🌐</span>;
-  return (
-    <img src={`https://flagcdn.com/24x18/${countryCode.toLowerCase()}.png`} alt={countryCode} className="inline-block mr-2" title={countryCode} />
-  );
 };
 
 interface SalesHistoryTableProps {

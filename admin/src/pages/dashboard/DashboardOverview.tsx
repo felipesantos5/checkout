@@ -280,7 +280,7 @@ export function DashboardOverview() {
 
   return (
     <div className="flex flex-col gap-8 flex-1 mx-auto p-4 md:p-0 animate-in fade-in duration-500">
-      <ConnectStripeCard />
+      {/* <ConnectStripeCard /> */}
 
       <div className="flex items-center justify-between mb-2 gap-4 flex-wrap">
         <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
