@@ -34,7 +34,7 @@ export function TopOffersChart({ data }: TopOffersChartProps) {
         <CardDescription>Receita por oferta</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col justify-between h-full pb-4">
-        <div className="h-[200px]">
+        <div className="h-[310px] flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -43,7 +43,7 @@ export function TopOffersChart({ data }: TopOffersChartProps) {
                 cy="50%"
                 labelLine={false}
                 // label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
+                outerRadius={110}
                 fill="#8884d8"
                 dataKey="value"
               >
