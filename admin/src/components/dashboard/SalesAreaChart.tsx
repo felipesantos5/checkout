@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -9,17 +9,13 @@ interface SalesChartProps {
 
 // Configuração de cores e labels
 const chartConfig = {
-  revenue: {
+  value: {
     label: "Receita",
     color: "#EAB308", // Seu Amarelo/Dourado
   },
 } satisfies ChartConfig;
 
 export function SalesAreaChart({ chartData }: SalesChartProps) {
-  // const totalRevenue = useMemo(() => {
-  //   return chartData.reduce((acc, curr) => acc + curr.value, 0);
-  // }, [chartData]);
-
   // Formata valor para o tooltip (BRL)
   const formatCurrency = (val: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 
@@ -32,7 +28,7 @@ export function SalesAreaChart({ chartData }: SalesChartProps) {
 
     // Se for formato YYYY-MM-DD, converte para DD/MM
     if (value.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [month, day] = value.split("-");
+      const [, month, day] = value.split("-");
       return `${day}/${month}`;
     }
 
@@ -42,28 +38,40 @@ export function SalesAreaChart({ chartData }: SalesChartProps) {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="mb-10">
+      <CardHeader className="pb-4">
         <CardTitle>Histórico de Vendas</CardTitle>
         <CardDescription>Receita no período selecionado</CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-1 h-full">
-        <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }} barCategoryGap="20%">
-            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-            <XAxis
+      <CardContent className="flex-1 pb-4">
+        <ChartContainer config={chartConfig} className="h-full min-h-[400px] w-full">
+          <BarChart
+            accessibilityLayer
+            data={chartData}
+            layout="vertical"
+            margin={{
+              left: 10,
+              right: 20,
+              top: 10,
+              bottom: 10,
+            }}
+          >
+            <XAxis type="number" dataKey="value" hide />
+            <YAxis
               dataKey="date"
+              type="category"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+              width={60}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               tickFormatter={formatDateLabel}
             />
             <ChartTooltip
-              cursor={{ fill: "hsl(var(--muted))", opacity: 0.2 }}
-              content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(Number(value))} className="bg-popover border-border" />}
+              cursor={false}
+              content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(Number(value))} />}
             />
-            <Bar dataKey="value" fill={chartConfig.revenue.color} radius={[8, 8, 0, 0]} maxBarSize={60} />
+            <Bar dataKey="value" fill="var(--color-value)" radius={5} barSize={32} />
           </BarChart>
         </ChartContainer>
       </CardContent>
