@@ -1,7 +1,7 @@
-import { Bar, BarChart, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, LabelList } from "recharts";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 
 interface SalesChartProps {
   chartData: { date: string; value: number }[];
@@ -51,7 +51,7 @@ export function SalesAreaChart({ chartData }: SalesChartProps) {
             layout="vertical"
             margin={{
               left: 10,
-              right: 20,
+              right: 100,
               top: 10,
               bottom: 10,
             }}
@@ -67,11 +67,33 @@ export function SalesAreaChart({ chartData }: SalesChartProps) {
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               tickFormatter={formatDateLabel}
             />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(Number(value))} />}
-            />
-            <Bar dataKey="value" fill="var(--color-value)" radius={5} barSize={32} />
+            <Bar dataKey="value" fill="var(--color-value)" radius={5} barSize={32}>
+              <LabelList
+                dataKey="value"
+                position="right"
+                offset={8}
+                className="fill-foreground"
+                fontSize={10}
+                fontWeight={600}
+                content={(props: any) => {
+                  const { x, y, width, height, value } = props;
+                  if (!value || value === 0) return null;
+                  return (
+                    <text
+                      x={x + width + 8}
+                      y={y + height / 2}
+                      fill="currentColor"
+                      fontSize={10}
+                      fontWeight={600}
+                      textAnchor="start"
+                      dominantBaseline="middle"
+                    >
+                      {formatCurrency(value)}
+                    </text>
+                  );
+                }}
+              />
+            </Bar>
           </BarChart>
         </ChartContainer>
       </CardContent>
