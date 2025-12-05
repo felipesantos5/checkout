@@ -34,7 +34,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData, checkoutSessionI
   }, [offerData.ownerId?.stripeAccountId]);
 
   const paypalOptions = {
-    clientId: "sandbox", // Valor temporário - o PayPal SDK precisa de um clientId válido
+    clientId: "test", // ClientId de teste - será substituído pelas credenciais do backend
     currency: offerData.currency.toUpperCase(), // BRL, USD, etc.
     intent: "capture",
   };
@@ -50,7 +50,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ offerData, checkoutSessionI
     </Elements>
   );
 
-  if (offerData.paypalEnabled) {
+  // Só renderiza PayPalScriptProvider se paypalEnabled for explicitamente true
+  if (offerData.paypalEnabled === true) {
     return <PayPalScriptProvider options={paypalOptions}>{content}</PayPalScriptProvider>;
   }
 
