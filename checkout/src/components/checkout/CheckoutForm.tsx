@@ -10,7 +10,7 @@ import { OrderSummary } from "./OrderSummary";
 import { ContactInfo } from "./ContactInfo";
 import { PaymentMethods } from "./PaymentMethods";
 import { Banner } from "./Banner";
-import { PayPalPayment } from "./PayPalPayment";
+// import { PayPalPayment } from "./PayPalPayment";
 
 // Lazy load componentes não críticos para melhorar performance inicial
 const AddressInfo = lazy(() => import("./AddressInfo").then((module) => ({ default: module.AddressInfo })));
