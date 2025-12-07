@@ -1,3 +1,4 @@
+# backend/docker-compose.yml
 version: "3.8"
 
 services:
@@ -10,13 +11,22 @@ services:
     env_file: .env
     environment:
       - TZ=America/Sao_Paulo
-      # Sobrescreve a URI para usar o nome do serviço interno
       - MONGO_URI=mongodb://root:${DB_PASSWORD}@mongodb:27017/checkout?authSource=admin
     restart: unless-stopped
     depends_on:
       - mongodb
     networks:
       - app_network
+    # [NOVO] Configuração do Healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4242/health"]
+      interval: 30s       # Verifica a cada 30 segundos
+      timeout: 10s        # Se demorar mais de 10s, considera falha
+      retries: 3          # Precisa falhar 3 vezes seguidas para marcar unhealthy
+      start_period: 40s   # Dá 40s de carência pro Node iniciar antes de testar
+    # [NOVO] Etiqueta para o autoheal saber que deve vigiar este container
+    labels:
+      - "autoheal=true"
 
   mongodb:
     image: mongo:6.0
@@ -28,6 +38,17 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
     volumes:
       - mongo_data:/data/db
+    networks:
+      - app_network
+
+  # [NOVO] Serviço Vigilante - Reinicia containers Unhealthy automaticamente
+  autoheal:
+    image: willfarrell/autoheal
+    restart: always
+    environment:
+      - AUTOHEAL_CONTAINER_LABEL=all  # Monitora todos que tiverem a label, ou use 'all' para todos
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - app_network
 
