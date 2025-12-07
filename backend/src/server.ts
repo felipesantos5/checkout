@@ -3,6 +3,16 @@ import app from "./app";
 import connectDB from "./lib/db";
 import { initializeCurrencyService } from "./services/currency-conversion.service";
 
+process.on("uncaughtException", (error) => {
+  console.error("CRITICAL ERROR: Uncaught Exception:", error);
+  // Opcional: manter o processo vivo ou deixar o orquestrador reiniciar (recomendado deixar reiniciar)
+});
+
+// ADICIONE ISTO: Captura promises rejeitadas sem catch
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("CRITICAL ERROR: Unhandled Rejection at:", promise, "reason:", reason);
+});
+
 const PORT = process.env.PORT || 4242;
 
 // Crie uma função 'startServer' assíncrona
