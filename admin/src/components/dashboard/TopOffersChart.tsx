@@ -28,13 +28,13 @@ export function TopOffersChart({ data }: TopOffersChartProps) {
   }
 
   return (
-    <Card className="">
-      <CardHeader>
-        <CardTitle>Top Ofertas</CardTitle>
-        <CardDescription>Receita por oferta</CardDescription>
+    <Card className="h-full">
+      <CardHeader className="pb-2 sm:pb-4">
+        <CardTitle className="text-base sm:text-lg">Top Ofertas</CardTitle>
+        <CardDescription className="text-xs sm:text-sm">Receita por oferta</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col justify-between h-full pb-4">
-        <div className="h-[310px] flex items-center justify-center">
+      <CardContent className="flex flex-col justify-between h-full pb-3 sm:pb-4">
+        <div className="h-[180px] sm:h-[280px] flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -42,8 +42,8 @@ export function TopOffersChart({ data }: TopOffersChartProps) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                // label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={110}
+                outerRadius={"80%"}
+                innerRadius={"40%"}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -53,21 +53,21 @@ export function TopOffersChart({ data }: TopOffersChartProps) {
               </Pie>
               <Tooltip
                 formatter={(value: number) => `R$ ${value.toFixed(2)}`}
-                contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+                contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: "12px" }}
               />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="space-y-2">
-          {data.map((offer, index) => (
-            <div key={index} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                <span className="font-medium max-w-48 truncate">{offer.name}</span>
+        <div className="space-y-1.5 sm:space-y-2 mt-2">
+          {data.slice(0, 5).map((offer, index) => (
+            <div key={index} className="flex items-center justify-between text-xs sm:text-sm gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                <span className="font-medium truncate">{offer.name}</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-nowrap">
-                <span className="text-muted-foreground">{offer.count} vendas</span>
-                <span className="font-bold">R$ {offer.value.toFixed(2)}</span>
+              <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-nowrap flex-shrink-0">
+                <span className="text-muted-foreground hidden sm:inline">{offer.count} vendas</span>
+                <span className="font-bold">R$ {offer.value.toFixed(0)}</span>
               </div>
             </div>
           ))}

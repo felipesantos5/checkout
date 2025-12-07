@@ -10,8 +10,8 @@ export function DashboardLayout() {
       <SidebarProvider className="">
         <AppSidebar />
         {/* 2. Conteúdo da Página */}
-        <SidebarTrigger />
-        <main className="flex-1 p-4 md:p-8 md:pt-12">
+        <SidebarTrigger className="fixed top-3 left-3 z-50 md:relative md:top-0 md:left-0" />
+        <main className="flex-1 p-3 pt-14 sm:p-4 md:p-8 md:pt-12 overflow-x-hidden">
           <Outlet />
         </main>
       </SidebarProvider>

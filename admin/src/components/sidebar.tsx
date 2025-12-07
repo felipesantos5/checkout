@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "./ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -124,6 +125,7 @@ export function AppSidebar() {
 
   const { token } = useAuth();
   const { theme } = useTheme();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const [totalRevenue, setTotalRevenue] = useState(0);
 
@@ -143,6 +145,13 @@ export function AppSidebar() {
 
     fetchRevenue();
   }, [token]);
+
+  // Fechar a sidebar automaticamente quando a rota muda no mobile
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [location.pathname, isMobile, setOpenMobile]);
 
   return (
     <Sidebar>

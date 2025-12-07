@@ -38,22 +38,22 @@ export function SalesAreaChart({ chartData }: SalesChartProps) {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="pb-4">
-        <CardTitle>Histórico de Vendas</CardTitle>
-        <CardDescription>Receita no período selecionado</CardDescription>
+      <CardHeader className="pb-2 sm:pb-4">
+        <CardTitle className="text-base sm:text-lg">Histórico de Vendas</CardTitle>
+        <CardDescription className="text-xs sm:text-sm">Receita no período selecionado</CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-1 pb-4">
-        <ChartContainer config={chartConfig} className="h-full min-h-[400px] w-full">
+      <CardContent className="flex-1 pb-3 sm:pb-4">
+        <ChartContainer config={chartConfig} className="h-full min-h-[250px] sm:min-h-[400px] w-full">
           <BarChart
             accessibilityLayer
             data={chartData}
             layout="vertical"
             margin={{
-              left: 10,
-              right: 20,
-              top: 10,
-              bottom: 10,
+              left: 5,
+              right: 10,
+              top: 5,
+              bottom: 5,
             }}
           >
             <XAxis type="number" dataKey="value" hide />
@@ -61,17 +61,17 @@ export function SalesAreaChart({ chartData }: SalesChartProps) {
               dataKey="date"
               type="category"
               tickLine={false}
-              tickMargin={10}
+              tickMargin={5}
               axisLine={false}
-              width={60}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              width={45}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
               tickFormatter={formatDateLabel}
             />
             <ChartTooltip
               cursor={false}
               content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(Number(value))} />}
             />
-            <Bar dataKey="value" fill="var(--color-value)" radius={5} barSize={32} />
+            <Bar dataKey="value" fill="var(--color-value)" radius={4} barSize={24} />
           </BarChart>
         </ChartContainer>
       </CardContent>

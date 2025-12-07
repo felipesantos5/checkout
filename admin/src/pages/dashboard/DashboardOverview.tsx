@@ -70,16 +70,16 @@ const KpiCard = ({ title, value, icon: Icon, subtext, chartData, color, destaque
 
   return (
     <Card
-      className={`overflow-hidden flex flex-col h-[180px] relative py-2 gap-3 ${
+      className={`overflow-hidden flex flex-col h-[140px] sm:h-[180px] relative py-2 gap-2 sm:gap-3 ${
         destaque ? "bg-linear-to-br from-yellow-400 via-yellow-500 to-chart-1 border-chart-1 shadow-lg shadow-yellow-500/50" : ""
       }`}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-4 px-4">
-        <CardTitle className={`text-base font-medium ${destaque ? "text-white" : "text-muted-foreground"}`}>{title}</CardTitle>
-        <div className="flex items-center gap-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-3 sm:pt-4 px-3 sm:px-4">
+        <CardTitle className={`text-sm sm:text-base font-medium ${destaque ? "text-white" : "text-muted-foreground"}`}>{title}</CardTitle>
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {showChange && (
             <span
-              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              className={`text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full ${
                 destaque
                   ? isPositive
                     ? "bg-white text-yellow-500 dark:bg-zinc-800"
@@ -93,15 +93,15 @@ const KpiCard = ({ title, value, icon: Icon, subtext, chartData, color, destaque
               {changePercentage.toFixed(1)}%
             </span>
           )}
-          <Icon className={`h-4 w-4 ${destaque ? "text-white" : "text-muted-foreground"}`} />
+          <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${destaque ? "text-white" : "text-muted-foreground"}`} />
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-0">
-        <span className={`text-3xl font-bold ${destaque && "text-white"}`}>{value}</span>
-        {subtext && <p className={`text-xs ${destaque ? "text-white/90" : "text-muted-foreground"}`}>{subtext}</p>}
+      <CardContent className="px-3 sm:px-4 pb-0">
+        <span className={`text-xl sm:text-3xl font-bold ${destaque && "text-white"}`}>{value}</span>
+        {subtext && <p className={`text-[10px] sm:text-xs mt-0.5 ${destaque ? "text-white/90" : "text-muted-foreground"}`}>{subtext}</p>}
       </CardContent>
       {/* Área do Gráfico colada na base */}
-      <div className="absolute bottom-2 w-full h-16">
+      <div className="absolute bottom-1 sm:bottom-2 w-full h-10 sm:h-16">
         {chartData && chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
@@ -270,132 +270,136 @@ export function DashboardOverview() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6 p-6">
-        <div className="grid gap-4 md:grid-cols-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 p-4 sm:p-6">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+          <Skeleton className="h-[140px] sm:h-32" />
+          <Skeleton className="h-[140px] sm:h-32" />
+          <Skeleton className="h-[140px] sm:h-32" />
+          <Skeleton className="h-[140px] sm:h-32" />
         </div>
-        <Skeleton className="h-64" />
+        <Skeleton className="h-48 sm:h-64" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 flex-1 mx-auto p-4 md:p-0 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-4 sm:gap-8 flex-1 mx-auto p-0 animate-in fade-in duration-500">
       {/* <ConnectStripeCard /> */}
 
-      <div className="flex items-center justify-between mb-2 gap-4 flex-wrap">
-        <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
+      {/* Header Responsivo */}
+      <div className="flex flex-col gap-4">
+        {/* Título e Valor a Receber */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Visão Geral</h1>
+          <div className="flex items-center gap-2 text-sm sm:text-base">
+            <span className="text-muted-foreground">Valor a receber:</span>
+            <span className="text-chart-1 text-lg sm:text-2xl font-semibold">{formatStripe(balance?.pending || [])}</span>
+          </div>
+        </div>
 
-        {/* Filtros */}
-        <div className="flex items-center gap-3">
-          <h3 className="mr-4 text-muted-foreground flex items-center gap-2">
-            Valor a receber: <span className="text-chart-1 text-2xl font-semibold">{formatStripe(balance?.pending || [])}</span>
-          </h3>
+        {/* Filtros Responsivos */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium text-muted-foreground">Filtros:</span>
           </div>
-          {/* Filtro de Período */}
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="">
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">Hoje</SelectItem>
-              <SelectItem value="7">Últimos 7 dias</SelectItem>
-              <SelectItem value="30">Últimos 30 dias</SelectItem>
-              <SelectItem value="90">Últimos 3 meses</SelectItem>
-              <SelectItem value="custom">Período personalizado</SelectItem>
-            </SelectContent>
-          </Select>
-          {/* DateRangePicker (só aparece quando period === "custom") */}
-          {period === "custom" && (
-            <div className="w-[250px]">
-              <DateRangePicker value={customDateRange} onChange={setCustomDateRange} />
-            </div>
-          )}
-          {/* Filtro de Oferta */}
-          <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todas ofertas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as ofertas</SelectItem>
-              {offers.map((offer) => (
-                <SelectItem key={offer._id} value={offer._id}>
-                  {offer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Filtro de Período */}
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-[140px] sm:w-auto">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Hoje</SelectItem>
+                <SelectItem value="7">Últimos 7 dias</SelectItem>
+                <SelectItem value="30">Últimos 30 dias</SelectItem>
+                <SelectItem value="90">Últimos 3 meses</SelectItem>
+                <SelectItem value="custom">Período personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {/* DateRangePicker (só aparece quando period === "custom") */}
+            {period === "custom" && (
+              <div className="w-full sm:w-[250px]">
+                <DateRangePicker value={customDateRange} onChange={setCustomDateRange} />
+              </div>
+            )}
+            
+            {/* Filtro de Oferta */}
+            <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
+              <SelectTrigger className="w-[160px] sm:w-[200px]">
+                <SelectValue placeholder="Todas ofertas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as ofertas</SelectItem>
+                {offers.map((offer) => (
+                  <SelectItem key={offer._id} value={offer._id}>
+                    {offer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
-      <div className="flex gap-4">
-        {/* 8 Cards de KPIs */}
-        <div className="w-full grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Card 1: Total em Vendas */}
-          <KpiCard
-            title="Total em Vendas"
-            value={formatCurrency(metrics?.kpis.totalRevenue || 0)}
-            icon={DollarSign}
-            subtext={getPeriodLabel()}
-            chartData={metrics?.charts.revenue}
-            color="#eab308"
-            destaque={true}
-            changePercentage={metrics?.kpis.totalRevenueChange}
-          />
+      {/* Cards de KPIs */}
+      <div className="w-full grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+        {/* Card 1: Total em Vendas */}
+        <KpiCard
+          title="Total em Vendas"
+          value={formatCurrency(metrics?.kpis.totalRevenue || 0)}
+          icon={DollarSign}
+          subtext={getPeriodLabel()}
+          chartData={metrics?.charts.revenue}
+          color="#eab308"
+          destaque={true}
+          changePercentage={metrics?.kpis.totalRevenueChange}
+        />
 
-          {/* Card 2: Upsells */}
+        {/* Card 2: Total de Pedidos */}
+        <KpiCard
+          title="Total de Pedidos"
+          value={metrics?.kpis.totalOrders || 0}
+          icon={ShoppingCart}
+          subtext={`Visitantes ${metrics?.kpis.totalVisitors || 0}`}
+          chartData={metrics?.charts.sales}
+          color="#eab308"
+          changePercentage={metrics?.kpis.totalOrdersChange}
+        />
 
-          {/* Card 3: Total de Pedidos */}
-          <KpiCard
-            title="Total de Pedidos"
-            value={metrics?.kpis.totalOrders || 0}
-            icon={ShoppingCart}
-            subtext={`Total de Visitantes ${metrics?.kpis.totalVisitors || 0}`}
-            chartData={metrics?.charts.sales}
-            color="#eab308"
-            changePercentage={metrics?.kpis.totalOrdersChange}
-          />
+        {/* Card 3: Ticket Médio */}
+        <KpiCard
+          title="Ticket Médio"
+          value={formatCurrency(metrics?.kpis.averageTicket || 0)}
+          icon={DollarSign}
+          subtext={`Upsell ${formatCurrency(metrics?.kpis.extraRevenue || 0)}`}
+          chartData={metrics?.charts.ticket}
+          color="#eab308"
+          changePercentage={metrics?.kpis.averageTicketChange}
+        />
 
-          {/* Card 4: Valor a Receber (Pendente) */}
-
-          {/* Card 5: Ticket Médio */}
-          <KpiCard
-            title="Ticket Médio"
-            value={formatCurrency(metrics?.kpis.averageTicket || 0)}
-            icon={DollarSign}
-            subtext={`Upsell ${formatCurrency(metrics?.kpis.extraRevenue || 0)}`}
-            chartData={metrics?.charts.ticket}
-            color="#eab308"
-            changePercentage={metrics?.kpis.averageTicketChange}
-          />
-
-          {/* Card 7: Conversão do Checkout */}
-          <KpiCard
-            title="Conversão do Checkout"
-            value={`${metrics?.kpis.conversionRate.toFixed(1)}%`}
-            icon={TrendingUp}
-            subtext={`Aprovação do Checkout ${metrics?.kpis.paymentApprovalRate?.toFixed(1) || 0}%`}
-            chartData={metrics?.charts.conversionRate}
-            color="#eab308"
-            changePercentage={metrics?.kpis.conversionRateChange}
-          />
-        </div>
+        {/* Card 4: Conversão do Checkout */}
+        <KpiCard
+          title="Conversão"
+          value={`${metrics?.kpis.conversionRate.toFixed(1)}%`}
+          icon={TrendingUp}
+          subtext={`Aprovação ${metrics?.kpis.paymentApprovalRate?.toFixed(1) || 0}%`}
+          chartData={metrics?.charts.conversionRate}
+          color="#eab308"
+          changePercentage={metrics?.kpis.conversionRateChange}
+        />
       </div>
 
       {/* Seção Inferior: Gráficos Circulares + Histórico de Vendas */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {/* Top Ofertas (Gráfico Circular) */}
         <TopOffersChart data={metrics?.topOffers || []} />
         {/* Histórico de Vendas */}
-        <div className="lg:col-span-1">
+        <div className="md:col-span-1">
           <SalesAreaChart chartData={metrics?.charts.revenue || []} />
         </div>
-        <div className="lg:col-span-1">
+        <div className="md:col-span-2 lg:col-span-1">
           <SalesWorldMap data={metrics?.topCountries || []} />
         </div>
       </div>

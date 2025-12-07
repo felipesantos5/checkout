@@ -101,18 +101,18 @@ export function RecentSalesTable() {
   }, [filterType, dateRange]);
 
   return (
-    <Card className="w-full shadow-md border-gray-200">
-      <CardHeader className="pb-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <Card className="w-full shadow-md border-gray-200 dark:border-gray-700 gap-0">
+      <CardHeader className="pb-3p-3 sm:p-6 pb-0">
+        <div className="flex justify-between gap-3 sm:gap-4">
           <div>
-            <CardTitle className="text-xl font-bold text-foreground">Vendas Recentes</CardTitle>
-            <CardDescription>Gerencie suas transações e acompanhe o desempenho.</CardDescription>
+            <CardTitle className="text-base sm:text-xl font-bold text-foreground">Vendas Recentes</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Gerencie suas transações.</CardDescription>
           </div>
 
           {/* Área de Filtros */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={filterType} onValueChange={(val) => setFilterType(val as DateRangeFilter)}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-[130px] sm:w-40 h-8 sm:h-10 text-xs sm:text-sm">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -127,8 +127,8 @@ export function RecentSalesTable() {
             {filterType === "custom" && (
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant={"outline"} className={cn("w-60 justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                  <Button variant={"outline"} className={cn("w-full sm:w-60 justify-start text-left font-normal h-8 sm:h-10 text-xs sm:text-sm", !dateRange && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     {dateRange?.from ? (
                       dateRange.to ? (
                         <>
@@ -142,14 +142,14 @@ export function RecentSalesTable() {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     initialFocus
                     mode="range"
                     defaultMonth={dateRange?.from}
                     selected={dateRange}
-                    onSelect={(range: any) => setDateRange(range)} // Tipagem 'any' rápida para compatibilidade shadcn
-                    numberOfMonths={2}
+                    onSelect={(range: any) => setDateRange(range)}
+                    numberOfMonths={1}
                     locale={ptBR}
                   />
                 </PopoverContent>
@@ -159,9 +159,9 @@ export function RecentSalesTable() {
         </div>
       </CardHeader>
 
-      <CardContent>
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
+      <CardContent className="p-3 sm:p-6 pt-0">
+        <div className="rounded-lg border overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead>Data</TableHead>
@@ -311,9 +311,9 @@ export function RecentSalesTable() {
 
         {/* Paginação */}
         {filteredSales.length > 0 && totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 border-t pt-4">
-            <div className="text-sm text-muted-foreground">
-              Mostrando {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredSales.length)} de {filteredSales.length}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-3 sm:mt-4 border-t pt-3 sm:pt-4">
+            <div className="text-xs sm:text-sm text-muted-foreground">
+              {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredSales.length)} de {filteredSales.length}
             </div>
             <div className="flex gap-2">
               <Button
@@ -321,20 +321,20 @@ export function RecentSalesTable() {
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8"
+                className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Anterior
+                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline ml-1">Anterior</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8"
+                className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
               >
-                Próxima
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="hidden sm:inline mr-1">Próxima</span>
+                <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </div>
           </div>
