@@ -61,9 +61,12 @@ export interface IOffer extends Document {
   };
   customId?: string;
   collectPhone: boolean;
+  paypalEnabled: boolean;
 
   mainProduct: IProductSubDocument;
   orderBumps: IProductSubDocument[];
+
+  checkoutStarted: number; // Contador de checkouts iniciados
 
   createdAt?: Date;
   updatedAt?: Date;
@@ -169,6 +172,10 @@ const offerSchema = new Schema<IOffer>(
       type: Boolean,
       default: true,
     },
+    paypalEnabled: {
+      type: Boolean,
+      default: false,
+    },
     mainProduct: {
       type: productSubSchema,
       required: true,
@@ -180,6 +187,10 @@ const offerSchema = new Schema<IOffer>(
       authToken: { type: String, default: "" },
     },
     customId: { type: String, default: "" },
+    checkoutStarted: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
