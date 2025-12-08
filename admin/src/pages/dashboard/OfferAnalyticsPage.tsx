@@ -163,14 +163,14 @@ export default function OfferAnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Button variant="ghost" size="sm" onClick={() => navigate("/offers")} className="-ml-2 text-gray-500">
-                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
-              </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/offers")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{data.offerName}</h1>
+              <p className="text-sm text-muted-foreground">Análise detalhada de performance do funil</p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">{data.offerName}</h1>
-            <p className="text-muted-foreground">Análise detalhada de performance do funil.</p>
           </div>
 
           {/* Filtros de Data e Botão Ver Página */}

@@ -131,7 +131,7 @@ export function SalesWorldMap({ data }: SalesWorldMapProps) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {data.slice(0, 6).map((country, idx) => (
             <div key={idx} className="flex items-center gap-2 p-1.5 sm:p-2 rounded-md bg-muted/30">
-              <img src={`https://flagcdn.com/w40/${country.name.toLowerCase()}.png`} alt={country.name} className="w-5 h-3.5 sm:w-7 sm:h-5 rounded object-none flex-shrink-0" />
+              <img src={`https://flagcdn.com/w40/${country.name.toLowerCase()}.png`} alt={country.name} className="w-5 h-3.5 sm:w-7 sm:h-5 rounded object-contain shrink-0" />
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-[10px] sm:text-xs font-semibold text-foreground uppercase">{country.name}</span>
                 <span className="text-[10px] sm:text-xs font-bold text-chart-1">{formatCurrency(country.value)}</span>

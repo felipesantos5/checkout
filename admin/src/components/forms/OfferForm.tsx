@@ -169,7 +169,7 @@ const DnsInstructionsDialog = ({ domain }: { domain?: string }) => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="gap-2">
+        <Button type="button" variant="outline" size="lg" className="gap-2 h-[36px]">
           <HelpCircle className="w-4 h-4" />
           Como Configurar
         </Button>
@@ -1190,7 +1190,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                   </FormItem>
                 )}
               />
-              <div className="pt-8">
+              <div className="mt-[22px]">
                 <DnsInstructionsDialog domain={form.watch("customDomain")} />
               </div>
             </div>

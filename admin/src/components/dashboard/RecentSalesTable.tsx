@@ -102,7 +102,7 @@ export function RecentSalesTable() {
 
   return (
     <Card className="w-full shadow-md border-gray-200 dark:border-gray-700 gap-0">
-      <CardHeader className="pb-3p-3 sm:p-6 pb-0">
+      <CardHeader className="pb-0">
         <div className="flex justify-between gap-3 sm:gap-4">
           <div>
             <CardTitle className="text-base sm:text-xl font-bold text-foreground">Vendas Recentes</CardTitle>
