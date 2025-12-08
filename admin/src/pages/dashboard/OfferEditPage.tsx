@@ -186,7 +186,7 @@ export function OfferEditPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 px-4 w-full overflow-x-hidden">
+    <div className="max-w-4xl mx-auto space-y-6 px-0 sm:px-4 w-full overflow-x-hidden">
       <Link to="/offers" className="hover:underline mb-4 font-semibold flex gap-1 items-center">
         <ChevronLeft size={20} />
         Voltar para ofertas

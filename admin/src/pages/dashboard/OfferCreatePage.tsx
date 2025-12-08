@@ -7,8 +7,8 @@ export function OfferCreatePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="max-w-4xl m-auto overflow-hidden">
-      <div className="mb-6">
+    <div className="max-w-4xl mx-auto overflow-hidden px-0 sm:px-4">
+      <div className="mb-6 px-2 sm:px-0">
         <h1 className="text-2xl font-bold">Criar Novo Link de Checkout</h1>
       </div>
 
