@@ -190,6 +190,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
             fbc: fbCookies.fbc,
             fbp: fbCookies.fbp,
             purchaseEventId: purchaseEventId,
+            abTestId: abTestId ?? null, // A/B test tracking
           },
         };
 
@@ -417,7 +418,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           addPaymentInfoEventId: addPaymentInfoEventId.current,
           purchaseEventId: purchaseEventId,
           // A/B test tracking
-          abTestId: abTestId || undefined,
+          abTestId: abTestId ?? null, // null é serializado, undefined é omitido
         },
       };
 
@@ -594,6 +595,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
                       currency={offerData.currency}
                       offerId={offerData._id}
                       paypalClientId={paypalClientId}
+                      abTestId={abTestId}
                       customerData={{
                         name: (document.getElementById("name") as HTMLInputElement)?.value || "",
                         email: (document.getElementById("email") as HTMLInputElement)?.value || "",

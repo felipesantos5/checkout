@@ -79,7 +79,7 @@ export const createOrder = async (req: Request, res: Response) => {
 
 export const captureOrder = async (req: Request, res: Response) => {
   try {
-    const { orderId, offerId, customerData } = req.body;
+    const { orderId, offerId, customerData, abTestId } = req.body;
 
     if (!offerId) {
       return res.status(400).json({ error: "offerId é obrigatório." });
@@ -115,6 +115,7 @@ export const captureOrder = async (req: Request, res: Response) => {
         stripePaymentIntentId: `PAYPAL_${captureData.id}`, // Prefixo para identificar como PayPal
         offerId: offer._id,
         ownerId: offer.ownerId,
+        abTestId: abTestId || null, // A/B test tracking
         status: "succeeded",
         totalAmountInCents: amountInCents,
         platformFeeInCents: 0, // PayPal não usa taxa de plataforma no nosso sistema

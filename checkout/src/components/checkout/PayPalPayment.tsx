@@ -9,6 +9,7 @@ interface PayPalPaymentProps {
   currency: string;
   offerId: string;
   paypalClientId: string;
+  abTestId?: string | null;
   customerData: {
     name: string;
     email: string;
@@ -29,6 +30,7 @@ export const PayPalPayment: React.FC<PayPalPaymentProps> = ({
   currency,
   offerId,
   paypalClientId,
+  abTestId,
   customerData,
   onSuccess,
   onError,
@@ -126,6 +128,7 @@ export const PayPalPayment: React.FC<PayPalPaymentProps> = ({
                   orderId: data.orderID,
                   offerId: offerId,
                   customerData: customerData,
+                  abTestId: abTestId ?? null,
                 }),
               });
 
