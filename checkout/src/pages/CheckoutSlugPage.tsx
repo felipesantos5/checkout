@@ -65,6 +65,7 @@ export interface OfferData {
 export function CheckoutSlugPage() {
   const { slug } = useParams<{ slug: string }>();
   const [offerData, setOfferData] = useState<OfferData | null>(null);
+  const [abTestId, setAbTestId] = useState<string | null>(null); // NEW: Track A/B test ID
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -107,21 +108,49 @@ export function CheckoutSlugPage() {
 
   const { generateEventId } = useFacebookPixel(pixelIds);
 
+  // Controle para evitar fetch duplicado (React StrictMode executa useEffect 2x)
+  const fetchingRef = useRef<boolean>(false);
+
   useEffect(() => {
     if (!slug) return;
+    
+    // Evita fetch duplicado
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
 
     const fetchOffer = async () => {
       setIsLoading(true);
       setError(null);
+      setAbTestId(null);
+
       try {
-        const response = await fetch(`${API_URL}/offers/slug/${slug}`);
+        // 1. Tenta buscar como teste A/B primeiro
+        let response = await fetch(`${API_URL}/abtests/slug/${slug}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          // data contém: { offer: OfferData, abTestId: string }
+          setOfferData(data.offer);
+          setAbTestId(data.abTestId);
+
+          // O tracking de view já é feito pelo backend quando randomiza
+          // Apenas marca como rastreado para evitar duplicação no InitiateCheckout
+          if (trackedSlugRef.current !== slug) {
+            trackedSlugRef.current = slug;
+          }
+          return;
+        }
+
+        // 2. Se não for teste A/B (404), busca como oferta normal
+        response = await fetch(`${API_URL}/offers/slug/${slug}`);
+
         if (!response.ok) {
           throw new Error("Oferta não encontrada ou indisponível.");
         }
+
         const data: OfferData = await response.json();
         setOfferData(data);
 
-        // --- CORREÇÃO AQUI ---
         // Só dispara o tracking se o slug atual for diferente do último rastreado
         if (trackedSlugRef.current !== slug) {
           trackedSlugRef.current = slug; // Marca como rastreado imediatamente
@@ -135,7 +164,6 @@ export function CheckoutSlugPage() {
             }),
           }).catch((err) => console.log("Track view error", err));
         }
-        // ---------------------
       } catch (err) {
         setError((err as Error).message);
       } finally {

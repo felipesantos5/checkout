@@ -29,7 +29,12 @@ function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Nova rota sem /c/ - tenta primeiro como teste A/B, depois como oferta normal */}
+        <Route path="/:slug" element={<CheckoutSlugPage />} />
+        
+        {/* Backward compatibility - mantém /c/ funcionando */}
         <Route path="/c/:slug" element={<CheckoutSlugPage />} />
+        
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/upsell" element={<TestUpsellPage />} />
 
@@ -48,3 +53,4 @@ function App() {
 }
 
 export default App;
+

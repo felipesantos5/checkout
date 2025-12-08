@@ -11,6 +11,7 @@ import stripeRoutes from "./stripe.routes";
 import metricsRoutes from "./metrics.routes";
 import healthRoutes from "./health.routes";
 import settingsRoutes from "./settings.routes";
+import abTestRoutes from "./abtest.routes";
 import { getUpsellScript } from "../controllers/script.controller";
 
 const router = Router();
@@ -42,6 +43,10 @@ router.use("/paypal", payPalRoutes);
 
 router.use("/settings", settingsRoutes);
 
+// Rotas para Testes A/B
+router.use("/abtests", abTestRoutes);
+
 router.get("/v1/upsell.js", getUpsellScript);
 
 export default router;
+

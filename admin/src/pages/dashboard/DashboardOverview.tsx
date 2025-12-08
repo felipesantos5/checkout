@@ -4,12 +4,10 @@ import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 // import { ConnectStripeCard } from "@/components/ConnectStripeCard";
 import { API_URL } from "@/config/BackendUrl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, ShoppingCart, TrendingUp, Filter } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp } from "lucide-react";
 import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { formatCurrency } from "@/helper/formatCurrency";
 import { SalesAreaChart } from "@/components/dashboard/SalesAreaChart";
 import { TopOffersChart } from "@/components/dashboard/TopOffersChart";
@@ -17,6 +15,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
 import { subDays, startOfDay, endOfDay } from "date-fns";
 import { SalesWorldMap } from "@/components/dashboard/SalesWorldMap";
+import { KpiCard } from "@/components/dashboard/KpiCard";
 
 // --- Interfaces ---
 interface DashboardData {
@@ -63,65 +62,6 @@ interface Offer {
   _id: string;
   name: string;
 }
-
-const KpiCard = ({ title, value, icon: Icon, subtext, chartData, color, destaque = false, changePercentage }: any) => {
-  const isPositive = changePercentage >= 0;
-  const showChange = changePercentage !== undefined && changePercentage !== null;
-
-  return (
-    <Card
-      className={`overflow-hidden flex flex-col h-[140px] sm:h-[180px] relative py-2 gap-2 sm:gap-3 ${
-        destaque ? "bg-linear-to-br from-yellow-400 via-yellow-500 to-chart-1 border-chart-1 shadow-lg shadow-yellow-500/50" : ""
-      }`}
-    >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-3 sm:pt-4 px-3 sm:px-4">
-        <CardTitle className={`text-sm sm:text-base font-medium ${destaque ? "text-white" : "text-muted-foreground"}`}>{title}</CardTitle>
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {showChange && (
-            <span
-              className={`text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full ${
-                destaque
-                  ? isPositive
-                    ? "bg-white text-yellow-500 dark:bg-zinc-800"
-                    : "bg-white text-yellow-500 dark:bg-zinc-800"
-                  : isPositive
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-              }`}
-            >
-              {isPositive ? "+" : ""}
-              {changePercentage.toFixed(1)}%
-            </span>
-          )}
-          <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${destaque ? "text-white" : "text-muted-foreground"}`} />
-        </div>
-      </CardHeader>
-      <CardContent className="px-3 sm:px-4 pb-0">
-        <span className={`text-xl sm:text-3xl font-bold ${destaque && "text-white"}`}>{value}</span>
-        {subtext && <p className={`text-[10px] sm:text-xs mt-0.5 ${destaque ? "text-white/90" : "text-muted-foreground"}`}>{subtext}</p>}
-      </CardContent>
-      {/* Área do Gráfico colada na base */}
-      <div className="absolute bottom-1 sm:bottom-2 w-full h-10 sm:h-16">
-        {chartData && chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={destaque ? "#ffffff" : color}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4, strokeWidth: 0, fill: destaque ? "#ffffff" : color }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className={`w-full h-full border-t ${destaque ? "border-white/30" : "border-gray-100"}`}></div>
-        )}
-      </div>
-    </Card>
-  );
-};
 
 export function DashboardOverview() {
   const { token } = useAuth();
@@ -287,27 +227,28 @@ export function DashboardOverview() {
       {/* <ConnectStripeCard /> */}
 
       {/* Header Responsivo */}
-      <div className="flex flex-col gap-4">
-        {/* Título e Valor a Receber */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Visão Geral</h1>
-          <div className="flex items-center gap-2 text-sm sm:text-base">
-            <span className="text-muted-foreground">Valor a receber:</span>
-            <span className="text-chart-1 text-lg sm:text-2xl font-semibold">{formatStripe(balance?.pending || [])}</span>
-          </div>
-        </div>
-
-        {/* Filtros Responsivos */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-muted-foreground">Filtros:</span>
-          </div>
+      <div className="flex flex-col gap-3 lg:gap-0">
+        {/* Desktop (lg+): Título à esquerda + Filtros à direita | Mobile/Tablet: Empilhado */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
+          {/* Título */}
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight whitespace-nowrap">Visão Geral</h1>
           
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Container direito: Filtros + Valor a receber */}
+          <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+                        
+         
+          
+            {/* Valor a receber */}
+            <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+              <span className="text-muted-foreground">A receber:</span>
+              <span className="text-chart-1 text-lg font-semibold">{formatStripe(balance?.pending || [])}</span>
+            </div>
+
+               {/* Separador (só desktop) */}
+            <div className="hidden lg:block w-px h-6 bg-border" />
             {/* Filtro de Período */}
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[140px] sm:w-auto">
+              <SelectTrigger className="w-[145px] h-9">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -315,24 +256,24 @@ export function DashboardOverview() {
                 <SelectItem value="7">Últimos 7 dias</SelectItem>
                 <SelectItem value="30">Últimos 30 dias</SelectItem>
                 <SelectItem value="90">Últimos 3 meses</SelectItem>
-                <SelectItem value="custom">Período personalizado</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
             
             {/* DateRangePicker (só aparece quando period === "custom") */}
             {period === "custom" && (
-              <div className="w-full sm:w-[250px]">
+              <div className="w-[220px]">
                 <DateRangePicker value={customDateRange} onChange={setCustomDateRange} />
               </div>
             )}
             
             {/* Filtro de Oferta */}
             <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
-              <SelectTrigger className="w-[160px] sm:w-[200px]">
-                <SelectValue placeholder="Todas ofertas" />
+              <SelectTrigger className="w-[145px] h-9">
+                <SelectValue placeholder="Oferta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as ofertas</SelectItem>
+                <SelectItem value="all">Todas</SelectItem>
                 {offers.map((offer) => (
                   <SelectItem key={offer._id} value={offer._id}>
                     {offer.name}

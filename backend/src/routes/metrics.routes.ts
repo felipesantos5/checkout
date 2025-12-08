@@ -1,6 +1,7 @@
 // src/routes/sale.routes.ts
 import { Router } from "express";
 import * as metricsController from "../controllers/metrics.controller";
+import * as abTestMetricsController from "../controllers/abtest-metrics.controller";
 import { protectRoute } from "../middleware/auth.middleware";
 
 const router = Router();
@@ -16,4 +17,8 @@ router.get("/funnel", protectRoute, metricsController.handleGetConversionFunnel)
 router.get("/overview", protectRoute, metricsController.handleGetDashboardOverview);
 router.get("/offer-total-revenue", protectRoute, metricsController.handleGetOfferTotalRevenue);
 
+// Métricas para Testes A/B
+router.get("/abtest/:id", protectRoute, abTestMetricsController.handleGetABTestMetrics);
+
 export default router;
+

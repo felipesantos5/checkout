@@ -13,6 +13,10 @@ import { StripeRefreshPage } from "./pages/dashboard/StripeRefreshPage";
 import { DashboardOverview } from "./pages/dashboard/DashboardOverview";
 import OfferAnalyticsPage from "./pages/dashboard/OfferAnalyticsPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
+import ABTestsPage from "./pages/dashboard/ABTestsPage";
+import ABTestCreatePage from "./pages/dashboard/ABTestCreatePage";
+import ABTestEditPage from "./pages/dashboard/ABTestEditPage";
+import ABTestAnalyticsPage from "./pages/dashboard/ABTestAnalyticsPage";
 
 function App() {
   return (
@@ -34,6 +38,12 @@ function App() {
         <Route path="offers/:id" element={<OfferEditPage />} />
         <Route path="offers/:id/analytics" element={<OfferAnalyticsPage />} />
 
+        {/* Rotas de Testes A/B */}
+        <Route path="abtests" element={<ABTestsPage />} />
+        <Route path="abtests/new" element={<ABTestCreatePage />} />
+        <Route path="abtests/:id" element={<ABTestEditPage />} />
+        <Route path="abtests/:id/analytics" element={<ABTestAnalyticsPage />} />
+
         {/* 2. ADICIONE AS ROTAS DE CALLBACK DO STRIPE */}
         {/* (Elas batem com as URLs do backend stripe.controller.ts) */}
         <Route path="dashboard/stripe-return" element={<StripeReturnPage />} />
@@ -48,3 +58,4 @@ function App() {
 }
 
 export default App;
+

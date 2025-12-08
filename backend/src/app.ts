@@ -39,7 +39,7 @@ app.use(
 // Rate limiting global
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 300, // Limite de 100 requisições por IP
+  max: 400, // Limite de 100 requisições por IP
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,

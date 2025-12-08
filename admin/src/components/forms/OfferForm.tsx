@@ -54,7 +54,7 @@ const FormSection = ({ title, icon, description, children, defaultOpen = false, 
       </div>
 
       {isOpen && (
-        <div className="animate-in slide-in-from-top-2 fade-in duration-200">
+        <div className="overflow-hidden">
           <Separator />
           <div className="p-5 space-y-6 bg-card/50">{children}</div>
         </div>

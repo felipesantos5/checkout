@@ -14,6 +14,7 @@ interface ISaleItem {
 export interface ISale extends Document {
   ownerId: Schema.Types.ObjectId; // O vendedor (dono da oferta)
   offerId: Schema.Types.ObjectId; // A oferta usada
+  abTestId?: Schema.Types.ObjectId; // O teste A/B (se aplicável)
   stripePaymentIntentId: string; // O ID do pagamento no Stripe (pi_...)
 
   customerName: string;
@@ -48,6 +49,7 @@ const saleSchema = new Schema<ISale>(
   {
     ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     offerId: { type: Schema.Types.ObjectId, ref: "Offer", required: true },
+    abTestId: { type: Schema.Types.ObjectId, ref: "ABTest", default: null },
 
     stripePaymentIntentId: { type: String, required: true, unique: true, index: true },
 

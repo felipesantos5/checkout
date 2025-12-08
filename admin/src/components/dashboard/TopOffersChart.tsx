@@ -11,7 +11,14 @@ interface TopOffersChartProps {
   data: TopOffer[];
 }
 
-const COLORS = ["#fbbf24", "#f59e0b", "#d97706", "#b45309", "#92400e"];
+// Cores usando as variáveis CSS do Tailwind
+const COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 export function TopOffersChart({ data }: TopOffersChartProps) {
   if (!data || data.length === 0) {
