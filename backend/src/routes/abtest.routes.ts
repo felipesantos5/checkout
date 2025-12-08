@@ -31,4 +31,7 @@ router.post("/:id/duplicate", protectRoute, abTestController.handleDuplicateABTe
 // GET /api/abtests/slug/:slug (Busca teste por slug e retorna oferta randomizada)
 router.get("/slug/:slug", abTestController.handleGetABTestBySlug);
 
+// POST /api/abtests/track (Registra eventos de tracking do A/B test)
+router.post("/track", abTestController.handleTrackABTestEvent);
+
 export default router;

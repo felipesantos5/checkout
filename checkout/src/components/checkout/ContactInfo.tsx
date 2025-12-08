@@ -7,9 +7,10 @@ import { API_URL } from "../../config/BackendUrl";
 interface ContactInfoProps {
   showPhone?: boolean;
   offerID: string;
+  abTestId?: string | null;
 }
 
-export const ContactInfo: React.FC<ContactInfoProps> = ({ showPhone = true, offerID }) => {
+export const ContactInfo: React.FC<ContactInfoProps> = ({ showPhone = true, offerID, abTestId }) => {
   const { t } = useTranslation();
   const { textColor } = useTheme(); // Hook do tema
   const [phone, setPhone] = useState("");
@@ -24,11 +25,25 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({ showPhone = true, offe
       checkoutStartedSent.current = true;
 
       try {
-        await fetch(`${API_URL}/offers/checkout-started`, {
+        // Tracking padrão da oferta
+        fetch(`${API_URL}/offers/checkout-started`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ offerId: offerID }),
-        });
+        }).catch((err) => console.error("Erro tracking offer:", err));
+
+        // Tracking do Teste A/B (se houver)
+        if (abTestId) {
+          fetch(`${API_URL}/abtests/track`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              abTestId,
+              offerId: offerID,
+              type: "initiate_checkout",
+            }),
+          }).catch((err) => console.error("Erro tracking AB Test:", err));
+        }
       } catch (error) {
         console.error("Erro ao registrar checkout iniciado:", error);
       }

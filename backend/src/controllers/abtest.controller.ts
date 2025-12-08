@@ -130,3 +130,27 @@ export const handleGetABTestBySlug = async (req: Request, res: Response) => {
     res.status(500).json({ error: { message: (error as Error).message } });
   }
 };
+
+/**
+ * Controller para tracking de eventos em A/B tests (público)
+ * Usado para registrar "initiate_checkout" quando cliente preenche email
+ */
+export const handleTrackABTestEvent = async (req: Request, res: Response) => {
+  try {
+    const { abTestId, offerId, type } = req.body;
+
+    // Resposta imediata para não travar o cliente
+    res.status(200).send();
+
+    if (!abTestId || !offerId || !["initiate_checkout"].includes(type)) {
+      return;
+    }
+
+    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || "";
+    const userAgent = req.headers["user-agent"] || "";
+
+    await abTestService.trackABTestEvent(abTestId, offerId, type, ip, userAgent);
+  } catch (error) {
+    console.error("Erro tracking A/B test:", error);
+  }
+};

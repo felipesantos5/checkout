@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { API_URL } from "@/config/BackendUrl";
-import { ArrowLeft, FlaskConical, Loader2, Eye, ShoppingCart, DollarSign, TrendingUp, Trophy, Calendar, Percent, Target } from "lucide-react";
+import { ArrowLeft, FlaskConical, Loader2, Eye, ShoppingCart, DollarSign, TrendingUp, Trophy, Calendar, Percent, Target, ExternalLink } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KpiCard } from "@/components/dashboard/KpiCard";
@@ -17,6 +17,7 @@ interface OfferMetrics {
   offerName: string;
   percentage: number;
   views: number;
+  initiatedCheckout: number; // Novo campo
   sales: number;
   revenue: number;
   conversionRate: number;
@@ -28,6 +29,7 @@ interface DailyMetric {
   offerId: string;
   offerName: string;
   views: number;
+  initiatedCheckout: number; // Novo campo
   sales: number;
   revenue: number;
   conversionRate: number;
@@ -36,10 +38,12 @@ interface DailyMetric {
 interface ABTestMetrics {
   abTestId: string;
   abTestName: string;
+  abTestSlug: string;
   dateRange: { start: string; end: string };
   offers: OfferMetrics[];
   totals: {
     views: number;
+    initiatedCheckout: number; // Novo campo
     sales: number;
     revenue: number;
     conversionRate: number;
@@ -207,31 +211,41 @@ export function ABTestAnalyticsPage() {
               <SelectItem value="90">Últimos 90 dias</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => window.open(`https://pay.snappcheckout.com/c/${metrics.abTestSlug}`, "_blank")} className="gap-2">
+            <ExternalLink className="h-4 w-4" />
+            Ver Página
+          </Button>
         </div>
       </div>
 
       {/* KPI Cards - Totais */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-5">
         <KpiCard
-          title="Total de Visualizações"
+          title="Visualizações"
           value={metrics.totals.views.toLocaleString()}
           icon={Eye}
           color="#fbbf24"
         />
         <KpiCard
-          title="Total de Vendas"
-          value={metrics.totals.sales.toLocaleString()}
+          title="Checkouts Iniciados"
+          value={metrics.totals.initiatedCheckout.toLocaleString()}
           icon={ShoppingCart}
+          color="#3b82f6"
+        />
+        <KpiCard
+          title="Vendas Totais"
+          value={metrics.totals.sales.toLocaleString()}
+          icon={Trophy}
           color="#f59e0b"
         />
         <KpiCard
-          title="Faturamento Total"
+          title="Faturamento"
           value={formatCurrency(metrics.totals.revenue)}
           icon={DollarSign}
           destaque={true}
         />
         <KpiCard
-          title="Taxa de Conversão"
+          title="Conversão"
           value={formatPercentage(metrics.totals.conversionRate)}
           icon={TrendingUp}
           subtext={`Ticket Médio: ${formatCurrency(metrics.totals.averageTicket)}`}
@@ -292,23 +306,27 @@ export function ABTestAnalyticsPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-3 text-center">
+                  <div className="grid grid-cols-5 gap-2 text-center">
                     <div className="bg-muted/50 rounded-lg p-2">
-                      <p className="text-xs text-muted-foreground">Views</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">Views</p>
                       <p className="text-sm font-bold">{offer.views.toLocaleString()}</p>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-2">
-                      <p className="text-xs text-muted-foreground">Vendas</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">Checkout</p>
+                      <p className="text-sm font-bold">{offer.initiatedCheckout.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase">Vendas</p>
                       <p className="text-sm font-bold">{offer.sales.toLocaleString()}</p>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-2">
-                      <p className="text-xs text-muted-foreground">CVR</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">CVR</p>
                       <p className={`text-sm font-bold ${isBestConversion ? "text-yellow-500" : ""}`}>
                         {formatPercentage(offer.conversionRate)}
                       </p>
                     </div>
                     <div className="bg-muted/50 rounded-lg p-2">
-                      <p className="text-xs text-muted-foreground">Receita</p>
+                      <p className="text-[10px] text-muted-foreground uppercase">Receita</p>
                       <p className="text-sm font-bold">{formatCurrency(offer.revenue)}</p>
                     </div>
                   </div>

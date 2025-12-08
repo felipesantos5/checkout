@@ -262,6 +262,7 @@ export const getABTestBySlugAndRandomize = async (
     abTestId: test._id,
     offerId: populatedOffer._id,
     ownerId: test.ownerId,
+    type: "view",
     ip: ip || "",
     userAgent: userAgent || "",
   });
@@ -273,3 +274,55 @@ export const getABTestBySlugAndRandomize = async (
   };
 };
 
+/**
+ * Registra um evento de teste A/B (View ou Initiate Checkout)
+ */
+export const trackABTestEvent = async (
+  abTestId: string,
+  offerId: string,
+  type: "view" | "initiate_checkout",
+  ip: string,
+  userAgent: string
+): Promise<void> => {
+  // Para 'view', evitamos duplicidade recente (mesmo IP, mesmo teste, últimas 24h)
+  if (type === "view") {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const alreadyViewed = await ABTestView.exists({
+      abTestId: new Types.ObjectId(abTestId),
+      type: "view",
+      ip,
+      createdAt: { $gte: oneDayAgo },
+    });
+
+    if (alreadyViewed) return;
+  }
+
+  // Para 'initiate_checkout', também podemos evitar flood, mas geralmente queremos saber a intenção real
+  // Vamos evitar duplicidade de 'initiate_checkout' para o mesmo IP no mesmo dia também
+  if (type === "initiate_checkout") {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const alreadyInitiated = await ABTestView.exists({
+      abTestId: new Types.ObjectId(abTestId),
+      type: "initiate_checkout",
+      ip,
+      createdAt: { $gte: oneDayAgo },
+    });
+
+    if (alreadyInitiated) return;
+  }
+
+  // Busca o teste para pegar o ownerId
+  const test = await ABTest.findById(abTestId);
+  if (!test) return;
+
+  const view = new ABTestView({
+    abTestId: new Types.ObjectId(abTestId),
+    offerId: new Types.ObjectId(offerId),
+    ownerId: test.ownerId,
+    type,
+    ip,
+    userAgent,
+  });
+
+  await view.save();
+};

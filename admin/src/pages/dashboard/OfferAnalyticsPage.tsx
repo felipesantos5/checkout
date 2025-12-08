@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { ArrowLeft, Eye, ShoppingCart, CreditCard, TrendingUp } from "lucide-react";
+import { ArrowLeft, Eye, ShoppingCart, CreditCard, TrendingUp, ExternalLink } from "lucide-react";
 import { formatCurrency } from "@/helper/formatCurrency";
 import { SalesHistoryTable } from "@/components/dashboard/SalesHistoryTable";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
@@ -195,7 +195,8 @@ export default function OfferAnalyticsPage() {
               )}
             </div>
 
-            <Button variant="outline" onClick={() => window.open(`https://pay.snappcheckout.com/c/${data.slug}`, "_blank")}>
+            <Button variant="outline" onClick={() => window.open(`https://pay.snappcheckout.com/c/${data.slug}`, "_blank")} className="gap-2">
+              <ExternalLink className="h-4 w-4" />
               Ver Página
             </Button>
           </div>

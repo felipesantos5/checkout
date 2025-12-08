@@ -5,6 +5,7 @@ export interface IABTestView extends Document {
   abTestId: Schema.Types.ObjectId;
   offerId: Schema.Types.ObjectId;
   ownerId: Schema.Types.ObjectId;
+  type: "view" | "initiate_checkout"; // Tipo de evento
   ip?: string;
   userAgent?: string;
   createdAt?: Date;
@@ -27,6 +28,11 @@ const abTestViewSchema = new Schema<IABTestView>(
       ref: "User",
       required: true,
     },
+    type: {
+      type: String,
+      enum: ["view", "initiate_checkout"],
+      default: "view",
+    },
     ip: {
       type: String,
       default: "",
@@ -44,6 +50,7 @@ abTestViewSchema.index({ abTestId: 1, createdAt: -1 });
 abTestViewSchema.index({ offerId: 1, createdAt: -1 });
 abTestViewSchema.index({ ownerId: 1, createdAt: -1 });
 abTestViewSchema.index({ abTestId: 1, offerId: 1, createdAt: -1 });
+abTestViewSchema.index({ abTestId: 1, type: 1, createdAt: -1 });
 
 const ABTestView: Model<IABTestView> = mongoose.models.ABTestView || model<IABTestView>("ABTestView", abTestViewSchema);
 

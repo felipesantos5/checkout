@@ -290,6 +290,7 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
     const sale = await Sale.create({
       ownerId: offer.ownerId,
       offerId: offer._id,
+      abTestId: metadata.abTestId || null, // A/B test tracking
       stripePaymentIntentId: paymentIntent.id,
       customerName: finalCustomerName,
       customerEmail: finalCustomerEmail,

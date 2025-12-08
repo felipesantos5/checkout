@@ -28,9 +28,10 @@ interface CheckoutFormProps {
   offerData: OfferData;
   checkoutSessionId: string;
   generateEventId: () => string;
+  abTestId: string | null;
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutSessionId }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutSessionId, abTestId }) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -415,6 +416,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           // Envia os event_ids para o backend usar no CAPI
           addPaymentInfoEventId: addPaymentInfoEventId.current,
           purchaseEventId: purchaseEventId,
+          // A/B test tracking
+          abTestId: abTestId || undefined,
         },
       };
 
@@ -524,7 +527,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
               {/* COLUNA ESQUERDA: Formulário de Checkout */}
               <div className="space-y-6">
-                <ContactInfo showPhone={offerData.collectPhone} offerID={offerData._id} />
+                <ContactInfo showPhone={offerData.collectPhone} offerID={offerData._id} abTestId={abTestId} />
 
                 {offerData.collectAddress && (
                   <Suspense fallback={<div className="animate-pulse bg-gray-100 h-40 rounded-lg"></div>}>

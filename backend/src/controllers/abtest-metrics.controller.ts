@@ -10,6 +10,7 @@ interface OfferMetrics {
   offerName: string;
   percentage: number;
   views: number;
+  initiatedCheckout: number; // Novo campo
   sales: number;
   revenue: number;
   conversionRate: number;
@@ -21,6 +22,7 @@ interface DailyMetric {
   offerId: string;
   offerName: string;
   views: number;
+  initiatedCheckout: number; // Novo campo
   sales: number;
   revenue: number;
   conversionRate: number;
@@ -50,18 +52,36 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
     const start = startDate ? new Date(startDate as string) : new Date(now.setDate(now.getDate() - 30));
     const end = endDate ? new Date(endDate as string) : new Date();
 
-    // Busca views por oferta
+    // Busca views por oferta (type: "view" ou undefined para retrocompatibilidade)
     const viewsByOffer = await ABTestView.aggregate([
       {
         $match: {
           abTestId: test._id,
           createdAt: { $gte: start, $lte: end },
+          $or: [{ type: "view" }, { type: { $exists: false } }],
         },
       },
       {
         $group: {
           _id: "$offerId",
           views: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Busca initiate_checkout por oferta
+    const initiatedCheckoutByOffer = await ABTestView.aggregate([
+      {
+        $match: {
+          abTestId: test._id,
+          createdAt: { $gte: start, $lte: end },
+          type: "initiate_checkout",
+        },
+      },
+      {
+        $group: {
+          _id: "$offerId",
+          count: { $sum: 1 },
         },
       },
     ]);
@@ -86,6 +106,7 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
 
     // Mapeia para fácil acesso
     const viewsMap = new Map(viewsByOffer.map((v) => [v._id.toString(), v.views]));
+    const initiatedCheckoutMap = new Map(initiatedCheckoutByOffer.map((v) => [v._id.toString(), v.count]));
     const salesMap = new Map(
       salesByOffer.map((s) => [s._id.toString(), { sales: s.sales, revenue: s.revenue }])
     );
@@ -95,6 +116,7 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
       const populatedOffer = offer.offerId as any;
       const offerId = populatedOffer._id.toString();
       const views = viewsMap.get(offerId) || 0;
+      const initiatedCheckout = initiatedCheckoutMap.get(offerId) || 0;
       const salesData = salesMap.get(offerId) || { sales: 0, revenue: 0 };
 
       return {
@@ -102,6 +124,7 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
         offerName: populatedOffer.name,
         percentage: offer.percentage,
         views,
+        initiatedCheckout,
         sales: salesData.sales,
         revenue: salesData.revenue,
         conversionRate: views > 0 ? (salesData.sales / views) * 100 : 0,
@@ -112,6 +135,7 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
     // Calcula totais
     const totals = {
       views: offerMetrics.reduce((sum, o) => sum + o.views, 0),
+      initiatedCheckout: offerMetrics.reduce((sum, o) => sum + o.initiatedCheckout, 0),
       sales: offerMetrics.reduce((sum, o) => sum + o.sales, 0),
       revenue: offerMetrics.reduce((sum, o) => sum + o.revenue, 0),
       conversionRate: 0,
@@ -127,6 +151,7 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
         $match: {
           abTestId: test._id,
           createdAt: { $gte: start, $lte: end },
+          $or: [{ type: "view" }, { type: { $exists: false } }],
         },
       },
       {
@@ -136,6 +161,26 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
             offerId: "$offerId",
           },
           views: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.date": 1 } },
+    ]);
+
+    const dailyInitiatedCheckout = await ABTestView.aggregate([
+      {
+        $match: {
+          abTestId: test._id,
+          createdAt: { $gte: start, $lte: end },
+          type: "initiate_checkout",
+        },
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            offerId: "$offerId",
+          },
+          count: { $sum: 1 },
         },
       },
       { $sort: { "_id.date": 1 } },
@@ -184,11 +229,15 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
         const viewData = dailyViews.find(
           (v) => v._id.date === date && v._id.offerId.toString() === offerId
         );
+        const initiatedData = dailyInitiatedCheckout.find(
+          (v) => v._id.date === date && v._id.offerId.toString() === offerId
+        );
         const saleData = dailySales.find(
           (s) => s._id.date === date && s._id.offerId.toString() === offerId
         );
 
         const views = viewData?.views || 0;
+        const initiatedCheckout = initiatedData?.count || 0;
         const sales = saleData?.sales || 0;
         const revenue = saleData?.revenue || 0;
 
@@ -197,6 +246,7 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
           offerId,
           offerName: offerNamesMap.get(offerId) || "Unknown",
           views,
+          initiatedCheckout,
           sales,
           revenue,
           conversionRate: views > 0 ? (sales / views) * 100 : 0,
@@ -219,6 +269,7 @@ export const handleGetABTestMetrics = async (req: Request, res: Response) => {
     res.status(200).json({
       abTestId: (test._id as Types.ObjectId).toString(),
       abTestName: test.name,
+      abTestSlug: test.slug,
       dateRange: { start, end },
       offers: offerMetrics,
       totals,
