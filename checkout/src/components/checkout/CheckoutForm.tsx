@@ -10,11 +10,12 @@ import { OrderSummary } from "./OrderSummary";
 import { ContactInfo } from "./ContactInfo";
 import { PaymentMethods } from "./PaymentMethods";
 import { Banner } from "./Banner";
-import { PayPalPayment } from "./PayPalPayment";
 
 // Lazy load componentes não críticos para melhorar performance inicial
 const AddressInfo = lazy(() => import("./AddressInfo").then((module) => ({ default: module.AddressInfo })));
 const OrderBump = lazy(() => import("./OrderBump").then((module) => ({ default: module.OrderBump })));
+// PayPal é lazy loaded para evitar carregar o SDK quando PayPal está desabilitado
+const PayPalPayment = lazy(() => import("./PayPalPayment").then((module) => ({ default: module.PayPalPayment })));
 import { API_URL } from "../../config/BackendUrl";
 import { useTheme } from "../../context/ThemeContext";
 import { useTranslation } from "../../i18n/I18nContext";
@@ -584,19 +585,21 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
                 {/* Botão e Trust Badges - Mobile e Desktop */}
 
                 {method === "paypal" && offerData.paypalEnabled && paypalClientId ? (
-                  <PayPalPayment
-                    amount={totalAmount}
-                    currency={offerData.currency}
-                    offerId={offerData._id}
-                    paypalClientId={paypalClientId}
-                    customerData={{
-                      name: (document.getElementById("name") as HTMLInputElement)?.value || "",
-                      email: (document.getElementById("email") as HTMLInputElement)?.value || "",
-                      phone: (document.getElementById("phone") as HTMLInputElement)?.value || "",
-                    }}
-                    onSuccess={() => setPaymentSucceeded(true)}
-                    onError={(msg) => setErrorMessage(msg)}
-                  />
+                  <Suspense fallback={<div className="animate-pulse bg-gray-100 h-12 rounded-lg" />}>
+                    <PayPalPayment
+                      amount={totalAmount}
+                      currency={offerData.currency}
+                      offerId={offerData._id}
+                      paypalClientId={paypalClientId}
+                      customerData={{
+                        name: (document.getElementById("name") as HTMLInputElement)?.value || "",
+                        email: (document.getElementById("email") as HTMLInputElement)?.value || "",
+                        phone: (document.getElementById("phone") as HTMLInputElement)?.value || "",
+                      }}
+                      onSuccess={() => setPaymentSucceeded(true)}
+                      onError={(msg) => setErrorMessage(msg)}
+                    />
+                  </Suspense>
                 ) : method !== "wallet" ? (
                   <button
                     type="submit"
