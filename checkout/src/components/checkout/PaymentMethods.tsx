@@ -35,14 +35,14 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMetho
     return (
       <div
         onClick={() => setMethod(value)}
-        className="border rounded-lg p-4 cursor-pointer transition-all duration-200"
+        className="border rounded-lg p-4 cursor-pointer transition-all duration-200 min-h-[56px] flex items-center"
         style={{
           borderColor: isSelected ? primary : `${textColor}30`,
           backgroundColor: isSelected ? `${primary}10` : backgroundColor,
           borderWidth: isSelected ? "2px" : "1px",
         }}
       >
-        <div className="flex justify-between items-center relative">
+        <div className="flex justify-between items-center relative w-full">
           <div className="flex items-center">
             <input
               type="radio"
@@ -67,17 +67,27 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMetho
       <h2 className="text-lg font-semibold mb-4" style={{ color: textColor }}>
         {t.payment.title}
       </h2>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {/* Opção 1: Cartão de Crédito */}
         <PaymentOption value="creditCard" title={t.payment.creditCard}>
-          <div className="flex gap-1">
-            <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/visa.svg" className="h-6" alt="Visa" />
-            <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/mastercard.svg" className="h-6" alt="Master" />
+          <div className="flex gap-1 items-center h-8">
+            <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/visa.svg" className="h-7" alt="Visa" />
+            <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/mastercard.svg" className="h-7" alt="Master" />
           </div>
         </PaymentOption>
 
         {/* Opção 2: PayPal (NOVO) */}
-        {paypalEnabled && <PaymentOption value="paypal" title="PayPal" icon={<PayPalIcon className="h-6" />} />}
+        {paypalEnabled && (
+          <PaymentOption 
+            value="paypal" 
+            title="PayPal" 
+            icon={
+              <div className="h-8 flex items-center">
+                <PayPalIcon className="h-7 w-auto" />
+              </div>
+            } 
+          />
+        )}
 
         {/* Opção 3: Carteira Digital (Só aparece se disponível) */}
         {paymentRequest && walletLabel && (
@@ -85,7 +95,15 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMetho
             <PaymentOption
               value="wallet"
               title={walletLabel}
-              icon={<span className="">{walletLabel === "Apple Pay" ? <AppleyPayIcon className="h-6 w-auto" /> : <GooglePayIcon className="h-6 w-auto" />}</span>}
+              icon={
+                <div className="h-8 flex items-center">
+                  {walletLabel === "Apple Pay" ? (
+                    <AppleyPayIcon className="h-8 w-auto" />
+                  ) : (
+                    <GooglePayIcon className="h-8 w-auto" />
+                  )}
+                </div>
+              }
             />
             {method === "wallet" && (
               <div className="mt-2 animate-fade-in">

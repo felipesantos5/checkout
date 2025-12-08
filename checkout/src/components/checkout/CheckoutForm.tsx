@@ -525,7 +525,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
             </div>
 
             {/* Grid 2 colunas: mobile = 1 col, desktop = 2 cols */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8">
               {/* COLUNA ESQUERDA: Formulário de Checkout */}
               <div className="space-y-6">
                 <ContactInfo showPhone={offerData.collectPhone} offerID={offerData._id} abTestId={abTestId} />
@@ -603,6 +603,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
                       }}
                       onSuccess={() => setPaymentSucceeded(true)}
                       onError={(msg) => setErrorMessage(msg)}
+                      onSwitchPaymentMethod={() => setMethod("creditCard")}
                     />
                   </Suspense>
                 ) : method !== "wallet" ? (
@@ -617,7 +618,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
                     }}
                   >
                     <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-linear-to-r from-transparent via-white/20 to-transparent"></div>
-                    <span className="relative flex items-center justify-center gap-2">
+                    <span className="relative flex items-center justify-center gap-2 whitespace-nowrap">
                       {loading || paymentSucceeded ? (
                         <>
                           <Loader2 className="h-5 w-5 animate-spin" />
