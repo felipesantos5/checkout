@@ -38,7 +38,8 @@ function App() {
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/upsell" element={<TestUpsellPage />} />
 
-        <Route path="/" element={<div></div>} />
+        {/* Rota raiz: Suporte a domínio customizado (quando não há slug na URL) */}
+        <Route path="/" element={<CheckoutSlugPage />} />
         <Route
           path="*"
           element={

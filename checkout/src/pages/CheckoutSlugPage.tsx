@@ -112,8 +112,6 @@ export function CheckoutSlugPage() {
   const fetchingRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (!slug) return;
-    
     // Evita fetch duplicado
     if (fetchingRef.current) return;
     fetchingRef.current = true;
@@ -124,6 +122,51 @@ export function CheckoutSlugPage() {
       setAbTestId(null);
 
       try {
+        // --- DETECÇÃO DE DOMÍNIO CUSTOMIZADO ---
+        const hostname = window.location.hostname;
+        const isCustomDomain = 
+          hostname !== 'pay.snappcheckout.com' && 
+          hostname !== 'localhost' && 
+          hostname !== '127.0.0.1' &&
+          !hostname.includes('vercel.app');
+        
+        let data: OfferData;
+        
+        if (isCustomDomain) {
+          // Acesso via domínio customizado - busca pela API de domínios
+          console.log(`🌐 Custom domain detected: ${hostname}`);
+          
+          const response = await fetch(`${API_URL}/offers/by-domain?domain=${hostname}`);
+          
+          if (!response.ok) {
+            throw new Error("Domínio não configurado ou oferta não encontrada.");
+          }
+          
+          data = await response.json();
+          setOfferData(data);
+          
+          // Tracking de view para domínio customizado
+          if (trackedSlugRef.current !== data.slug) {
+            trackedSlugRef.current = data.slug;
+            
+            fetch(`${API_URL}/metrics/track`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                offerId: data._id,
+                type: "view",
+              }),
+            }).catch((err) => console.log("Track view error", err));
+          }
+          
+          return;
+        }
+        
+        // --- FLUXO NORMAL COM SLUG ---
+        if (!slug) {
+          throw new Error("Slug não fornecido.");
+        }
+
         // 1. Tenta buscar como teste A/B primeiro
         let response = await fetch(`${API_URL}/abtests/slug/${slug}`);
 
@@ -148,7 +191,7 @@ export function CheckoutSlugPage() {
           throw new Error("Oferta não encontrada ou indisponível.");
         }
 
-        const data: OfferData = await response.json();
+        data = await response.json();
         setOfferData(data);
 
         // Só dispara o tracking se o slug atual for diferente do último rastreado
