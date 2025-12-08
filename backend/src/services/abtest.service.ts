@@ -222,6 +222,7 @@ export const duplicateABTest = async (id: string, ownerId: string): Promise<IABT
 
 /**
  * Busca teste A/B por slug e randomiza uma oferta (público)
+ * Implementa "sticky assignment": se o visitante já viu uma oferta, sempre retorna a mesma
  */
 export const getABTestBySlugAndRandomize = async (
   slug: string,
@@ -238,35 +239,69 @@ export const getABTestBySlugAndRandomize = async (
 
   if (!test) return null;
 
-  // Algoritmo de randomização baseado em porcentagens
-  const random = Math.random() * 100;
-  let cumulative = 0;
   let selectedOffer = null;
+  let isReturningVisitor = false;
 
-  for (const offer of test.offers) {
-    cumulative += offer.percentage;
-    if (random < cumulative) {
-      selectedOffer = offer;
-      break;
+  // STICKY ASSIGNMENT: Verifica se o visitante já tem uma oferta atribuída
+  if (ip) {
+    const previousView = await ABTestView.findOne({
+      abTestId: test._id,
+      type: "view",
+      ip,
+    }).sort({ createdAt: -1 }); // Pega a view mais recente
+
+    if (previousView) {
+      // Visitante já viu uma oferta - retornar a mesma
+      isReturningVisitor = true;
+      const previousOfferId = previousView.offerId.toString();
+      
+      // Encontra a oferta que o visitante já viu
+      selectedOffer = test.offers.find(
+        (o) => (o.offerId as any)._id.toString() === previousOfferId
+      );
+      
+      // Se a oferta ainda existe no teste, usa ela
+      // Se a oferta foi removida do teste, faz nova randomização
+      if (!selectedOffer) {
+        isReturningVisitor = false; // Oferta não existe mais, precisa randomizar
+      }
     }
   }
 
-  // Fallback para última oferta caso não encontre
+  // Se não é visitante recorrente (ou oferta anterior foi removida), faz randomização normal
   if (!selectedOffer) {
-    selectedOffer = test.offers[test.offers.length - 1];
+    // Algoritmo de randomização baseado em porcentagens
+    const random = Math.random() * 100;
+    let cumulative = 0;
+
+    for (const offer of test.offers) {
+      cumulative += offer.percentage;
+      if (random < cumulative) {
+        selectedOffer = offer;
+        break;
+      }
+    }
+
+    // Fallback para última oferta caso não encontre
+    if (!selectedOffer) {
+      selectedOffer = test.offers[test.offers.length - 1];
+    }
   }
 
-  // Registra a view
   const populatedOffer = selectedOffer.offerId as any;
-  const view = new ABTestView({
-    abTestId: test._id,
-    offerId: populatedOffer._id,
-    ownerId: test.ownerId,
-    type: "view",
-    ip: ip || "",
-    userAgent: userAgent || "",
-  });
-  await view.save();
+
+  // Registra a view apenas se for novo visitante (evita duplicatas)
+  if (!isReturningVisitor) {
+    const view = new ABTestView({
+      abTestId: test._id,
+      offerId: populatedOffer._id,
+      ownerId: test.ownerId,
+      type: "view",
+      ip: ip || "",
+      userAgent: userAgent || "",
+    });
+    await view.save();
+  }
 
   return {
     offer: populatedOffer,
