@@ -98,9 +98,9 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({ method, setMetho
               icon={
                 <div className="h-8 flex items-center">
                   {walletLabel === "Apple Pay" ? (
-                    <AppleyPayIcon className="h-8 w-auto" />
+                    <AppleyPayIcon className="h-10 w-auto" />
                   ) : (
-                    <GooglePayIcon className="h-8 w-auto" />
+                    <GooglePayIcon className="h-10 w-auto" />
                   )}
                 </div>
               }
