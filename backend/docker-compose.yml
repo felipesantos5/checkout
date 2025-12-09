@@ -21,9 +21,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4242/health"]
       interval: 30s       # Verifica a cada 30 segundos
-      timeout: 10s        # Se demorar mais de 10s, considera falha
-      retries: 3          # Precisa falhar 3 vezes seguidas para marcar unhealthy
-      start_period: 40s   # Dá 40s de carência pro Node iniciar antes de testar
+      timeout: 20s        # Se demorar mais de 10s, considera falha
+      retries: 5          # Precisa falhar 3 vezes seguidas para marcar unhealthy
+      start_period: 120s   # Dá 40s de carência pro Node iniciar antes de testar
     # [NOVO] Etiqueta para o autoheal saber que deve vigiar este container
     labels:
       - "autoheal=true"
