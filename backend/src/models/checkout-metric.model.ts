@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model, model } from "mongoose";
 
 export interface ICheckoutMetric extends Document {
   offerId: mongoose.Types.ObjectId;
-  type: "view" | "initiate_checkout";
+  type: "view" | "view_total" | "initiate_checkout";
   ip?: string;
   userAgent?: string;
   createdAt: Date;
@@ -18,7 +18,7 @@ const checkoutMetricSchema = new Schema<ICheckoutMetric>(
     },
     type: {
       type: String,
-      enum: ["view", "initiate_checkout"],
+      enum: ["view", "view_total", "initiate_checkout"],
       required: true,
     },
     ip: { type: String, default: "" }, // Essencial para FB CAPI

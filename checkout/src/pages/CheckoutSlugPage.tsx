@@ -160,6 +160,7 @@ export function CheckoutSlugPage() {
         if (trackedSlugRef.current !== slug) {
           trackedSlugRef.current = slug; // Marca como rastreado imediatamente
 
+          // Tracking de view única (filtrada por IP no backend)
           fetch(`${API_URL}/metrics/track`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -168,6 +169,16 @@ export function CheckoutSlugPage() {
               type: "view",
             }),
           }).catch((err) => console.log("Track view error", err));
+
+          // Tracking de view total (conta todas as visualizações)
+          fetch(`${API_URL}/metrics/track`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              offerId: data._id,
+              type: "view_total",
+            }),
+          }).catch((err) => console.log("Track view_total error", err));
         }
       } catch (err) {
         setError((err as Error).message);
@@ -179,7 +190,8 @@ export function CheckoutSlugPage() {
     fetchOffer();
   }, [slug]);
 
-  // Dispara evento InitiateCheckout quando a oferta carrega
+  // Dispara evento InitiateCheckout para o Facebook quando a oferta carrega
+  // NOTA: Este evento é apenas para o Facebook Pixel/CAPI, não para a métrica do dashboard
   useEffect(() => {
     if (!offerData || trackedSlugRef.current !== slug) return;
 
@@ -209,18 +221,17 @@ export function CheckoutSlugPage() {
       );
     }
 
-    // 2. Envia evento para o backend (CAPI)
-    fetch(`${API_URL}/metrics/track`, {
+    // 2. Envia evento para o backend (Facebook CAPI) - NÃO salva no dashboard
+    fetch(`${API_URL}/metrics/facebook-initiate-checkout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         offerId: offerData._id,
-        type: "initiate_checkout",
         eventId: eventId,
         totalAmount: offerData.mainProduct.priceInCents,
         contentIds: contentIds,
       }),
-    }).catch((err) => console.log("Track initiate_checkout error", err));
+    }).catch((err) => console.log("Track Facebook InitiateCheckout error", err));
   }, [offerData, slug, checkoutSessionId]);
 
   // ... (resto do código de renderização igual)

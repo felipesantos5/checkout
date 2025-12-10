@@ -21,13 +21,13 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
     const userAgent = req.headers["user-agent"] || "";
     const referer = req.headers["referer"] || "";
 
-    if (!offerId || !["view", "initiate_checkout"].includes(type)) {
+    if (!offerId || !["view", "view_total", "initiate_checkout"].includes(type)) {
       // Como já respondemos 200, apenas paramos a execução.
       return;
     }
 
     // --- PROTEÇÃO CONTRA DUPLICIDADE (ANTI-POLLUTION) ---
-    // Apenas para 'view'. Para 'initiate_checkout' geralmente queremos registrar todas as tentativas.
+    // Apenas para 'view'. Para 'view_total' e 'initiate_checkout' queremos registrar todas as tentativas.
     if (type === "view") {
       // Define janela de 24 horas atrás
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -157,6 +157,92 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
 };
 
 /**
+ * Envia evento InitiateCheckout apenas para o Facebook CAPI
+ * NÃO salva no CheckoutMetric (dashboard)
+ * Público: Chamado pelo checkout quando a página carrega
+ */
+export const handleFacebookInitiateCheckout = async (req: Request, res: Response) => {
+  try {
+    const { offerId, eventId, totalAmount, contentIds } = req.body;
+
+    // Resposta imediata para não travar o cliente (Fire and Forget)
+    res.status(200).send();
+
+    if (!offerId) return;
+
+    const ip = (req.headers["x-forwarded-for"] as string) || req.socket.remoteAddress || "";
+    const userAgent = req.headers["user-agent"] || "";
+    const referer = req.headers["referer"] || "";
+
+    // Busca a oferta para pegar os pixels do Facebook
+    const offer = await Offer.findById(offerId, "facebookPixelId facebookAccessToken facebookPixels currency mainProduct slug").lean();
+
+    if (!offer) return;
+
+    // Coleta TODOS os pixels configurados (novo array + campo antigo para retrocompatibilidade)
+    const pixels: Array<{ pixelId: string; accessToken: string }> = [];
+
+    // Adiciona pixels do novo array
+    if (offer.facebookPixels && offer.facebookPixels.length > 0) {
+      pixels.push(...offer.facebookPixels);
+    }
+
+    // Adiciona pixel antigo se existir e não estiver no array novo (retrocompatibilidade)
+    if (offer.facebookPixelId && offer.facebookAccessToken) {
+      const alreadyExists = pixels.some(p => p.pixelId === offer.facebookPixelId);
+      if (!alreadyExists) {
+        pixels.push({
+          pixelId: offer.facebookPixelId,
+          accessToken: offer.facebookAccessToken,
+        });
+      }
+    }
+
+    // Se houver pixels configurados, envia evento para TODOS
+    if (pixels.length > 0) {
+      // Cria userData com dados disponíveis
+      const userData = createFacebookUserData(ip, userAgent);
+
+      // Calcula valor total correto (já vem em centavos do frontend)
+      const valueInCurrency = totalAmount ? totalAmount / 100 : ((offer.mainProduct as any).priceInCents || 0) / 100;
+
+      // IDs de produtos
+      const productIds = contentIds && contentIds.length > 0
+        ? contentIds
+        : [(offer.mainProduct as any)._id?.toString()];
+
+      // Payload do evento
+      const eventPayload = {
+        event_name: "InitiateCheckout" as const,
+        event_time: Math.floor(Date.now() / 1000),
+        event_id: eventId,
+        event_source_url: referer || `https://pay.snappcheckout.com/c/${offer.slug}`,
+        action_source: "website" as const,
+        user_data: userData,
+        custom_data: {
+          currency: offer.currency || "BRL",
+          value: valueInCurrency,
+          content_ids: productIds,
+          content_type: "product",
+        },
+      };
+
+      // Envia para TODOS os pixels configurados em paralelo
+      console.log(`🔵 [Facebook CAPI] Enviando InitiateCheckout para ${pixels.length} pixel(s) [eventID: ${eventId}]`);
+
+      await Promise.allSettled(
+        pixels.map((pixel) =>
+          sendFacebookEvent(pixel.pixelId, pixel.accessToken, eventPayload)
+            .catch((err) => console.error(`❌ Erro Facebook CAPI pixel ${pixel.pixelId}:`, err))
+        )
+      );
+    }
+  } catch (error) {
+    console.error("Erro Facebook InitiateCheckout:", error);
+  }
+};
+
+/**
  * Retorna o funil de conversão detalhado por oferta
  * Protegido: Apenas para o dono da oferta (Admin)
  * Suporta filtros de data via query params: startDate e endDate
@@ -201,7 +287,10 @@ export const handleGetConversionFunnel = async (req: Request, res: Response) => 
       const offerMetrics = allMetrics.filter((m) => m.offerId.toString() === currentOfferId);
       const offerSales = allSales.filter((s) => s.offerId && s.offerId.toString() === currentOfferId);
 
+      // Visualizações únicas (filtradas por IP no handleTrackMetric)
       const views = offerMetrics.filter((m) => m.type === "view").length;
+      // Visualizações totais (conta todas as aberturas da página)
+      const totalViews = offerMetrics.filter((m) => m.type === "view_total").length;
       // Conta os checkouts iniciados do CheckoutMetric filtrado por data
       const initiatedCheckout = offerMetrics.filter((m) => m.type === "initiate_checkout").length;
       const purchases = offerSales.length;
@@ -221,6 +310,7 @@ export const handleGetConversionFunnel = async (req: Request, res: Response) => 
         offerName: offer.name,
         slug: offer.slug,
         views,
+        totalViews,
         initiatedCheckout,
         purchases,
         revenue: revenueInBRL,

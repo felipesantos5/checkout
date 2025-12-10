@@ -10,6 +10,9 @@ const router = Router();
 // GET /api/sales/metrics?days=30
 router.post("/track", metricsController.handleTrackMetric);
 
+// Rota para enviar InitiateCheckout apenas para Facebook CAPI (sem salvar métrica no dashboard)
+router.post("/facebook-initiate-checkout", metricsController.handleFacebookInitiateCheckout);
+
 // Rotas Privadas: O Dashboard chama isso
 router.get("/", protectRoute, metricsController.handleGetSalesMetrics);
 router.get("/offers-ranking", protectRoute, metricsController.handleGetOffersRevenue);

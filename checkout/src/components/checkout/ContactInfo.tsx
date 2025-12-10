@@ -25,12 +25,22 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({ showPhone = true, offe
       checkoutStartedSent.current = true;
 
       try {
-        // Tracking padrão da oferta
+        // Tracking padrão da oferta (contador no model Offer)
         fetch(`${API_URL}/offers/checkout-started`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ offerId: offerID }),
         }).catch((err) => console.error("Erro tracking offer:", err));
+
+        // Tracking de métrica initiate_checkout (para o dashboard de analytics)
+        fetch(`${API_URL}/metrics/track`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            offerId: offerID,
+            type: "initiate_checkout",
+          }),
+        }).catch((err) => console.error("Erro tracking initiate_checkout:", err));
 
         // Tracking do Teste A/B (se houver)
         if (abTestId) {
