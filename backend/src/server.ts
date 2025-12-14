@@ -5,15 +5,16 @@ import { initializeCurrencyService } from "./services/currency-conversion.servic
 
 process.on("uncaughtException", (error) => {
   console.error("CRITICAL ERROR: Uncaught Exception:", error);
-  // Opcional: manter o processo vivo ou deixar o orquestrador reiniciar (recomendado deixar reiniciar)
+  process.exit(1); // Força o reinício pelo orquestrador (Coolify)
 });
 
-// ADICIONE ISTO: Captura promises rejeitadas sem catch
 process.on("unhandledRejection", (reason, promise) => {
   console.error("CRITICAL ERROR: Unhandled Rejection at:", promise, "reason:", reason);
+  // Dependendo da gravidade, pode valer a pena sair também, ou apenas logar
 });
 
 const PORT = process.env.PORT || 4242;
+let server: any;
 
 // Crie uma função 'startServer' assíncrona
 async function startServer() {
@@ -32,6 +33,29 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+const gracefulShutdown = async () => {
+  console.log('SIGTERM recebido. Fechando servidor HTTP e conexões...');
+  
+  if (server) {
+    server.close(() => {
+      console.log('Servidor HTTP fechado.');
+    });
+  }
+
+  try {
+    await mongoose.connection.close(false);
+    console.log('Conexão MongoDB fechada.');
+    process.exit(0);
+  } catch (err) {
+    console.error('Erro ao fechar conexão MongoDB', err);
+    process.exit(1);
+  }
+};
+
+// Sinais de encerramento do Docker/Coolify
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 // Chame a função
 startServer();
