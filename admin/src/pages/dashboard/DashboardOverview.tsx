@@ -53,10 +53,7 @@ interface DashboardData {
   topCountries: { name: string; value: number; count: number }[];
 }
 
-interface StripeBalance {
-  available: { amount: number; currency: string }[];
-  pending: { amount: number; currency: string }[];
-}
+
 
 interface Offer {
   _id: string;
@@ -67,7 +64,6 @@ export function DashboardOverview() {
   const { token } = useAuth();
 
   const [metrics, setMetrics] = useState<DashboardData | null>(null);
-  const [balance, setBalance] = useState<StripeBalance | null>(null);
   const [loading, setLoading] = useState(true);
 
   // --- FILTROS COM PERSISTÊNCIA (LOCALSTORAGE) ---
@@ -171,13 +167,8 @@ export function DashboardOverview() {
           ...(selectedOfferId !== "all" && { offerId: selectedOfferId }),
         });
 
-        const [metricsRes, balanceRes] = await Promise.all([
-          axios.get(`${API_URL}/metrics/overview?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_URL}/stripe/balance`, { headers: { Authorization: `Bearer ${token}` } }),
-        ]);
-
+        const metricsRes = await axios.get(`${API_URL}/metrics/overview?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
         setMetrics(metricsRes.data);
-        setBalance(balanceRes.data);
       } catch (error) {
         console.error("Erro ao carregar dashboard:", error);
       } finally {
@@ -188,10 +179,7 @@ export function DashboardOverview() {
     fetchData();
   }, [token, period, selectedOfferId, customDateRange]);
 
-  const formatStripe = (bal: any[]) => {
-    if (!bal?.length) return "R$ 0,00";
-    return (bal[0].amount / 100).toLocaleString("pt-BR", { style: "currency", currency: bal[0].currency });
-  };
+
 
   const getPeriodLabel = () => {
     switch (period) {
@@ -232,20 +220,9 @@ export function DashboardOverview() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 lg:gap-4">
           {/* Título */}
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight whitespace-nowrap">Visão Geral</h1>
-          
-          {/* Container direito: Filtros + Valor a receber */}
-          <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-                        
-         
-          
-            {/* Valor a receber */}
-            <div className="flex items-center gap-2 text-sm whitespace-nowrap">
-              <span className="text-muted-foreground">A receber:</span>
-              <span className="text-chart-1 text-lg font-semibold">{formatStripe(balance?.pending || [])}</span>
-            </div>
 
-               {/* Separador (só desktop) */}
-            <div className="hidden lg:block w-px h-6 bg-border" />
+          {/* Container direito: Filtros */}
+          <div className="flex flex-wrap items-center gap-2 lg:gap-3">
             {/* Filtro de Período */}
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-[145px] h-9">
@@ -259,14 +236,14 @@ export function DashboardOverview() {
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
-            
+
             {/* DateRangePicker (só aparece quando period === "custom") */}
             {period === "custom" && (
               <div className="w-[220px]">
                 <DateRangePicker value={customDateRange} onChange={setCustomDateRange} />
               </div>
             )}
-            
+
             {/* Filtro de Oferta */}
             <Select value={selectedOfferId} onValueChange={setSelectedOfferId}>
               <SelectTrigger className="w-[145px] h-9">
