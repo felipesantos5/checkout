@@ -16,6 +16,7 @@ export interface OfferData {
   slug: string;
   name: string;
   thankYouPageUrl?: string;
+  backRedirectUrl?: string; // URL para redirecionar quando o cliente tentar voltar
   language?: Language;
   collectAddress?: boolean;
   collectPhone?: boolean;
@@ -123,7 +124,7 @@ export function CheckoutSlugPage() {
 
       try {
         let data: OfferData;
-        
+
         // Validação do slug
         if (!slug) {
           throw new Error("Slug não fornecido.");
@@ -155,6 +156,8 @@ export function CheckoutSlugPage() {
 
         data = await response.json();
         setOfferData(data);
+
+        console.log('data', data)
 
         // Só dispara o tracking se o slug atual for diferente do último rastreado
         if (trackedSlugRef.current !== slug) {
@@ -233,6 +236,41 @@ export function CheckoutSlugPage() {
       }),
     }).catch((err) => console.log("Track Facebook InitiateCheckout error", err));
   }, [offerData, slug, checkoutSessionId]);
+
+  // Configura o back redirect usando pushState quando a oferta tiver backRedirectUrl
+  useEffect(() => {
+    if (!offerData?.backRedirectUrl) return;
+
+    const backUrl = offerData.backRedirectUrl.trim();
+    if (!backUrl || (!backUrl.startsWith("http://") && !backUrl.startsWith("https://"))) return;
+
+    // Técnica: replaceState + pushState
+    // 1. Substitui a entrada atual do histórico com o estado de backRedirect
+    // 2. Adiciona a página atual como nova entrada
+    // Resultado: quando o usuário clicar em voltar, ele vai para o estado com backRedirect
+
+    const currentUrl = window.location.href;
+
+    // Substitui o estado atual (a entrada "anterior" agora tem o backRedirect)
+    window.history.replaceState({ backRedirect: true, redirectUrl: backUrl }, "", currentUrl);
+
+    // Adiciona a página atual como nova entrada (essa é a página que o usuário está vendo)
+    window.history.pushState({ checkout: true }, "", currentUrl);
+
+    // Listener para o evento popstate (quando o cliente clica em voltar)
+    const handlePopState = (event: PopStateEvent) => {
+      // Se voltou para o estado com backRedirect, redireciona para a URL externa
+      if (event.state?.backRedirect && event.state?.redirectUrl) {
+        window.location.href = event.state.redirectUrl;
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [offerData]);
 
   // ... (resto do código de renderização igual)
   const primaryColor = offerData?.primaryColor || "#000000";

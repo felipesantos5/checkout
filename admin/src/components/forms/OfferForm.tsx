@@ -299,6 +299,7 @@ const offerFormSchema = z.object({
   bannerImageUrl: optionalUrl,
   secondaryBannerImageUrl: optionalUrl,
   thankYouPageUrl: optionalUrl,
+  backRedirectUrl: optionalUrl,
   currency: z.string().default("BRL"),
   language: z.string().default("pt"),
   collectAddress: z.boolean().default(false),
@@ -366,6 +367,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       bannerImageUrl: "",
       secondaryBannerImageUrl: "",
       thankYouPageUrl: "",
+      backRedirectUrl: "",
       currency: "BRL",
       language: "pt",
 
@@ -536,6 +538,21 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                     <Input placeholder="https://seusite.com/obrigado" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormDescription>Para onde o cliente será redirecionado se não houver Upsell ou se recusar.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="backRedirectUrl"
+              render={({ field }: any) => (
+                <FormItem>
+                  <FormLabel>URL de Redirecionamento ao Voltar (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://seusite.com/oferta-especial" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormDescription>Quando o cliente tentar voltar do checkout, será redirecionado para esta URL (ex: oferta com desconto).</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

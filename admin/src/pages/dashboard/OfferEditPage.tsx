@@ -34,6 +34,7 @@ interface ApiOfferData {
   bannerImageUrl?: string;
   secondaryBannerImageUrl?: string;
   thankYouPageUrl?: string;
+  backRedirectUrl?: string;
   customDomain?: string;
   currency: string;
   language: string;
@@ -74,6 +75,7 @@ const transformDataForForm = (data: ApiOfferData): OfferFormData => {
     bannerImageUrl: data.bannerImageUrl,
     secondaryBannerImageUrl: data.secondaryBannerImageUrl,
     thankYouPageUrl: data.thankYouPageUrl,
+    backRedirectUrl: data.backRedirectUrl,
     customDomain: data.customDomain,
     currency: data.currency,
     language: data.language,
@@ -95,32 +97,32 @@ const transformDataForForm = (data: ApiOfferData): OfferFormData => {
     // --- NOVO: Mapear Membership Webhook ---
     membershipWebhook: data.membershipWebhook
       ? {
-          enabled: data.membershipWebhook.enabled,
-          url: data.membershipWebhook.url,
-          authToken: data.membershipWebhook.authToken,
-        }
+        enabled: data.membershipWebhook.enabled,
+        url: data.membershipWebhook.url,
+        authToken: data.membershipWebhook.authToken,
+      }
       : {
-          enabled: false,
-          url: "",
-          authToken: "",
-        },
+        enabled: false,
+        url: "",
+        authToken: "",
+      },
 
     // Mapear Upsell (incluindo customId)
     upsell: data.upsell
       ? {
-          enabled: data.upsell.enabled,
-          name: data.upsell.name,
-          price: data.upsell.price ? data.upsell.price / 100 : 0,
-          redirectUrl: data.upsell.redirectUrl,
-          customId: data.upsell.customId, // <--- NOVO
-        }
+        enabled: data.upsell.enabled,
+        name: data.upsell.name,
+        price: data.upsell.price ? data.upsell.price / 100 : 0,
+        redirectUrl: data.upsell.redirectUrl,
+        customId: data.upsell.customId, // <--- NOVO
+      }
       : {
-          enabled: false,
-          name: "",
-          price: 0,
-          redirectUrl: "",
-          customId: "",
-        },
+        enabled: false,
+        name: "",
+        price: 0,
+        redirectUrl: "",
+        customId: "",
+      },
 
     // Mapear Produto Principal (incluindo customId)
     mainProduct: {

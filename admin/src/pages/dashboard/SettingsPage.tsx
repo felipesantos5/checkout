@@ -4,16 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import axios from "axios";
 import { API_URL } from "@/config/BackendUrl";
-import { Loader2, Save, Key } from "lucide-react";
+import { Loader2, Save, Key, Bell } from "lucide-react";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [paypalClientId, setPaypalClientId] = useState("");
   const [paypalClientSecret, setPaypalClientSecret] = useState("");
+  const [automaticNotifications, setAutomaticNotifications] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -25,6 +27,7 @@ export default function SettingsPage() {
       const response = await axios.get(`${API_URL}/settings`);
       setPaypalClientId(response.data.paypalClientId || "");
       setPaypalClientSecret(response.data.paypalClientSecret || "");
+      setAutomaticNotifications(response.data.automaticNotifications ?? false);
     } catch (error: any) {
       toast.error("Erro ao carregar configurações", {
         description: error.response?.data?.error || error.message,
@@ -40,6 +43,7 @@ export default function SettingsPage() {
       await axios.put(`${API_URL}/settings`, {
         paypalClientId,
         paypalClientSecret,
+        automaticNotifications,
       });
       toast.success("Configurações salvas com sucesso!");
     } catch (error: any) {
@@ -66,66 +70,98 @@ export default function SettingsPage() {
         <p className="text-muted-foreground mt-2">Gerencie as configurações da sua conta</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Key className="h-5 w-5 text-primary" />
-            <CardTitle>Credenciais PayPal</CardTitle>
-          </div>
-          <CardDescription>Configure suas credenciais do PayPal para aceitar pagamentos</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="paypalClientId">PayPal Client ID</Label>
-            <Input
-              id="paypalClientId"
-              type="text"
-              placeholder="Ex: AeB1234..."
-              value={paypalClientId}
-              onChange={(e) => setPaypalClientId(e.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">
-              Encontre seu Client ID no{" "}
-              <a
-                href="https://developer.paypal.com/dashboard/applications/live"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                PayPal Developer Dashboard
-              </a>
-            </p>
-          </div>
+      <div className="space-y-6">
+        {/* Card de Notificações */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Bell className="h-5 w-5 text-primary" />
+              <CardTitle>Notificações</CardTitle>
+            </div>
+            <CardDescription>Configure como você deseja receber notificações de vendas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="automaticNotifications" className="text-base font-medium">
+                  Notificações Automáticas
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Receba notificações automáticas por email quando uma venda for realizada
+                </p>
+              </div>
+              <Switch
+                id="automaticNotifications"
+                checked={automaticNotifications}
+                onCheckedChange={setAutomaticNotifications}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="space-y-2">
-            <Label htmlFor="paypalClientSecret">PayPal Client Secret</Label>
-            <Input
-              id="paypalClientSecret"
-              type="password"
-              placeholder="••••••••"
-              value={paypalClientSecret}
-              onChange={(e) => setPaypalClientSecret(e.target.value)}
-            />
-            <p className="text-sm text-muted-foreground">Mantenha seu Client Secret seguro e nunca o compartilhe</p>
-          </div>
+        {/* Card de Credenciais PayPal */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-primary" />
+              <CardTitle>Credenciais PayPal</CardTitle>
+            </div>
+            <CardDescription>Configure suas credenciais do PayPal para aceitar pagamentos</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="paypalClientId">PayPal Client ID</Label>
+              <Input
+                id="paypalClientId"
+                type="text"
+                placeholder="Ex: AeB1234..."
+                value={paypalClientId}
+                onChange={(e) => setPaypalClientId(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Encontre seu Client ID no{" "}
+                <a
+                  href="https://developer.paypal.com/dashboard/applications/live"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  PayPal Developer Dashboard
+                </a>
+              </p>
+            </div>
 
-          <div className="flex justify-end pt-4">
-            <Button onClick={handleSave} disabled={loading} className="gap-2">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Salvar Configurações
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="space-y-2">
+              <Label htmlFor="paypalClientSecret">PayPal Client Secret</Label>
+              <Input
+                id="paypalClientSecret"
+                type="password"
+                placeholder="••••••••"
+                value={paypalClientSecret}
+                onChange={(e) => setPaypalClientSecret(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">Mantenha seu Client Secret seguro e nunca o compartilhe</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Botão de Salvar */}
+        <div className="flex justify-end">
+          <Button onClick={handleSave} disabled={loading} className="gap-2">
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Salvar Configurações
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
