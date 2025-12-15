@@ -6,6 +6,7 @@ import User from "../models/user.model";
 import { sendAccessWebhook } from "../services/integration.service";
 import { createFacebookUserData, sendFacebookEvent } from "../services/facebook.service";
 import { getCountryFromIP } from "../helper/getCountryFromIP";
+import { processUtmfyIntegrationForPayPal } from "../services/utmfy.service";
 
 /**
  * Retorna o PayPal Client ID para uma oferta (público, usado pelo frontend SDK)
@@ -192,6 +193,34 @@ export const captureOrder = async (req: Request, res: Response) => {
         await sendFacebookPurchaseForPayPal(offer, newSale, items, clientIp, customerData, purchaseEventId);
       } catch (fbError: any) {
         console.error(`⚠️ [PayPal] Erro ao enviar evento Facebook:`, fbError.message);
+      }
+
+      // C: Webhook de Rastreamento (UTMfy)
+      try {
+        await processUtmfyIntegrationForPayPal(
+          offer as any,
+          newSale,
+          items,
+          captureData.id, // PayPal Order ID como identificador
+          {
+            email: customerData?.email,
+            name: customerData?.name,
+            phone: customerData?.phone,
+          },
+          {
+            ip: clientIp,
+            // UTMs podem vir do frontend se forem passados no customerData
+            utm_source: customerData?.utm_source,
+            utm_medium: customerData?.utm_medium,
+            utm_campaign: customerData?.utm_campaign,
+            utm_term: customerData?.utm_term,
+            utm_content: customerData?.utm_content,
+            userAgent: customerData?.userAgent,
+          }
+        );
+      } catch (utmfyError: any) {
+        console.error(`⚠️ [PayPal] Erro ao enviar webhook UTMfy:`, utmfyError.message);
+        // Não falha a transação por causa do webhook
       }
 
       res.json({ success: true, data: captureData, saleId: newSale._id });

@@ -295,3 +295,149 @@ export const processUtmfyIntegration = async (
     console.error("Erro na lógica do serviço UTMfy:", error);
   }
 };
+
+/**
+ * Processa a integração com UTMfy para pagamentos PayPal
+ * Versão adaptada de processUtmfyIntegration que não depende de Stripe.PaymentIntent
+ *
+ * @param offer - A oferta do produto
+ * @param sale - A venda salva no banco
+ * @param items - Lista de itens da compra
+ * @param paypalOrderId - ID da ordem do PayPal
+ * @param customerData - Dados do cliente (email, name, phone)
+ * @param metadata - Metadados adicionais (UTMs, IP, userAgent, etc.)
+ */
+export const processUtmfyIntegrationForPayPal = async (
+  offer: IOffer,
+  sale: ISale,
+  items: Array<{ _id?: string; name: string; priceInCents: number; isOrderBump: boolean; compareAtPriceInCents?: number }>,
+  paypalOrderId: string,
+  customerData: { email?: string; name?: string; phone?: string },
+  metadata: {
+    quantity?: string;
+    ip?: string;
+    userAgent?: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_term?: string;
+    utm_content?: string;
+  }
+) => {
+  // Coletar todas as URLs válidas (novo array + campo antigo para retrocompatibilidade)
+  const webhookUrls: string[] = [];
+
+  // Adiciona URLs do novo array
+  if (offer.utmfyWebhookUrls && offer.utmfyWebhookUrls.length > 0) {
+    webhookUrls.push(...offer.utmfyWebhookUrls.filter((url) => url && url.startsWith("http")));
+  }
+
+  // Adiciona URL antiga se existir e não estiver no array novo (retrocompatibilidade)
+  if (offer.utmfyWebhookUrl && offer.utmfyWebhookUrl.startsWith("http") && !webhookUrls.includes(offer.utmfyWebhookUrl)) {
+    webhookUrls.push(offer.utmfyWebhookUrl);
+  }
+
+  // Se não houver URLs válidas, retorna
+  if (webhookUrls.length === 0) {
+    return;
+  }
+
+  try {
+    const quantity = parseInt(metadata.quantity || "1", 10);
+    const owner = (offer as any).ownerId;
+
+    // Mapeamento de produtos para o formato UTMfy
+    const utmfyProducts = items.map((item) => {
+      let id = item._id ? item._id.toString() : crypto.randomUUID();
+      if (!item.isOrderBump && !item._id) {
+        id = (offer._id as any)?.toString() || crypto.randomUUID();
+      }
+      return { Id: id, Name: item.name };
+    });
+
+    // Cálculo de preço original (com comparação de preços)
+    let originalTotalInCents = 0;
+    items.forEach((item) => {
+      const price = item.compareAtPriceInCents && item.compareAtPriceInCents > item.priceInCents ? item.compareAtPriceInCents : item.priceInCents;
+      if (item.isOrderBump) {
+        originalTotalInCents += price;
+      } else {
+        originalTotalInCents += price * quantity;
+      }
+    });
+
+    // Pegar a moeda da venda e garantir maiúscula
+    const currencyCode = sale.currency ? sale.currency.toUpperCase() : "BRL";
+
+    // CONVERSÃO PARA BRL (UTMfy sempre espera valores em BRL)
+    const originalTotalInBRL = await convertToBRL(originalTotalInCents, currencyCode);
+    const totalAmountInBRL = await convertToBRL(sale.totalAmountInCents, currencyCode);
+    const platformFeeInBRL = await convertToBRL(sale.platformFeeInCents, currencyCode);
+    const producerAmountInBRL = totalAmountInBRL - platformFeeInBRL;
+
+    const utmfyPayload = {
+      Id: crypto.randomUUID(),
+      IsTest: false, // PayPal não tem modo de teste como Stripe
+      Event: "Purchase_Order_Confirmed",
+      CreatedAt: new Date().toISOString(),
+      Data: {
+        Products: utmfyProducts,
+        Buyer: {
+          Id: paypalOrderId,
+          Email: sale.customerEmail || customerData.email || "",
+          Name: sale.customerName || customerData.name || "",
+          PhoneNumber: customerData.phone || null,
+        },
+        Seller: {
+          Id: owner._id ? owner._id.toString() : "unknown_seller",
+          Email: owner.email || "unknown@email.com",
+        },
+        Commissions: [
+          { Value: centsToUnits(platformFeeInBRL), Source: "MARKETPLACE" },
+          { Value: centsToUnits(producerAmountInBRL), Source: "PRODUCER" },
+        ],
+        Purchase: {
+          PaymentId: paypalOrderId,
+          Recurrency: 1,
+          PaymentDate: new Date().toISOString(),
+          // VALORES SEMPRE EM BRL (conforme requisito da UTMfy)
+          OriginalPrice: {
+            Value: centsToUnits(originalTotalInBRL),
+            Currency: "BRL",
+          },
+          Price: {
+            Value: centsToUnits(totalAmountInBRL),
+            Currency: "BRL",
+          },
+          Payment: {
+            NumberOfInstallments: 1,
+            PaymentMethod: "paypal", // Identificador específico para PayPal
+            InterestRateAmount: 0,
+          },
+        },
+        Offer: {
+          Id: (offer._id as any)?.toString() || crypto.randomUUID(),
+          Name: offer.name,
+          Url: `${process.env.FRONTEND_URL || "https://pay.snappcheckout.com"}/p/${offer.slug}`,
+        },
+        Utm: {
+          UtmSource: metadata.utm_source || null,
+          UtmMedium: metadata.utm_medium || null,
+          UtmCampaign: metadata.utm_campaign || null,
+          UtmTerm: metadata.utm_term || null,
+          UtmContent: metadata.utm_content || null,
+        },
+        DeviceInfo: {
+          UserAgent: metadata.userAgent || null,
+          ip: metadata.ip || null,
+        },
+      },
+    };
+
+    // Envia para todas as URLs configuradas em paralelo
+    console.log(`📤 [PayPal] Enviando para ${webhookUrls.length} webhook(s) UTMfy...`);
+    await Promise.all(webhookUrls.map((url) => sendPurchaseToUTMfyWebhook(url, utmfyPayload)));
+  } catch (error) {
+    console.error("❌ [PayPal] Erro na lógica do serviço UTMfy:", error);
+  }
+};
