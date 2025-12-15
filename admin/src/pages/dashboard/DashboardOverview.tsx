@@ -5,7 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 // import { ConnectStripeCard } from "@/components/ConnectStripeCard";
 import { API_URL } from "@/config/BackendUrl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, ShoppingCart, TrendingUp } from "lucide-react";
+import { DollarSign, ShoppingCart, TrendingUp, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { RecentSalesTable } from "@/components/dashboard/RecentSalesTable";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/helper/formatCurrency";
@@ -152,30 +153,29 @@ export function DashboardOverview() {
     };
   };
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!token) return;
+    setLoading(true);
+    try {
+      const { startDate, endDate } = getDateRange(period);
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const { startDate, endDate } = getDateRange(period);
+      // Envia as datas exatas para o backend
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        ...(selectedOfferId !== "all" && { offerId: selectedOfferId }),
+      });
 
-        // Envia as datas exatas para o backend
-        const params = new URLSearchParams({
-          startDate,
-          endDate,
-          ...(selectedOfferId !== "all" && { offerId: selectedOfferId }),
-        });
+      const metricsRes = await axios.get(`${API_URL}/metrics/overview?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
+      setMetrics(metricsRes.data);
+    } catch (error) {
+      console.error("Erro ao carregar dashboard:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const metricsRes = await axios.get(`${API_URL}/metrics/overview?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } });
-        setMetrics(metricsRes.data);
-      } catch (error) {
-        console.error("Erro ao carregar dashboard:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchData();
   }, [token, period, selectedOfferId, customDateRange]);
 
@@ -223,6 +223,17 @@ export function DashboardOverview() {
 
           {/* Container direito: Filtros */}
           <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={fetchData}
+              disabled={loading}
+              className="h-[36px] w-[36px]"
+              title="Atualizar métricas"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
             {/* Filtro de Período */}
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-[145px] h-9">
