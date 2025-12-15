@@ -11,6 +11,7 @@ export interface IUser extends Document {
   stripeOnboardingComplete: boolean; // <-- NOVO: Controla se o onboarding foi concluído
   paypalClientId?: string; // <-- NOVO: PayPal Client ID
   paypalClientSecret?: string; // <-- NOVO: PayPal Client Secret
+  automaticNotifications: boolean; // <-- NOVO: Notificações automáticas de vendas
   // Métodos
   comparePassword(password: string): Promise<boolean>;
 }
@@ -56,6 +57,12 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: "",
       select: false, // Não retorna por padrão por segurança
+    },
+
+    // --- NOVO CAMPO NOTIFICAÇÕES ---
+    automaticNotifications: {
+      type: Boolean,
+      default: false, // Desativado por padrão
     },
   },
   {

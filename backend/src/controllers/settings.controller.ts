@@ -14,6 +14,7 @@ export const getSettings = async (req: Request, res: Response) => {
     res.status(200).json({
       paypalClientId: user.paypalClientId || "",
       paypalClientSecret: user.paypalClientSecret || "",
+      automaticNotifications: user.automaticNotifications ?? false,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -23,7 +24,7 @@ export const getSettings = async (req: Request, res: Response) => {
 export const updateSettings = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
-    const { paypalClientId, paypalClientSecret } = req.body;
+    const { paypalClientId, paypalClientSecret, automaticNotifications } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -35,6 +36,9 @@ export const updateSettings = async (req: Request, res: Response) => {
     }
     if (paypalClientSecret !== undefined) {
       user.paypalClientSecret = paypalClientSecret;
+    }
+    if (automaticNotifications !== undefined) {
+      user.automaticNotifications = automaticNotifications;
     }
 
     await user.save();

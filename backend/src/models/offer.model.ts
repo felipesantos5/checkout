@@ -36,6 +36,7 @@ export interface IOffer extends Document {
   language: string;
   collectAddress: boolean;
   thankYouPageUrl?: string;
+  backRedirectUrl?: string; // URL para redirecionar quando o cliente tentar voltar
   primaryColor: string;
   buttonColor: string;
   backgroundColor: string;
@@ -134,6 +135,10 @@ const offerSchema = new Schema<IOffer>(
       customId: { type: String, default: "" },
     },
     thankYouPageUrl: {
+      type: String,
+      default: "",
+    },
+    backRedirectUrl: {
       type: String,
       default: "",
     },
