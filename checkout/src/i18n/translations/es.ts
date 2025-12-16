@@ -112,6 +112,10 @@ export const es = {
   orderBump: {
     action: "Añadir producto",
   },
+
+  notification: {
+    purchase: "acaba de comprar",
+  },
 };
 
 export type Translation = typeof es;

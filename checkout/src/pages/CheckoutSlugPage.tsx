@@ -8,7 +8,7 @@ import { I18nProvider } from "../i18n/I18nContext";
 import type { Language } from "../i18n/translations";
 import { SkeletonLoader } from "../components/ui/SkeletonLoader";
 import { useFacebookPixel } from "../hooks/useFacebookPixel";
-// import { useAutoNotifications } from "../hooks/useAutoNotifications";
+import { PurchaseNotification } from "../components/ui/PurchaseNotification";
 
 export interface OfferData {
   _id: string;
@@ -114,12 +114,6 @@ export function CheckoutSlugPage() {
   }, [offerData]);
 
   const { generateEventId } = useFacebookPixel(pixelIds);
-
-  // Hook para notificações automáticas de prova social
-  // useAutoNotifications({
-  //   config: offerData?.autoNotifications,
-  //   productName: offerData?.mainProduct?.name || 'produto',
-  // });
 
   // Controle para evitar fetch duplicado (React StrictMode executa useEffect 2x)
   const fetchingRef = useRef<boolean>(false);
@@ -326,6 +320,10 @@ export function CheckoutSlugPage() {
   return (
     <I18nProvider language={offerData.language || "pt"}>
       <ThemeContext.Provider value={themeValues}>
+        <PurchaseNotification
+          config={offerData.autoNotifications}
+          productName={offerData.mainProduct.name}
+        />
         <CheckoutPage offerData={offerData} checkoutSessionId={checkoutSessionId.current} generateEventId={generateEventId} abTestId={abTestId} />
       </ThemeContext.Provider>
     </I18nProvider>

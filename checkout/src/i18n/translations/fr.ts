@@ -114,4 +114,8 @@ export const fr: Translation = {
   orderBump: {
     action: "Ajouter un produit",
   },
+
+  notification: {
+    purchase: "vient d'acheter",
+  },
 };
