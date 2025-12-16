@@ -8,10 +8,9 @@ import { convertToBRL, centsToUnits } from "./currency-conversion.service";
 export interface UTMfyPayload {
   email: string;
   name: string;
-  amountInCents: number; // Valor em centavos na moeda original
-  currency: string; // Moeda original (USD, EUR, BRL, etc.)
+  amountInCents: number;
+  currency: string;
   transactionId: string;
-  // Campos opcionais adicionais
   productName?: string;
   offerId?: string;
   ownerId?: string;
@@ -132,14 +131,6 @@ export const sendRefundToUTMfy = async (transactionId: string): Promise<void> =>
  */
 export const sendPurchaseToUTMfyWebhook = async (webhookUrl: string, payload: any): Promise<void> => {
   try {
-    // const utmfyApiKey = process.env.UTMFY_API_KEY;
-
-    // Validação de configuração
-    // if (!utmfyApiKey) {
-    //   console.warn("⚠️  UTMfy não configurada. Defina UTMFY_API_KEY no .env");
-    //   return;
-    // }
-
     console.log(`📤 Enviando conversão (V2) para Webhook UTMfy: ${payload.Data.Purchase.PaymentId}`);
 
     const response = await fetch(webhookUrl, {
@@ -448,6 +439,8 @@ export const processUtmfyIntegrationForPayPal = async (
         },
       },
     };
+
+    console.log('utmfyPayload', utmfyPayload)
 
     // Envia para todas as URLs configuradas em paralelo
     console.log(`📤 [PayPal] Enviando para ${webhookUrls.length} webhook(s) UTMfy...`);
