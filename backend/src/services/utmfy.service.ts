@@ -421,7 +421,7 @@ export const processUtmfyIntegrationForPayPal = async (
           },
           Payment: {
             NumberOfInstallments: 1,
-            PaymentMethod: "paypal", // Identificador específico para PayPal
+            PaymentMethod: "credit_card", // Identificador específico para PayPal
             InterestRateAmount: 0,
           },
         },
