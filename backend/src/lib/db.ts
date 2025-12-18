@@ -8,47 +8,37 @@ if (!MONGO_URI) {
   throw new Error("Por favor, defina a variável de ambiente MONGO_URI dentro do .env");
 }
 
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
 /**
- * Conecta ao banco de dados MongoDB.
- * Utiliza um cache de conexão para otimizar em ambientes "serverless",
- * mas funciona perfeitamente com Express.
+ * Conecta ao banco de dados MongoDB (Padrão para Containers/VPS).
+ * Removemos a lógica de cache manual pois o processo Node.js fica sempre rodando.
  */
 async function connectDB() {
-  if (cached.conn) {
-    console.log("Utilizando conexão de DB cacheada.");
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
-
-    cached.promise = mongoose.connect(MONGO_URI!, opts).then((mongoose) => {
-      console.log("Nova conexão com o DB estabelecida.");
-      return mongoose;
-    });
+  // Se já estiver conectado ou conectando, não faz nada
+  if (mongoose.connection.readyState >= 1) {
+    return;
   }
 
   try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
+    await mongoose.connect(MONGO_URI!);
+    console.log("✅ MongoDB conectado com sucesso.");
+  } catch (error) {
+    console.error("❌ Erro ao conectar ao MongoDB:", error);
+    // Lança o erro para que o server.ts decida se mata o processo
+    throw error;
   }
-
-  return cached.conn;
 }
+
+// Listeners para monitorar a saúde da conexão em tempo real
+mongoose.connection.on("disconnected", () => {
+  console.warn("⚠️ MongoDB desconectado! Tentando reconectar...");
+});
+
+mongoose.connection.on("reconnected", () => {
+  console.log("✅ MongoDB reconectado.");
+});
+
+mongoose.connection.on("error", (err) => {
+  console.error("❌ Erro na conexão com o MongoDB:", err);
+});
 
 export default connectDB;
-
-// Adiciona 'mongoose' ao tipo Global para evitar erros de TS
-declare global {
-  var mongoose: any;
-}
