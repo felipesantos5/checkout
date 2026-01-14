@@ -14,4 +14,8 @@ router.get("/", protectRoute, saleController.handleListMySales);
 // GET /api/sales/offer/:offerId
 router.get("/offer/:offerId", protectRoute, saleController.handleListSalesByOffer);
 
+// Rota pública para polling de status de pagamento
+// GET /api/sales/:id
+router.get("/:id", saleController.handleGetSaleById);
+
 export default router;

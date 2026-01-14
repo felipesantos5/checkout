@@ -83,3 +83,21 @@ export const handleListSalesByOffer = async (req: Request, res: Response) => {
     res.status(500).json({ error: { message: (error as Error).message } });
   }
 };
+
+/**
+ * Busca uma venda pelo ID (público) - Usado para polling de status
+ */
+export const handleGetSaleById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const sale = await saleService.getSaleById(id);
+
+    if (!sale) {
+      return res.status(404).json({ error: { message: "Venda não encontrada." } });
+    }
+
+    res.status(200).json(sale);
+  } catch (error) {
+    res.status(500).json({ error: { message: (error as Error).message } });
+  }
+};

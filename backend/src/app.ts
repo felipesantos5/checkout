@@ -49,12 +49,15 @@ const globalLimiter = rateLimit({
 
 app.use(globalLimiter);
 
+// Webhooks que precisam de RAW body (Stripe)
 app.use("/api/webhooks/stripe", stripeWebhookRouter);
+
+// Middleware para parsear JSON (Global)
+app.use(express.json());
+
+// Webhooks que podem usar JSON parseado
 app.use("/api/webhooks/paypal", paypalWebhookRouter);
 app.use("/api/webhooks/pagarme", pagarmeWebhookRouter);
-
-// Middleware para parsear JSON
-app.use(express.json());
 
 // Rota de "health check"
 app.get("/health", (req: Request, res: Response) => {

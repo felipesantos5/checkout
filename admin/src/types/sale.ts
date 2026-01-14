@@ -13,9 +13,10 @@ export interface Sale {
   currency: string; // Moeda da transação (brl, usd, eur, etc)
   status: "succeeded" | "pending" | "refunded";
   createdAt: string;
+  updatedAt: string;
   isUpsell?: boolean;
   country?: string; // Código do país (ex: BR, US, FR)
-  paymentMethod?: "stripe" | "paypal"; // Plataforma de pagamento usada
+  paymentMethod?: "stripe" | "paypal" | "pagarme"; // Plataforma de pagamento usada
   offerId: {
     _id: string;
     name: string;

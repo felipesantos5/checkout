@@ -35,3 +35,17 @@ export const listSalesByOffer = async (ownerId: string, offerId: string): Promis
     throw new Error("Falha ao buscar vendas da oferta.");
   }
 };
+
+/**
+ * Busca uma venda pelo ID (público)
+ */
+export const getSaleById = async (id: string): Promise<ISale | null> => {
+  try {
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return null;
+    }
+    return await Sale.findById(id);
+  } catch (error) {
+    throw new Error("Falha ao buscar venda pelo ID.");
+  }
+};

@@ -19,6 +19,7 @@ import { getCountryName } from "@/helper/getCountryFlag";
 import { CountryFlag } from "../CountryFlag";
 import { StripeIcon } from "../icons/stripe";
 import { PaypalIcon } from "../icons/paypal";
+import { PixIcon } from "../icons/pix";
 import type { DateRange } from "react-day-picker";
 
 interface RecentSalesTableProps {
@@ -242,7 +243,23 @@ export function RecentSalesTable({ period = "7", customDateRange }: RecentSalesT
                           )}
                           variant="outline"
                         >
-                          {sale.status === "succeeded" ? "Aprovada" : sale.status === "refunded" ? "Reembolsada" : "Pendente"}
+                          {sale.status === "succeeded" ? (
+                            <span className="flex flex-col items-center">
+                              <span>Aprovada</span>
+                              {sale.updatedAt && (
+                                <span className="text-[10px] opacity-70">
+                                  {new Date(sale.updatedAt).toLocaleTimeString("pt-BR", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              )}
+                            </span>
+                          ) : sale.status === "refunded" ? (
+                            "Reembolsada"
+                          ) : (
+                            "Pendente"
+                          )}
                         </Badge>
                       </TableCell>
 
@@ -250,6 +267,11 @@ export function RecentSalesTable({ period = "7", customDateRange }: RecentSalesT
 
                         {sale.paymentMethod === "paypal" ? (
                           <PaypalIcon />
+                        ) : sale.paymentMethod === "pagarme" ? (
+                          <div className="flex flex-col items-center gap-0.5">
+                            <PixIcon className="w-5 h-5" />
+                            <span className="text-[10px] font-bold text-[#32BCAD]">PIX</span>
+                          </div>
                         ) : (
                           <StripeIcon className="w-10" />
                         )}

@@ -521,15 +521,15 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
     <>
       {/* Modal do PIX - Aparece por cima do formulário */}
       {pixData && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="relative max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-hidden">
+          <div className="relative w-full max-w-[360px] animate-in fade-in zoom-in duration-300">
             {/* Botão de fechar */}
             <button
               onClick={() => setPixData(null)}
-              className="absolute top-4 right-4 z-10 bg-white rounded-full p-2 shadow-lg hover:bg-gray-100 transition-colors"
+              className="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all backdrop-blur-sm"
               aria-label="Fechar"
             >
-              <svg className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
