@@ -45,6 +45,7 @@ interface ApiOfferData {
   backgroundColor?: string;
   textColor?: string;
   paypalEnabled: boolean;
+  pagarme_pix_enabled?: boolean;
   utmfyWebhookUrl?: string;
   utmfyWebhookUrls?: string[];
   facebookPixelId?: string;
@@ -95,6 +96,7 @@ const transformDataForForm = (data: ApiOfferData): OfferFormData => {
     textColor: data.textColor,
 
     paypalEnabled: data.paypalEnabled,
+    pagarme_pix_enabled: data.pagarme_pix_enabled,
 
     utmfyWebhookUrl: data.utmfyWebhookUrl,
     utmfyWebhookUrls: data.utmfyWebhookUrls || [],
