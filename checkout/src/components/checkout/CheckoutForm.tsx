@@ -132,7 +132,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
 
   // Configuração simplificada da Carteira Digital - Deixa o Stripe decidir tudo
   useEffect(() => {
-    if (!stripe) {
+    if (!stripe || offerData.stripe_card_enabled === false) {
+      setPaymentRequest(null);
       return;
     }
 
@@ -279,7 +280,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         setLoading(false);
       }
     });
-  }, [stripe, offerData, selectedBumps, totalAmount, utmData, t]);
+  }, [stripe, offerData.stripe_card_enabled, offerData.currency, offerData.mainProduct.name, offerData.collectPhone, selectedBumps, totalAmount, utmData, t]);
 
   useEffect(() => {
     if (paymentRequest) {

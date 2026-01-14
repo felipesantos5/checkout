@@ -103,7 +103,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       </h2>
       <div className="space-y-3">
         {/* Opção 1: Cartão de Crédito (Stripe) - Só aparece se habilitado */}
-        {stripeCardEnabled && (
+        {stripeCardEnabled !== false && (
           <PaymentOption value="creditCard" title={t.payment.creditCard}>
             <div className="flex gap-1 items-center h-8">
               <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/visa.svg" className="h-7" alt="Visa" />
@@ -168,7 +168,8 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       </div>
 
       {/* Formulário do Cartão */}
-      <div className="mt-6">{method === "creditCard" && stripeCardEnabled && <CreditCardForm />}</div>
+      {/* Formulário do Cartão */}
+      <div className="mt-6">{method === "creditCard" && <CreditCardForm />}</div>
 
       {/* Botão PayPal */}
       {method === "paypal" && paypalEnabled && paypalClientId && paypalAmount && paypalCurrency && paypalOfferId && paypalPurchaseEventId && onPaypalSuccess && onPaypalError && (
