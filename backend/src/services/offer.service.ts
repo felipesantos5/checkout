@@ -52,6 +52,7 @@ export type CreateOfferPayload = {
   upsellLink?: string;
   paypalEnabled: boolean;
   pagarme_pix_enabled: boolean;
+  stripe_card_enabled: boolean;
   utmfyWebhookUrl?: string;
   facebookPixelId?: string;
   facebookAccessToken?: string;

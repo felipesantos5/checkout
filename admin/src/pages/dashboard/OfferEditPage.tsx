@@ -47,6 +47,7 @@ interface ApiOfferData {
   textColor?: string;
   paypalEnabled: boolean;
   pagarme_pix_enabled?: boolean;
+  stripe_card_enabled?: boolean;
   utmfyWebhookUrl?: string;
   utmfyWebhookUrls?: string[];
   facebookPixelId?: string;
@@ -99,7 +100,7 @@ const transformDataForForm = (data: ApiOfferData): OfferFormData => {
 
     paypalEnabled: data.paypalEnabled,
     pagarme_pix_enabled: data.pagarme_pix_enabled,
-
+    stripe_card_enabled: data.stripe_card_enabled,
     utmfyWebhookUrl: data.utmfyWebhookUrl,
     utmfyWebhookUrls: data.utmfyWebhookUrls || [],
     facebookPixelId: data.facebookPixelId || "",

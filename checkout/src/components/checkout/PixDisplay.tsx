@@ -92,24 +92,24 @@ export const PixDisplay: React.FC<PixDisplayProps> = ({
   }, [saleId, onSuccess]);
 
   return (
-    <div className="w-full max-w-md mx-auto p-5 rounded-xl border-t-8 shadow-2xl" style={{ backgroundColor, borderColor: primary }}>
+    <div className="w-full max-w-2xl mx-auto p-8 flex flex-col items-center justify-center" style={{ backgroundColor }}>
       {/* Título */}
-      <div className="text-center mb-4">
-        <h2 className="text-xl font-bold mb-1" style={{ color: textColor }}>
+      <div className="text-center mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: textColor }}>
           {t.pix?.title || "Pagamento via PIX"}
         </h2>
-        <p className="text-2xl font-black" style={{ color: primary }}>
+        <p className="text-4xl md:text-5xl font-black" style={{ color: primary }}>
           {formattedAmount}
         </p>
       </div>
 
       {/* QR Code */}
-      <div className="bg-white p-3 rounded-xl mb-4 flex justify-center shadow-inner mx-auto w-fit border-2 border-gray-100">
+      <div className="bg-white p-6 rounded-3xl mb-8 flex justify-center shadow-2xl mx-auto w-fit border-4 border-gray-50">
         {qrCodeUrl ? (
-          <img src={qrCodeUrl} alt="QR Code PIX" className="w-48 h-48 object-contain" />
+          <img src={qrCodeUrl} alt="QR Code PIX" className="w-64 h-64 md:w-80 md:h-80 object-contain" />
         ) : (
-          <div className="w-48 h-48 flex items-center justify-center bg-gray-50 rounded">
-            <svg className="h-10 w-10 animate-spin text-gray-300" fill="none" viewBox="0 0 24 24">
+          <div className="w-64 h-64 md:w-80 md:h-80 flex items-center justify-center bg-gray-50 rounded">
+            <svg className="h-12 w-12 animate-spin text-gray-300" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
@@ -118,40 +118,40 @@ export const PixDisplay: React.FC<PixDisplayProps> = ({
       </div>
 
       {/* Instruções Simplificadas */}
-      <div className="mb-4 text-center">
-        <p className="text-xs font-medium uppercase tracking-wider mb-3 opacity-60" style={{ color: textColor }}>
+      <div className="mb-8 w-full max-w-md text-center">
+        <p className="text-sm font-medium uppercase tracking-[0.2em] mb-6 opacity-60" style={{ color: textColor }}>
           {t.pix?.instruction || "Escaneie o QR Code abaixo"}
         </p>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="flex flex-col items-center gap-1">
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: `${primary}20`, color: primary }}>1</span>
-            <span className="text-[10px] leading-tight" style={{ color: textColor }}>Abra o app banco</span>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex flex-col items-center gap-2">
+            <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${primary}20`, color: primary }}>1</span>
+            <span className="text-xs leading-tight font-medium" style={{ color: textColor }}>Abra o app do seu banco</span>
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: `${primary}20`, color: primary }}>2</span>
-            <span className="text-[10px] leading-tight" style={{ color: textColor }}>Pague via PIX</span>
+          <div className="flex flex-col items-center gap-2">
+            <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${primary}20`, color: primary }}>2</span>
+            <span className="text-xs leading-tight font-medium" style={{ color: textColor }}>Pagar via PIX (QR Code)</span>
           </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: `${primary}20`, color: primary }}>3</span>
-            <span className="text-[10px] leading-tight" style={{ color: textColor }}>Aguarde o sucesso</span>
+          <div className="flex flex-col items-center gap-2">
+            <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${primary}20`, color: primary }}>3</span>
+            <span className="text-xs leading-tight font-medium" style={{ color: textColor }}>Pronto! Aguarde a tela</span>
           </div>
         </div>
       </div>
 
       {/* Código Copia e Cola */}
-      <div className="mb-4">
+      <div className="mb-8 w-full max-w-md">
         <div className="relative group">
           <input
             type="text"
             value={qrCode}
             readOnly
             onClick={(e) => (e.target as HTMLInputElement).select()}
-            className="w-full pl-3 pr-20 py-2.5 border-2 rounded-xl text-xs font-mono bg-gray-50 focus:outline-none"
+            className="w-full pl-4 pr-24 py-4 border-2 rounded-2xl text-sm font-mono bg-gray-50 focus:outline-none transition-all"
             style={{ borderColor: `${primary}20`, color: textColor }}
           />
           <button
             onClick={handleCopy}
-            className="absolute right-1.5 top-1.5 bottom-1.5 px-3 rounded-lg text-xs font-bold transition-all active:scale-95"
+            className="absolute right-2 top-2 bottom-2 px-4 rounded-xl text-sm font-bold transition-all active:scale-95 shadow-md hover:shadow-lg"
             style={{
               backgroundColor: copied ? "#10b981" : primary,
               color: "#ffffff",
@@ -163,25 +163,25 @@ export const PixDisplay: React.FC<PixDisplayProps> = ({
       </div>
 
       {/* Status e Tempo Restante */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-center gap-2 p-2 rounded-xl" style={{ backgroundColor: `${primary}08` }}>
-          <svg className="h-4 w-4 animate-spin" style={{ color: primary }} fill="none" viewBox="0 0 24 24">
+      <div className="w-full max-w-md">
+        <div className="flex items-center justify-center gap-3 p-4 rounded-2xl border-2" style={{ backgroundColor: `${primary}05`, borderColor: `${primary}15` }}>
+          <svg className="h-5 w-5 animate-spin" style={{ color: primary }} fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <span className="text-[11px] font-semibold" style={{ color: primary }}>
-            {t.pix?.waiting || "Aguardando pagamento..."}
+          <span className="text-sm font-bold" style={{ color: primary }}>
+            {t.pix?.waiting || "Aguardando confirmação..."}
           </span>
-          <span className="text-[11px] font-bold ml-auto" style={{ color: primary }}>
+          <span className="text-sm font-black ml-auto bg-white/50 px-3 py-1 rounded-lg" style={{ color: primary }}>
             {timeLeft}
           </span>
         </div>
       </div>
 
       {/* Informação adicional */}
-      <div className="mt-4">
-        <p className="text-[9px] text-center opacity-50 uppercase tracking-tighter" style={{ color: textColor }}>
-          Redirecionamento automático após confirmação
+      <div className="mt-8">
+        <p className="text-[10px] text-center opacity-40 uppercase tracking-[0.3em] font-bold" style={{ color: textColor }}>
+          Confirmamos seu pedido instantaneamente
         </p>
       </div>
     </div>

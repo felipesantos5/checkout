@@ -54,7 +54,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
     expiresAt: string;
   } | null>(null);
 
-  const [method, setMethod] = useState<"creditCard" | "pix" | "wallet" | "paypal">("creditCard");
+  const [method, setMethod] = useState<"creditCard" | "pix" | "wallet" | "paypal">(() => {
+    if (offerData.stripe_card_enabled === false) {
+      if (offerData.pagarme_pix_enabled) return "pix";
+      if (offerData.paypalEnabled) return "paypal";
+    }
+    return "creditCard";
+  });
   const [selectedBumps, setSelectedBumps] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
   const [totalAmount, setTotalAmount] = useState(offerData.mainProduct.priceInCents);
@@ -97,6 +103,18 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
       setMethod("creditCard");
     }
   }, [method, offerData.paypalEnabled]);
+
+  // Reseta método de pagamento se Stripe (Cartão) não estiver habilitado
+  useEffect(() => {
+    if (method === "creditCard" && offerData.stripe_card_enabled === false) {
+      // Prioriza PIX, depois PayPal, senão mantém (não há opção)
+      if (offerData.pagarme_pix_enabled) {
+        setMethod("pix");
+      } else if (offerData.paypalEnabled) {
+        setMethod("paypal");
+      }
+    }
+  }, [method, offerData.stripe_card_enabled, offerData.pagarme_pix_enabled, offerData.paypalEnabled]);
 
   // Busca o PayPal Client ID quando PayPal está habilitado
   useEffect(() => {
@@ -517,37 +535,30 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
     );
   }
 
+  if (pixData) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center p-4 animate-in fade-in duration-500"
+        style={{ backgroundColor: backgroundColor }}
+      >
+        <div className="w-full max-w-md">
+          <PixDisplay
+            qrCode={pixData.qrCode}
+            qrCodeUrl={pixData.qrCodeUrl}
+            orderId={pixData.orderId}
+            amount={totalAmount}
+            currency={offerData.currency}
+            expiresAt={pixData.expiresAt}
+            saleId={pixData.saleId}
+            onSuccess={() => setPaymentSucceeded(true)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      {/* Modal do PIX - Aparece por cima do formulário */}
-      {pixData && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-hidden">
-          <div className="relative w-full max-w-[360px] animate-in fade-in zoom-in duration-300">
-            {/* Botão de fechar */}
-            <button
-              onClick={() => setPixData(null)}
-              className="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-all backdrop-blur-sm"
-              aria-label="Fechar"
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <PixDisplay
-              qrCode={pixData.qrCode}
-              qrCodeUrl={pixData.qrCodeUrl}
-              orderId={pixData.orderId}
-              amount={totalAmount}
-              currency={offerData.currency}
-              expiresAt={pixData.expiresAt}
-              saleId={pixData.saleId}
-              onSuccess={() => setPaymentSucceeded(true)}
-            />
-          </div>
-        </div>
-      )}
-
       {loading && (
         <div
           className="fixed inset-0 z-60 flex items-center justify-center backdrop-blur-sm"
@@ -555,7 +566,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
         >
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
-            {/* Texto de processamento usando a cor configurada */}
             <p className="font-medium animate-pulse" style={{ color: textColor }}>
               {t.buttons.processing}
             </p>
@@ -613,6 +623,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
                   walletLabel={walletLabel}
                   paypalEnabled={offerData.paypalEnabled}
                   pagarmePixEnabled={offerData.pagarme_pix_enabled}
+                  stripeCardEnabled={offerData.stripe_card_enabled}
                   paypalClientId={paypalClientId}
                   paypalAmount={totalAmount}
                   paypalCurrency={offerData.currency}

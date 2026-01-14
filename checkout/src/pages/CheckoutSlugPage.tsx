@@ -22,6 +22,7 @@ export interface OfferData {
   collectDocument?: boolean;
   paypalEnabled?: boolean;
   pagarme_pix_enabled?: boolean;
+  stripe_card_enabled?: boolean;
   bannerImageUrl?: string;
   secondaryBannerImageUrl?: string;
   currency: string;

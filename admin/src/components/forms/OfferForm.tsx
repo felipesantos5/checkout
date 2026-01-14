@@ -214,6 +214,7 @@ const offerFormSchema = z.object({
   collectDocument: z.boolean().default(false),
   paypalEnabled: z.boolean().default(false),
   pagarme_pix_enabled: z.boolean().default(false),
+  stripe_card_enabled: z.boolean().default(true),
   customDomain: z.string().optional().refine(
     (val) => {
       if (!val || val.trim() === "") return true;
@@ -284,6 +285,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
       collectDocument: false,
       paypalEnabled: false,
       pagarme_pix_enabled: false,
+      stripe_card_enabled: true,
       utmfyWebhookUrl: "",
       utmfyWebhookUrls: [],
       facebookPixelId: "",
@@ -660,7 +662,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>Coletar CPF/CNPJ</FormLabel>
-                      <FormDescription>Obrigatório para pagamentos PIX via Pagar.me.</FormDescription>
+                      {/* <FormDescription>Obrigatório para pagamentos PIX via Pagar.me.</FormDescription> */}
                     </div>
                   </FormItem>
                 )}
@@ -692,6 +694,27 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                       <FormLabel>Habilitar PIX via Pagar.me</FormLabel>
                       <FormDescription>
                         Permitir pagamentos via PIX. Certifique-se de configurar suas credenciais {""}
+                        <a href="/dashboard/settings" className="text-primary hover:underline">
+                          configurações da conta
+                        </a>
+                        .
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="stripe_card_enabled"
+                render={({ field }: any) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-card">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Habilitar Cartão de Crédito (Stripe)</FormLabel>
+                      <FormDescription>
+                        Permitir pagamentos via Cartão de Crédito. Certifique-se de configurar suas credenciais {""}
                         <a href="/dashboard/settings" className="text-primary hover:underline">
                           configurações da conta
                         </a>
@@ -885,13 +908,13 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
               name="upsell.enabled"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-card">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">Habilitar Upsell</FormLabel>
                     <FormDescription>O cliente será redirecionado para esta oferta APÓS pagar.</FormDescription>
                   </div>
-                  <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                  </FormControl>
                 </FormItem>
               )}
             />

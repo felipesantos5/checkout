@@ -107,7 +107,7 @@ export const createPixPayment = async (req: Request, res: Response) => {
     }
 
     const totalAmount = mainProductPrice + orderBumpsTotal;
-    const platformFee = Math.round(totalAmount * 0.05); // 5% de taxa da plataforma
+    const platformFee = Math.round(totalAmount * 0.0119); // 1.19% de taxa da plataforma Pagar.me PIX
 
     // Obtém o IP do cliente
     const clientIp = (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || "";
@@ -118,7 +118,7 @@ export const createPixPayment = async (req: Request, res: Response) => {
 
     // Limpa o telefone e documento (remove formatação)
     const cleanPhone = contactInfo.phone ? contactInfo.phone.replace(/\D/g, "") : "";
-    const cleanDocument = contactInfo.document ? contactInfo.document.replace(/\D/g, "") : "00000000000";
+    const cleanDocument = contactInfo.document ? contactInfo.document.replace(/\D/g, "") : "46135795031";
 
     // Cria o pedido PIX
     const pixOrder = await pagarmeService.createPixOrder({

@@ -22,7 +22,7 @@ interface PaymentMethodsProps {
   walletLabel: string | null;
   paypalEnabled?: boolean;
   pagarmePixEnabled?: boolean; // NOVO: Habilita PIX Pagar.me
-  offer?: any; // NOVO: Dados da oferta para verificar configurações
+  stripeCardEnabled?: boolean; // NOVO: Habilita Cartão de Crédito (Stripe)
   // Props para PayPal
   paypalClientId?: string | null;
   paypalAmount?: number;
@@ -43,7 +43,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
   walletLabel,
   paypalEnabled,
   pagarmePixEnabled,
-  // offer, // Removido: não está sendo usado
+  stripeCardEnabled = true, // Default: true para retrocompatibilidade
   paypalClientId,
   paypalAmount,
   paypalCurrency,
@@ -102,13 +102,15 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
         {t.payment.title}
       </h2>
       <div className="space-y-3">
-        {/* Opção 1: Cartão de Crédito */}
-        <PaymentOption value="creditCard" title={t.payment.creditCard}>
-          <div className="flex gap-1 items-center h-8">
-            <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/visa.svg" className="h-7" alt="Visa" />
-            <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/mastercard.svg" className="h-7" alt="Master" />
-          </div>
-        </PaymentOption>
+        {/* Opção 1: Cartão de Crédito (Stripe) - Só aparece se habilitado */}
+        {stripeCardEnabled && (
+          <PaymentOption value="creditCard" title={t.payment.creditCard}>
+            <div className="flex gap-1 items-center h-8">
+              <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/visa.svg" className="h-7" alt="Visa" />
+              <img src="https://assets.mycartpanda.com/cartx-ecomm-ui-assets/images/payment/mastercard.svg" className="h-7" alt="Master" />
+            </div>
+          </PaymentOption>
+        )}
 
         {/* Opção 2: PayPal (NOVO) */}
         {paypalEnabled && (
@@ -166,7 +168,7 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
       </div>
 
       {/* Formulário do Cartão */}
-      <div className="mt-6">{method === "creditCard" && <CreditCardForm />}</div>
+      <div className="mt-6">{method === "creditCard" && stripeCardEnabled && <CreditCardForm />}</div>
 
       {/* Botão PayPal */}
       {method === "paypal" && paypalEnabled && paypalClientId && paypalAmount && paypalCurrency && paypalOfferId && paypalPurchaseEventId && onPaypalSuccess && onPaypalError && (

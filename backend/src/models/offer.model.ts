@@ -73,6 +73,7 @@ export interface IOffer extends Document {
   collectDocument: boolean; // <-- NOVO: Controla se CPF/CNPJ deve ser coletado
   paypalEnabled: boolean;
   pagarme_pix_enabled: boolean; // <-- NOVO: Controla se PIX da Pagar.me está ativo
+  stripe_card_enabled: boolean; // <-- NOVO: Controla se Cartão de Crédito (Stripe) está ativo
 
   mainProduct: IProductSubDocument;
   orderBumps: IProductSubDocument[];
@@ -212,6 +213,10 @@ const offerSchema = new Schema<IOffer>(
     pagarme_pix_enabled: {
       type: Boolean,
       default: false,
+    },
+    stripe_card_enabled: {
+      type: Boolean,
+      default: true,
     },
     mainProduct: {
       type: productSubSchema,
