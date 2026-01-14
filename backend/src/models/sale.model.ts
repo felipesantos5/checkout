@@ -28,7 +28,13 @@ export interface ISale extends Document {
   currency: string; // Moeda da transação (brl, usd, etc)
 
   status: "succeeded" | "pending" | "refunded" | "failed" | "abandoned";
-  paymentMethod?: "stripe" | "paypal"; // Método de pagamento usado
+  paymentMethod?: "stripe" | "paypal" | "pagarme"; // Método de pagamento usado
+  gateway?: "stripe" | "paypal" | "pagarme"; // Gateway de pagamento (alias para paymentMethod)
+  
+  // Campos específicos do Pagar.me
+  pagarme_order_id?: string; // ID do pedido na Pagar.me
+  pagarme_transaction_id?: string; // ID da transação PIX na Pagar.me
+  
   failureReason?: string; // Motivo da falha (código de erro do Stripe)
   failureMessage?: string; // Mensagem de erro legível
   isUpsell: boolean;
@@ -75,8 +81,25 @@ const saleSchema = new Schema<ISale>(
 
     paymentMethod: {
       type: String,
-      enum: ["stripe", "paypal"],
+      enum: ["stripe", "paypal", "pagarme"],
       default: "stripe",
+    },
+
+    gateway: {
+      type: String,
+      enum: ["stripe", "paypal", "pagarme"],
+      default: "stripe",
+    },
+
+    // Campos específicos do Pagar.me
+    pagarme_order_id: {
+      type: String,
+      default: "",
+      index: true,
+    },
+    pagarme_transaction_id: {
+      type: String,
+      default: "",
     },
 
     failureReason: { type: String, default: "" },

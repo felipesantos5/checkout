@@ -212,6 +212,7 @@ const offerFormSchema = z.object({
 
   collectPhone: z.boolean().default(true),
   paypalEnabled: z.boolean().default(false),
+  pagarme_pix_enabled: z.boolean().default(false),
   customDomain: z.string().optional().refine(
     (val) => {
       if (!val || val.trim() === "") return true;
@@ -280,6 +281,7 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
 
       collectAddress: false,
       paypalEnabled: false,
+      pagarme_pix_enabled: false,
       utmfyWebhookUrl: "",
       utmfyWebhookUrls: [],
       facebookPixelId: "",
@@ -657,6 +659,27 @@ export function OfferForm({ onSuccess, initialData, offerId }: OfferFormProps) {
                     <div className="space-y-1 leading-none">
                       <FormLabel>Habilitar PayPal</FormLabel>
                       <FormDescription>Permitir pagamentos via PayPal.</FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="pagarme_pix_enabled"
+                render={({ field }: any) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-card">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Habilitar PIX via Pagar.me</FormLabel>
+                      <FormDescription>
+                        Permitir pagamentos via PIX. Certifique-se de configurar suas credenciais {""}
+                        <a href="/dashboard/settings" className="text-primary hover:underline">
+                          configurações da conta
+                        </a>
+                        .
+                      </FormDescription>
                     </div>
                   </FormItem>
                 )}

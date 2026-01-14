@@ -71,6 +71,7 @@ export interface IOffer extends Document {
   customId?: string;
   collectPhone: boolean;
   paypalEnabled: boolean;
+  pagarme_pix_enabled: boolean; // <-- NOVO: Controla se PIX da Pagar.me está ativo
 
   mainProduct: IProductSubDocument;
   orderBumps: IProductSubDocument[];
@@ -200,6 +201,10 @@ const offerSchema = new Schema<IOffer>(
       default: true,
     },
     paypalEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    pagarme_pix_enabled: {
       type: Boolean,
       default: false,
     },

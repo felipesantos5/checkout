@@ -13,6 +13,7 @@ import healthRoutes from "./health.routes";
 import settingsRoutes from "./settings.routes";
 import abTestRoutes from "./abtest.routes";
 import domainRoutes from "./domain.routes";
+import pagarmeRoutes from "./pagarme.routes";
 import { getUpsellScript } from "../controllers/script.controller";
 
 const router = Router();
@@ -49,6 +50,9 @@ router.use("/abtests", abTestRoutes);
 
 // Rotas para Domínios Customizados (Caddy + Checkout)
 router.use("/domains", domainRoutes);
+
+// Rotas para Pagar.me (PIX)
+router.use("/payments/pagarme", pagarmeRoutes);
 
 router.get("/v1/upsell.js", getUpsellScript);
 

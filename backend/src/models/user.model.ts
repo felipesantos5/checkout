@@ -11,6 +11,8 @@ export interface IUser extends Document {
   stripeOnboardingComplete: boolean; // <-- NOVO: Controla se o onboarding foi concluído
   paypalClientId?: string; // <-- NOVO: PayPal Client ID
   paypalClientSecret?: string; // <-- NOVO: PayPal Client Secret
+  pagarme_api_key?: string; // <-- NOVO: Pagar.me API Key (encriptada)
+  pagarme_encryption_key?: string; // <-- NOVO: Pagar.me Encryption Key (encriptada)
   automaticNotifications: boolean; // <-- NOVO: Notificações automáticas de vendas
   // Métodos
   comparePassword(password: string): Promise<boolean>;
@@ -54,6 +56,18 @@ const userSchema = new Schema<IUser>(
       default: "",
     },
     paypalClientSecret: {
+      type: String,
+      default: "",
+      select: false, // Não retorna por padrão por segurança
+    },
+
+    // --- NOVOS CAMPOS PAGAR.ME ---
+    pagarme_api_key: {
+      type: String,
+      default: "",
+      select: false, // Não retorna por padrão por segurança
+    },
+    pagarme_encryption_key: {
       type: String,
       default: "",
       select: false, // Não retorna por padrão por segurança
