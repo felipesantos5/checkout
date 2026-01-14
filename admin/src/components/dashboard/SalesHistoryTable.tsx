@@ -201,8 +201,8 @@ export function SalesHistoryTable({ offerId }: SalesHistoryTableProps) {
               </TableCell>
 
               <TableCell className="text-center">
-                {sale.paymentMethod === "stripe" && <StripeIcon className="h-5 w-5 mx-auto" />}
-                {sale.paymentMethod === "paypal" && <PaypalIcon className="h-5 w-5 mx-auto" />}
+                {sale.paymentMethod === "stripe" && <StripeIcon className="h-10 w-10 mx-auto" />}
+                {sale.paymentMethod === "paypal" && <PaypalIcon className="h-10 w-10 mx-auto" />}
                 {sale.paymentMethod === "pagarme" && <PixIcon className="h-5 w-5 mx-auto" />}
               </TableCell>
 

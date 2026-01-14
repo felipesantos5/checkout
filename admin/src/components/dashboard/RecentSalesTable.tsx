@@ -246,14 +246,14 @@ export function RecentSalesTable({ period = "7", customDateRange }: RecentSalesT
                           {sale.status === "succeeded" ? (
                             <span className="flex flex-col items-center">
                               <span>Aprovada</span>
-                              {sale.updatedAt && (
+                              {/* {sale.updatedAt && (
                                 <span className="text-[10px] opacity-70">
                                   {new Date(sale.updatedAt).toLocaleTimeString("pt-BR", {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                   })}
                                 </span>
-                              )}
+                              )} */}
                             </span>
                           ) : sale.status === "refunded" ? (
                             "Reembolsada"
@@ -270,7 +270,6 @@ export function RecentSalesTable({ period = "7", customDateRange }: RecentSalesT
                         ) : sale.paymentMethod === "pagarme" ? (
                           <div className="flex flex-col items-center gap-0.5">
                             <PixIcon className="w-5 h-5" />
-                            <span className="text-[10px] font-bold text-[#32BCAD]">PIX</span>
                           </div>
                         ) : (
                           <StripeIcon className="w-10" />

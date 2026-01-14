@@ -321,19 +321,19 @@ export function DashboardOverview() {
       </div>
 
       {/* Seção Inferior: Gráficos Circulares + Histórico de Vendas */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-3">
-        {/* Histórico de Vendas (Cresceu para ocupar 2 colunas em telas grandes) */}
-        <div className="lg:col-span-2">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        {/* Histórico de Vendas */}
+        <div className="col-span-1">
           <SalesAreaChart chartData={metrics?.charts.revenue || []} />
         </div>
 
-        {/* Top Ofertas (Gráfico Circular - ocupa 1 coluna) */}
-        <div className="lg:col-span-1">
+        {/* Top Ofertas (Gráfico Circular) */}
+        <div className="col-span-1">
           <TopOffersChart data={metrics?.topOffers || []} />
         </div>
 
-        {/* Mapa Mundial - ocupa 1 ou 2 colunas dependendo do layout */}
-        <div className="lg:col-span-3">
+        {/* Mapa Mundial */}
+        <div className="col-span-1">
           <SalesWorldMap data={metrics?.topCountries || []} />
         </div>
       </div>
