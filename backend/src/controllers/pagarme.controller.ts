@@ -27,11 +27,11 @@ export const createPixPayment = async (req: Request, res: Response) => {
       return res.status(400).json({ error: { message: "Slug da oferta não fornecido" } });
     }
 
-    if (!contactInfo || !contactInfo.name || !contactInfo.email || !contactInfo.document) {
-      return res.status(400).json({
-        error: { message: "Dados do cliente incompletos (nome, email e CPF são obrigatórios)" },
-      });
-    }
+    // if (!contactInfo || !contactInfo.name || !contactInfo.email || !contactInfo.document) {
+    //   return res.status(400).json({
+    //     error: { message: "Dados do cliente incompletos (nome, email e CPF são obrigatórios)" },
+    //   });
+    // }
 
     // Busca a oferta
     const offer = await Offer.findOne({ slug: offerSlug }).populate("ownerId");
