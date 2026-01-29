@@ -63,6 +63,7 @@ export const sendFacebookEvent = async (pixelId: string, accessToken: string, pa
     console.log(`   - Event ID: ${payload.event_id || 'N/A'}`);
     console.log(`   - Valor: ${payload.custom_data?.value || 'N/A'} ${payload.custom_data?.currency || 'N/A'}`);
     console.log(`   - User Data: email=${!!payload.user_data.em}, phone=${!!payload.user_data.ph}, fbc=${!!payload.user_data.fbc}, fbp=${!!payload.user_data.fbp}`);
+    console.log(`   - Payload Completo:`, JSON.stringify(payload, null, 2));
 
     const response = await axios.post(url, body, { timeout: 15000 });
 
@@ -72,6 +73,7 @@ export const sendFacebookEvent = async (pixelId: string, accessToken: string, pa
     }
 
     console.log(`✅ Evento ${payload.event_name} enviado com sucesso para pixel ${pixelId} - Events Received: ${response.data?.events_received || 0}`);
+    console.log(`   - Resposta Completa:`, JSON.stringify(response.data, null, 2));
     return response.data;
   } catch (error: any) {
     const errorMessage = error.response?.data?.error?.message || error.message;

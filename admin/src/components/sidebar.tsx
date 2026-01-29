@@ -149,9 +149,16 @@ export function AppSidebar() {
 
     const fetchRevenue = async () => {
       try {
-        const response = await axios.get(`${API_URL}/metrics/overview`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // Busca faturamento total desde 2020 até hoje (sem limite de período)
+        const startDate = new Date("2020-01-01").toISOString();
+        const endDate = new Date().toISOString();
+
+        const response = await axios.get(
+          `${API_URL}/metrics/overview?startDate=${startDate}&endDate=${endDate}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         setTotalRevenue(response.data.kpis.totalRevenue || 0);
       } catch (error) {
         console.error("Erro ao carregar faturamento:", error);

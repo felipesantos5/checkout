@@ -539,6 +539,8 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
           },
         };
 
+        console.log(`   - Event Data Completo:`, JSON.stringify(eventData, null, 2));
+
         // Envia evento Purchase para todos os pixels em paralelo com tratamento individual de erros
         // Promise.allSettled garante que todos os pixels sejam processados, mesmo se algum falhar
         const results = await Promise.allSettled(

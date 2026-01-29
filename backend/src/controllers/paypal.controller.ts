@@ -309,6 +309,7 @@ const sendFacebookPurchaseForPayPal = async (
 
   console.log(`🔵 [PayPal] Enviando Purchase para ${pixels.length} pixel(s) Facebook | Valor: ${totalValue}`);
   console.log(`   - User Data: email=${!!userData.em}, phone=${!!userData.ph}, fbc=${!!userData.fbc}, fbp=${!!userData.fbp}, userAgent=${!!userData.client_user_agent}`);
+  console.log(`   - Event Data Completo:`, JSON.stringify(eventData, null, 2));
 
   const results = await Promise.allSettled(
     pixels.map((pixel) =>
