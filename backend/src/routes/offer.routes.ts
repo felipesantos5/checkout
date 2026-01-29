@@ -37,6 +37,9 @@ router.patch("/:id/unarchive", protectRoute, offerController.handleUnarchiveOffe
 // PATCH /api/offers/:id/toggle-active (Ativa/Desativa uma oferta)
 router.patch("/:id/toggle-active", protectRoute, offerController.handleToggleOfferActive);
 
+// POST /api/offers/migrate-active (Rota administrativa para migrar ofertas antigas)
+router.post("/migrate-active", protectRoute, offerController.handleMigrateIsActive);
+
 // --- Rotas Públicas (Checkout) ---
 
 // GET /api/offers/slug/:slug

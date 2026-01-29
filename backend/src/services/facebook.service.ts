@@ -2,18 +2,18 @@ import crypto from "crypto";
 import axios from "axios";
 
 interface FacebookUserData {
-  fbc?: string;
-  fbp?: string;
+  fbc?: string; // Cookie do Facebook (não hashado)
+  fbp?: string; // Cookie do Facebook (não hashado)
   client_ip_address: string;
   client_user_agent: string;
-  em?: string; // Email (hashed)
-  ph?: string; // Phone (hashed)
-  fn?: string; // First Name (hashed)
-  ln?: string; // Last Name (hashed)
-  ct?: string; // City (hashed)
-  st?: string; // State (hashed)
-  zp?: string; // Zip Code (hashed)
-  country?: string; // Country (hashed)
+  em?: string[]; // Email (hashed) - ARRAY
+  ph?: string[]; // Phone (hashed) - ARRAY
+  fn?: string[]; // First Name (hashed) - ARRAY
+  ln?: string[]; // Last Name (hashed) - ARRAY
+  ct?: string[]; // City (hashed) - ARRAY
+  st?: string[]; // State (hashed) - ARRAY
+  zp?: string[]; // Zip Code (hashed) - ARRAY
+  country?: string[]; // Country (hashed) - ARRAY
 }
 
 interface FacebookEventPayload {
@@ -62,7 +62,17 @@ export const sendFacebookEvent = async (pixelId: string, accessToken: string, pa
     console.log(`🔵 Enviando evento Facebook: ${payload.event_name} para pixel ${pixelId}`);
     console.log(`   - Event ID: ${payload.event_id || 'N/A'}`);
     console.log(`   - Valor: ${payload.custom_data?.value || 'N/A'} ${payload.custom_data?.currency || 'N/A'}`);
-    console.log(`   - User Data: email=${!!payload.user_data.em}, phone=${!!payload.user_data.ph}, fbc=${!!payload.user_data.fbc}, fbp=${!!payload.user_data.fbp}`);
+    console.log(`   - User Data:`);
+    console.log(`     • email: ${payload.user_data.em ? `${payload.user_data.em[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
+    console.log(`     • phone: ${payload.user_data.ph ? `${payload.user_data.ph[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
+    console.log(`     • fbc: ${payload.user_data.fbc || 'N/A'}`);
+    console.log(`     • fbp: ${payload.user_data.fbp || 'N/A'}`);
+    console.log(`     • fn: ${payload.user_data.fn ? `${payload.user_data.fn[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
+    console.log(`     • ln: ${payload.user_data.ln ? `${payload.user_data.ln[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
+    console.log(`     • city: ${payload.user_data.ct ? `${payload.user_data.ct[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
+    console.log(`     • state: ${payload.user_data.st ? `${payload.user_data.st[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
+    console.log(`     • zipCode: ${payload.user_data.zp ? `${payload.user_data.zp[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
+    console.log(`     • country: ${payload.user_data.country ? `${payload.user_data.country[0].substring(0, 10)}... (hashed)` : 'N/A'}`);
     console.log(`   - Payload Completo:`, JSON.stringify(payload, null, 2));
 
     const response = await axios.post(url, body, { timeout: 15000 });
@@ -116,26 +126,26 @@ export const createFacebookUserData = (
     client_user_agent: userAgent,
   };
 
-  // Dados de identificação pessoal (hashados)
-  if (email) userData.em = hashData(email);
-  if (phone) userData.ph = hashData(phone.replace(/\D/g, "")); // Remove não-números antes do hash
+  // Dados de identificação pessoal (hashados) - Facebook espera ARRAYS
+  if (email) userData.em = [hashData(email)];
+  if (phone) userData.ph = [hashData(phone.replace(/\D/g, ""))]; // Remove não-números antes do hash
 
-  // Nome (separado em primeiro e último)
+  // Nome (separado em primeiro e último) - Facebook espera ARRAYS
   if (name) {
     const names = name.trim().split(" ");
-    if (names.length > 0) userData.fn = hashData(names[0]);
-    if (names.length > 1) userData.ln = hashData(names[names.length - 1]);
+    if (names.length > 0) userData.fn = [hashData(names[0])];
+    if (names.length > 1) userData.ln = [hashData(names[names.length - 1])];
   }
 
-  // Cookies de identificação do Facebook (não hashados)
+  // Cookies de identificação do Facebook (não hashados) - permanecem como strings
   if (fbc) userData.fbc = fbc;
   if (fbp) userData.fbp = fbp;
 
-  // Dados de localização (hashados)
-  if (city) userData.ct = hashData(city);
-  if (state) userData.st = hashData(state);
-  if (zipCode) userData.zp = hashData(zipCode.replace(/\D/g, "")); // Remove não-números antes do hash
-  if (country) userData.country = hashData(country);
+  // Dados de localização (hashados) - Facebook espera ARRAYS
+  if (city) userData.ct = [hashData(city)];
+  if (state) userData.st = [hashData(state)];
+  if (zipCode) userData.zp = [hashData(zipCode.replace(/\D/g, ""))]; // Remove não-números antes do hash
+  if (country) userData.country = [hashData(country)];
 
   return userData;
 };

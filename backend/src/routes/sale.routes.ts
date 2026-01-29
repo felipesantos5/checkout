@@ -6,8 +6,8 @@ import { protectRoute } from "../middleware/auth.middleware";
 const router = Router();
 
 // GET /api/sales
-// Rota protegida para o vendedor ver suas vendas
-router.get("/", protectRoute, saleController.handleListMySales);
+// Rota protegida com filtros avançados (paginação, filtros por status, oferta, país, etc)
+router.get("/", protectRoute, saleController.getSales);
 
 // --- ROTA NOVA ADICIONADA AQUI ---
 // Rota para vendas de UMA oferta

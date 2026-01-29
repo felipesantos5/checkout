@@ -17,7 +17,7 @@ export const getSales = async (req: Request, res: Response) => {
       startDate,
       endDate
     } = req.query;
-    const userId = (req as any).user.uid; // Assumindo que você pega o ID do user no middleware
+    const userId = req.userId!; // ID do usuário vem do middleware protectRoute
 
     // Query Base: Sempre filtrar pelo dono (segurança)
     const query: any = { ownerId: userId };

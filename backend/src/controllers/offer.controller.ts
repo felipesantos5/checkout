@@ -182,14 +182,39 @@ export const handleToggleOfferActive = async (req: Request, res: Response) => {
     const { id } = req.params;
     const ownerId = req.userId!;
 
+
     const offer = await offerService.toggleOfferActive(id, ownerId);
 
     if (!offer) {
+      console.log(`❌ Oferta não encontrada - ID: ${id}`);
       return res.status(404).json({ error: { message: "Oferta não encontrada ou não pertence a você." } });
     }
+
     res.status(200).json(offer);
   } catch (error) {
+    console.error(`❌ Erro ao toggle active:`, error);
     res.status(400).json({ error: { message: (error as Error).message } });
+  }
+};
+
+/**
+ * Controller para MIGRAR ofertas antigas adicionando isActive = true
+ * ROTA ADMINISTRATIVA - Executar uma vez após deploy
+ */
+export const handleMigrateIsActive = async (req: Request, res: Response) => {
+  try {
+    const ownerId = req.userId!;
+
+    const result = await offerService.migrateIsActive(ownerId);
+
+    res.status(200).json({
+      message: "Migração concluída com sucesso",
+      updated: result.modifiedCount,
+      total: result.matchedCount,
+    });
+  } catch (error) {
+    console.error("Erro na migração:", error);
+    res.status(500).json({ error: { message: (error as Error).message } });
   }
 };
 

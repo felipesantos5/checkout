@@ -174,7 +174,7 @@ export const handleTrackMetric = async (req: Request, res: Response) => {
  */
 export const handleFacebookInitiateCheckout = async (req: Request, res: Response) => {
   try {
-    const { offerId, eventId, totalAmount, contentIds } = req.body;
+    const { offerId, eventId, totalAmount, contentIds, email, phone, name, fbc, fbp, city, state, zipCode, country } = req.body;
 
     // Resposta imediata para não travar o cliente (Fire and Forget)
     res.status(200).send();
@@ -211,8 +211,20 @@ export const handleFacebookInitiateCheckout = async (req: Request, res: Response
 
     // Se houver pixels configurados, envia evento para TODOS
     if (pixels.length > 0) {
-      // Cria userData com dados disponíveis
-      const userData = createFacebookUserData(ip, userAgent);
+      // Cria userData com TODOS os dados disponíveis
+      const userData = createFacebookUserData(
+        ip,
+        userAgent,
+        email,
+        phone,
+        name,
+        fbc,
+        fbp,
+        city,
+        state,
+        zipCode,
+        country
+      );
 
       // Calcula valor total correto (já vem em centavos do frontend)
       const valueInCurrency = totalAmount ? totalAmount / 100 : ((offer.mainProduct as any).priceInCents || 0) / 100;

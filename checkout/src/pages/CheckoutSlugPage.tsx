@@ -9,6 +9,7 @@ import type { Language } from "../i18n/translations";
 import { SkeletonLoader } from "../components/ui/SkeletonLoader";
 import { useFacebookPixel } from "../hooks/useFacebookPixel";
 import { PurchaseNotification } from "../components/ui/PurchaseNotification";
+import { getCookie } from "../helper/getCookie";
 
 export interface OfferData {
   _id: string;
@@ -234,6 +235,10 @@ export function CheckoutSlugPage() {
     }
 
     // 2. Envia evento para o backend (Facebook CAPI) - NÃO salva no dashboard
+    // Coleta cookies do Facebook para melhor matching
+    const fbc = getCookie("_fbc") || undefined;
+    const fbp = getCookie("_fbp") || undefined;
+
     fetch(`${API_URL}/metrics/facebook-initiate-checkout`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -242,6 +247,10 @@ export function CheckoutSlugPage() {
         eventId: eventId,
         totalAmount: offerData.mainProduct.priceInCents,
         contentIds: contentIds,
+        fbc: fbc, // Cookie do Facebook para tracking
+        fbp: fbp, // Cookie do Facebook para tracking
+        // email, phone, name não estão disponíveis neste momento (página carregando)
+        // Eles serão enviados no evento Purchase quando o usuário completar o checkout
       }),
     }).catch((err) => console.log("Track Facebook InitiateCheckout error", err));
   }, [offerData, slug, checkoutSessionId]);

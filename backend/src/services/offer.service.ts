@@ -372,6 +372,36 @@ export const toggleOfferActive = async (id: string, ownerId: string): Promise<IO
 };
 
 /**
+ * Função para migrar ofertas antigas adicionando isActive = true
+ * EXECUTAR UMA VEZ após deploy
+ */
+export const migrateIsActive = async (ownerId: string) => {
+  try {
+    // Atualiza todas as ofertas do usuário que não têm o campo isActive definido
+    const result = await Offer.updateMany(
+      {
+        ownerId: ownerId,
+        $or: [
+          { isActive: { $exists: false } }, // Campo não existe
+          { isActive: null }, // Campo é null
+        ],
+      },
+      {
+        $set: { isActive: true },
+      }
+    );
+
+    console.log(`✅ Migração isActive concluída para usuário ${ownerId}:`);
+    console.log(`   - Ofertas encontradas: ${result.matchedCount}`);
+    console.log(`   - Ofertas atualizadas: ${result.modifiedCount}`);
+
+    return result;
+  } catch (error) {
+    throw new Error(`Falha na migração: ${(error as Error).message}`);
+  }
+};
+
+/**
  * Incrementa o contador de checkout iniciado
  */
 export const incrementCheckoutStarted = async (offerId: string): Promise<boolean> => {
