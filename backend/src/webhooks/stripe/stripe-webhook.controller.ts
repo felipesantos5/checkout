@@ -39,11 +39,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
     }
   }
 
-  // 3. Log do evento recebido
-  console.log(`\n🎯 Webhook recebido: ${event.type} | ID: ${event.id}`);
-  console.log(`   Semaphore: ${webhookSemaphore.available} disponíveis, ${webhookSemaphore.waiting} aguardando`);
-
-  // 4. Processa o evento usando os handlers (com controle de concorrência)
+  // 3. Processa o evento usando os handlers (com controle de concorrência)
   try {
     await webhookSemaphore.run(async () => {
       await handleStripeEvent(event);

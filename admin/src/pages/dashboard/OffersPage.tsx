@@ -9,13 +9,13 @@ import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
 import { API_URL } from "@/config/BackendUrl";
 // import { Badge } from "@/components/ui/badge";
-import { BarChart3, Copy, ImageIcon, Loader2, MoreVertical, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, BarChart3, Copy, ImageIcon, Loader2, MoreVertical, Trash2 } from "lucide-react";
 import type { product } from "@/types/product";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Tipo para os dados da oferta (sem alterações)
+// Tipo para os dados da oferta
 interface Offer {
   _id: string;
   name: string;
@@ -23,6 +23,7 @@ interface Offer {
   mainProduct: product;
   salesCount: number;
   currency: string;
+  archived?: boolean;
 }
 
 // Helper de formatação de moeda
@@ -47,13 +48,14 @@ export function OffersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [offerToDelete, setOfferToDelete] = useState<Offer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
 
-  // Função para buscar os dados (sem alterações)
-  const fetchOffers = async () => {
+  // Função para buscar os dados
+  const fetchOffers = async (archived: boolean = false) => {
     setIsLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/offers`);
+      const response = await axios.get(`${API_URL}/offers?archived=${archived}`);
       setOffers(response.data);
     } catch (error) {
       toast.error("Falha ao carregar ofertas.", {
@@ -65,8 +67,8 @@ export function OffersPage() {
   };
 
   useEffect(() => {
-    fetchOffers();
-  }, []);
+    fetchOffers(showArchived);
+  }, [showArchived]);
 
   // Função para copiar a URL (ajuste o domínio de produção)
   const handleCopy = (slug: string) => {
@@ -91,7 +93,7 @@ export function OffersPage() {
       await axios.delete(`${API_URL}/offers/${offerToDelete._id}`);
       toast.success("Oferta deletada com sucesso!");
       setOfferToDelete(null);
-      fetchOffers(); // Recarrega a lista
+      fetchOffers(showArchived); // Recarrega a lista
     } catch (error) {
       toast.error("Falha ao deletar oferta.", {
         description: (error as Error).message,
@@ -108,10 +110,36 @@ export function OffersPage() {
       await axios.post(`${API_URL}/offers/${offerId}/duplicate`);
       toast.dismiss();
       toast.success("Oferta duplicada com sucesso!");
-      fetchOffers(); // Recarrega a lista
+      fetchOffers(showArchived); // Recarrega a lista
     } catch (error) {
       toast.dismiss();
       toast.error("Falha ao duplicar oferta.", {
+        description: (error as Error).message,
+      });
+    }
+  };
+
+  // Função para arquivar a oferta
+  const handleArchive = async (offerId: string) => {
+    try {
+      await axios.patch(`${API_URL}/offers/${offerId}/archive`);
+      toast.success("Oferta arquivada com sucesso!");
+      fetchOffers(showArchived); // Recarrega a lista
+    } catch (error) {
+      toast.error("Falha ao arquivar oferta.", {
+        description: (error as Error).message,
+      });
+    }
+  };
+
+  // Função para desarquivar a oferta
+  const handleUnarchive = async (offerId: string) => {
+    try {
+      await axios.patch(`${API_URL}/offers/${offerId}/unarchive`);
+      toast.success("Oferta desarquivada com sucesso!");
+      fetchOffers(showArchived); // Recarrega a lista
+    } catch (error) {
+      toast.error("Falha ao desarquivar oferta.", {
         description: (error as Error).message,
       });
     }
@@ -122,12 +150,27 @@ export function OffersPage() {
       {/* Cabeçalho da Página (FORA do card, como no protótipo) */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Links de pagamento</h1>
+          <h1 className="text-2xl font-bold">{showArchived ? "Links arquivados" : "Links de pagamento"}</h1>
           <p className="text-sm text-muted-foreground">{isLoading ? "..." : `${offers.length} ${offers.length === 1 ? "registro" : "registros"}`}</p>
         </div>
-        <Button asChild>
-          <Link to="/offers/new">+ Adicionar link</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowArchived(!showArchived)}>
+            {showArchived ? (
+              <>
+                <ArchiveRestore className="h-4 w-4 mr-2" />
+                Ver Ativos
+              </>
+            ) : (
+              <>
+                <Archive className="h-4 w-4 mr-2" />
+                Ver Arquivados
+              </>
+            )}
+          </Button>
+          <Button asChild>
+            <Link to="/offers/new">+ Adicionar link</Link>
+          </Button>
+        </div>
       </div>
 
       {/* 4. Card que envolve a Tabela. 
@@ -228,6 +271,17 @@ export function OffersPage() {
                             <Copy className="h-4 w-4 mr-2" />
                             Duplicar
                           </DropdownMenuItem>
+                          {showArchived ? (
+                            <DropdownMenuItem onClick={() => handleUnarchive(offer._id)}>
+                              <ArchiveRestore className="h-4 w-4 mr-2" />
+                              Desarquivar
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => handleArchive(offer._id)}>
+                              <Archive className="h-4 w-4 mr-2" />
+                              Arquivar
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => setOfferToDelete(offer)} className="text-destructive focus:text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />
                             Deletar

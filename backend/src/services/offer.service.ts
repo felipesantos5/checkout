@@ -132,12 +132,21 @@ export const getOfferBySlug = async (slug: string): Promise<any> => {
 /**
  * Lista todas as ofertas de um usuário (para o dashboard)
  */
-export const listOffersByOwner = async (ownerId: string): Promise<any[]> => {
+export const listOffersByOwner = async (ownerId: string, archived?: boolean): Promise<any[]> => {
   try {
     // --- MUDANÇA PRINCIPAL ---
     // Removemos o .populate() daqui também
     // O campo 'mainProduct' já contém o objeto com nome e preço
-    const offers = await Offer.find({ ownerId }).sort({ createdAt: -1 });
+    const filter: any = { ownerId };
+
+    // Filtra por arquivadas ou não arquivadas (padrão: não arquivadas)
+    if (archived === true) {
+      filter.archived = true;
+    } else if (archived === false || archived === undefined) {
+      filter.archived = { $ne: true };
+    }
+
+    const offers = await Offer.find(filter).sort({ createdAt: -1 });
 
     // Para cada oferta, busca o número de vendas
     const offersWithSalesCount = await Promise.all(
@@ -288,6 +297,48 @@ export const duplicateOffer = async (id: string, ownerId: string): Promise<IOffe
     return duplicatedOffer;
   } catch (error) {
     throw new Error(`Falha ao duplicar oferta: ${(error as Error).message}`);
+  }
+};
+
+/**
+ * Arquiva uma oferta
+ */
+export const archiveOffer = async (id: string, ownerId: string): Promise<IOffer | null> => {
+  try {
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return null;
+    }
+
+    const offer = await Offer.findOneAndUpdate(
+      { _id: id, ownerId: ownerId },
+      { archived: true },
+      { new: true }
+    );
+
+    return offer;
+  } catch (error) {
+    throw new Error(`Falha ao arquivar oferta: ${(error as Error).message}`);
+  }
+};
+
+/**
+ * Desarquiva uma oferta
+ */
+export const unarchiveOffer = async (id: string, ownerId: string): Promise<IOffer | null> => {
+  try {
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return null;
+    }
+
+    const offer = await Offer.findOneAndUpdate(
+      { _id: id, ownerId: ownerId },
+      { archived: false },
+      { new: true }
+    );
+
+    return offer;
+  } catch (error) {
+    throw new Error(`Falha ao desarquivar oferta: ${(error as Error).message}`);
   }
 };
 

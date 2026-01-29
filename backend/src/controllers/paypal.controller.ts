@@ -155,7 +155,7 @@ export const captureOrder = async (req: Request, res: Response) => {
         }
       }
 
-      // SALVAR A VENDA NO BANCO DE DADOS
+      // SALVAR A VENDA NO BANCO DE DADOS (com dados do Facebook para CAPI)
       const newSale = new Sale({
         stripePaymentIntentId: `PAYPAL_${captureData.id}`, // Prefixo para identificar como PayPal
         offerId: offer._id,
@@ -171,6 +171,14 @@ export const captureOrder = async (req: Request, res: Response) => {
         paymentMethod: "paypal",
         ip: clientIp,
         country: countryCode,
+        userAgent: customerData?.userAgent || "",
+        // Dados do Facebook para CAPI
+        fbc: customerData?.fbc,
+        fbp: customerData?.fbp,
+        addressCity: customerData?.addressCity,
+        addressState: customerData?.addressState,
+        addressZipCode: customerData?.addressZipCode,
+        addressCountry: customerData?.addressCountry,
         items,
       });
 
@@ -265,12 +273,19 @@ const sendFacebookPurchaseForPayPal = async (
 
   const totalValue = sale.totalAmountInCents / 100;
 
+  // Dados do usuário com todos os parâmetros necessários para o Facebook
   const userData = createFacebookUserData(
     clientIp,
-    "",
+    customerData?.userAgent || "",
     customerData?.email || sale.customerEmail,
     customerData?.phone || "",
-    customerData?.name || sale.customerName
+    customerData?.name || sale.customerName,
+    customerData?.fbc, // Cookie _fbc do Facebook
+    customerData?.fbp, // Cookie _fbp do Facebook
+    customerData?.addressCity,
+    customerData?.addressState,
+    customerData?.addressZipCode,
+    customerData?.addressCountry
   );
 
   // Usa purchaseEventId do frontend se disponível (para deduplicação com Pixel)
@@ -293,6 +308,7 @@ const sendFacebookPurchaseForPayPal = async (
   };
 
   console.log(`🔵 [PayPal] Enviando Purchase para ${pixels.length} pixel(s) Facebook | Valor: ${totalValue}`);
+  console.log(`   - User Data: email=${!!userData.em}, phone=${!!userData.ph}, fbc=${!!userData.fbc}, fbp=${!!userData.fbp}, userAgent=${!!userData.client_user_agent}`);
 
   const results = await Promise.allSettled(
     pixels.map((pixel) =>

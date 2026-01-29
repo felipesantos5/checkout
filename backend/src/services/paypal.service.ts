@@ -39,8 +39,6 @@ export const createOrder = async (amount: number, currency: string, clientId: st
   // Converte centavos para valor decimal (PayPal usa 10.00, não 1000)
   const valueFormatted = (amount / 100).toFixed(2);
 
-  console.log(`[PayPal] Creating order: amount=${amount} (${valueFormatted}), currency=${currencyCode}`);
-
   try {
     const accessToken = await generateAccessToken(clientId, clientSecret);
     const response = await axios.post(

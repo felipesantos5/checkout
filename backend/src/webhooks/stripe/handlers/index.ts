@@ -1,6 +1,6 @@
 // src/webhooks/stripe/handlers/index.ts
 import { Stripe } from "stripe";
-import { handlePaymentIntentSucceeded, handlePaymentIntentFailed, handlePaymentIntentCreated } from "./payment-intent.handler";
+import { handlePaymentIntentSucceeded, handlePaymentIntentFailed, handlePaymentIntentCreated, handleChargeRefunded } from "./payment-intent.handler";
 import { handleAccountUpdated } from "./account.handler";
 
 /**
@@ -31,7 +31,7 @@ export const handleStripeEvent = async (event: Stripe.Event): Promise<void> => {
 
     case "charge.refunded":
       console.log(`💸 Reembolso realizado: ${event.data.object.id}`);
-      // Aqui você pode atualizar o status da venda para "refunded"
+      await handleChargeRefunded(event.data.object as Stripe.Charge);
       break;
 
     default:

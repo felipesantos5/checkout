@@ -49,7 +49,8 @@ export const handleGetOfferBySlug = async (req: Request, res: Response) => {
 export const handleListMyOffers = async (req: Request, res: Response) => {
   try {
     const ownerId = req.userId!; // Vem do middleware 'protectRoute'
-    const offers = await offerService.listOffersByOwner(ownerId);
+    const archived = req.query.archived === "true" ? true : req.query.archived === "false" ? false : undefined;
+    const offers = await offerService.listOffersByOwner(ownerId, archived);
     res.status(200).json(offers);
   } catch (error) {
     res.status(500).json({ error: { message: (error as Error).message } });
@@ -125,6 +126,44 @@ export const handleDuplicateOffer = async (req: Request, res: Response) => {
       return res.status(404).json({ error: { message: "Oferta não encontrada ou não pertence a você." } });
     }
     res.status(201).json(duplicatedOffer);
+  } catch (error) {
+    res.status(400).json({ error: { message: (error as Error).message } });
+  }
+};
+
+/**
+ * Controller para ARQUIVAR uma oferta
+ */
+export const handleArchiveOffer = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const ownerId = req.userId!;
+
+    const offer = await offerService.archiveOffer(id, ownerId);
+
+    if (!offer) {
+      return res.status(404).json({ error: { message: "Oferta não encontrada ou não pertence a você." } });
+    }
+    res.status(200).json(offer);
+  } catch (error) {
+    res.status(400).json({ error: { message: (error as Error).message } });
+  }
+};
+
+/**
+ * Controller para DESARQUIVAR uma oferta
+ */
+export const handleUnarchiveOffer = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const ownerId = req.userId!;
+
+    const offer = await offerService.unarchiveOffer(id, ownerId);
+
+    if (!offer) {
+      return res.status(404).json({ error: { message: "Oferta não encontrada ou não pertence a você." } });
+    }
+    res.status(200).json(offer);
   } catch (error) {
     res.status(400).json({ error: { message: (error as Error).message } });
   }

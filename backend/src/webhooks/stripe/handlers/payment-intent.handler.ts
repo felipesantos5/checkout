@@ -22,7 +22,6 @@ export const handlePaymentIntentCreated = async (paymentIntent: Stripe.PaymentIn
 
     // Se não tem offerSlug, pode ser um PaymentIntent não relacionado ao checkout
     if (!offerSlug) {
-      console.log("ℹ️  PaymentIntent sem offerSlug - ignorando (pode ser outro sistema)");
       return;
     }
 
@@ -42,7 +41,6 @@ export const handlePaymentIntentCreated = async (paymentIntent: Stripe.PaymentIn
     // 2. Idempotência (Evita duplicidade)
     const existingSale = await Sale.findOne({ stripePaymentIntentId: paymentIntent.id });
     if (existingSale) {
-      console.log(`ℹ️  Tentativa ${existingSale._id} já existe para PaymentIntent ${paymentIntent.id}`);
       return;
     }
 
@@ -140,10 +138,6 @@ export const handlePaymentIntentCreated = async (paymentIntent: Stripe.PaymentIn
       isUpsell: isUpsell,
       items,
     });
-
-    console.log(`🔔 Tentativa de compra ${sale._id} registrada (status: pending)`);
-    console.log(`   - Cliente: ${finalCustomerEmail}`);
-    console.log(`   - Valor: ${paymentIntent.amount / 100} ${(offer.currency || "BRL").toUpperCase()}`);
   } catch (error: any) {
     console.error(`❌ Erro ao registrar tentativa de compra: ${error.message}`);
     // Não relança o erro para não bloquear o webhook
@@ -268,12 +262,6 @@ export const handlePaymentIntentFailed = async (paymentIntent: Stripe.PaymentInt
     const failureReason = lastPaymentError?.code || paymentIntent.cancellation_reason || "unknown";
     const failureMessage = lastPaymentError?.message || "Pagamento recusado";
 
-    console.log(`❌ Pagamento FALHOU: ${paymentIntent.id}`);
-    console.log(`   - Cliente: ${finalCustomerEmail}`);
-    console.log(`   - Valor: ${paymentIntent.amount / 100} ${paymentIntent.currency.toUpperCase()}`);
-    console.log(`   - Motivo: ${failureReason}`);
-    console.log(`   - Mensagem: ${failureMessage}`);
-
     // 5. Idempotência (Evita duplicidade)
     const existingSale = await Sale.findOne({ stripePaymentIntentId: paymentIntent.id });
     if (existingSale) {
@@ -283,7 +271,6 @@ export const handlePaymentIntentFailed = async (paymentIntent: Stripe.PaymentInt
         existingSale.failureReason = failureReason;
         existingSale.failureMessage = failureMessage;
         await existingSale.save();
-        console.log(`✅ Venda ${existingSale._id} atualizada para status "failed".`);
       }
       return;
     }
@@ -308,8 +295,6 @@ export const handlePaymentIntentFailed = async (paymentIntent: Stripe.PaymentInt
       isUpsell: isUpsell,
       items,
     });
-
-    console.log(`✅ Tentativa de venda falhada ${sale._id} registrada no banco.`);
   } catch (error: any) {
     console.error(`❌ Erro ao processar pagamento falhado: ${error.message}`);
     // Não relança o erro para não fazer o Stripe retentar
@@ -430,7 +415,6 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
     if (sale) {
       // Se já existe com status succeeded, não processa novamente
       if (sale.status === "succeeded") {
-        console.log(`ℹ️  Venda ${sale._id} já está como succeeded, ignorando.`);
         return;
       }
 
@@ -443,8 +427,6 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
       sale.country = countryCode;
       sale.items = items;
       await sale.save();
-
-      console.log(`✅ Tentativa ${sale._id} atualizada para APROVADA.`);
     } else {
       // 5. Cria nova venda se não existir (fallback para compatibilidade)
       sale = await Sale.create({
@@ -465,8 +447,6 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
         isUpsell: isUpsell,
         items,
       });
-
-      console.log(`✅ Venda ${sale._id} criada com sucesso.`);
     }
 
     // =================================================================
@@ -501,9 +481,6 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
 
       if (pixels.length > 0) {
         const totalValue = paymentIntent.amount / 100; // Stripe usa centavos (JÁ INCLUI produto + order bumps)
-
-        console.log(`💰 Valor total da compra: ${totalValue} ${offer.currency?.toUpperCase()} (produto principal + ${items.length - 1} order bump(s))`);
-        console.log(`📦 Itens na compra:`, items.map(i => ({ name: i.name, price: i.priceInCents / 100, isOrderBump: i.isOrderBump })));
 
         // Dados do Metadata (vindos do frontend)
         const userAgent = metadata.userAgent || "";
@@ -567,9 +544,6 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
         const results = await Promise.allSettled(
           pixels.map((pixel, index) =>
             sendFacebookEvent(pixel.pixelId, pixel.accessToken, eventData)
-              .then(() => {
-                console.log(`✅ Purchase enviado com sucesso para pixel ${index + 1}/${pixels.length}: ${pixel.pixelId}`);
-              })
               .catch((err) => {
                 console.error(`❌ Erro ao enviar Purchase para pixel ${index + 1}/${pixels.length} (${pixel.pixelId}):`, err);
                 throw err; // Re-lança para que o Promise.allSettled capture como rejected
@@ -603,5 +577,40 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
     // Aqui relançamos o erro APENAS se for falha crítica de banco/stripe
     // Para que o Stripe tente enviar o webhook novamente.
     throw error;
+  }
+};
+
+/**
+ * Handler para quando um pagamento é REEMBOLSADO
+ * 1. Busca a venda pelo stripePaymentIntentId (obtido do charge.payment_intent)
+ * 2. Atualiza o status da venda para "refunded" no banco de dados
+ */
+export const handleChargeRefunded = async (charge: Stripe.Charge): Promise<void> => {
+  try {
+    const paymentIntentId = typeof charge.payment_intent === "string" 
+      ? charge.payment_intent 
+      : charge.payment_intent?.id;
+
+    if (!paymentIntentId) {
+      console.error("❌ [Refund] PaymentIntent ID não encontrado no charge.");
+      return;
+    }
+
+    // Busca a venda correspondente ao PaymentIntent
+    const sale = await Sale.findOne({ stripePaymentIntentId: paymentIntentId });
+
+    if (!sale) {
+      return;
+    }
+
+    if (sale.status === "refunded") {
+      return;
+    }
+
+    // Atualiza o status
+    sale.status = "refunded";
+    await sale.save();
+  } catch (error: any) {
+    console.error(`❌ [Refund] Erro ao processar reembolso: ${error.message}`);
   }
 };

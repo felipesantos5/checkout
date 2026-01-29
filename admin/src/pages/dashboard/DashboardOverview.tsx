@@ -30,9 +30,14 @@ interface DashboardData {
     totalOrders: number;
     checkoutsInitiated: number;
     checkoutApprovalRate: number;
-    paymentApprovalRate: number; // Taxa real de aprovação de pagamentos (aprovados / total de tentativas)
-    totalPaymentAttempts: number; // Total de tentativas (aprovadas + negadas)
-    totalFailedPayments: number; // Total de pagamentos negados
+    paymentApprovalRate: number;
+    totalPaymentAttempts: number;
+    totalFailedPayments: number;
+    revenueByGateway?: {
+      stripe: number;
+      paypal: number;
+      pagarme: number;
+    };
     totalRevenueChange?: number;
     extraRevenueChange?: number;
     totalOrdersChange?: number;
@@ -279,7 +284,24 @@ export function DashboardOverview() {
           title="Total em Vendas"
           value={formatCurrency(metrics?.kpis.totalRevenue || 0)}
           icon={DollarSign}
-          subtext={getPeriodLabel()}
+          subtext={
+            metrics?.kpis.revenueByGateway ? (
+              <div className="flex flex-col gap-0.5 mt-1">
+                <div className="flex justify-between gap-4 text-[10px] opacity-80">
+                  <span>Stripe:</span>
+                  <span>{formatCurrency(metrics.kpis.revenueByGateway.stripe)}</span>
+                </div>
+                <div className="flex justify-between gap-4 text-[10px] opacity-80">
+                  <span>PayPal:</span>
+                  <span>{formatCurrency(metrics.kpis.revenueByGateway.paypal)}</span>
+                </div>
+                <div className="flex justify-between gap-4 text-[10px] opacity-80">
+                  <span>PIX:</span>
+                  <span>{formatCurrency(metrics.kpis.revenueByGateway.pagarme)}</span>
+                </div>
+              </div>
+            ) : getPeriodLabel()
+          }
           chartData={metrics?.charts.revenue}
           color="#eab308"
           destaque={true}

@@ -79,6 +79,7 @@ export interface IOffer extends Document {
   orderBumps: IProductSubDocument[];
 
   checkoutStarted: number; // Contador de checkouts iniciados
+  archived: boolean; // Se a oferta está arquivada
 
   createdAt?: Date;
   updatedAt?: Date;
@@ -191,7 +192,7 @@ const offerSchema = new Schema<IOffer>(
     language: {
       type: String,
       required: true,
-      enum: ["pt", "en", "fr", "es"],
+      enum: ["pt", "en", "fr", "es", "de", "it"],
       default: "pt",
     },
     collectAddress: {
@@ -232,6 +233,11 @@ const offerSchema = new Schema<IOffer>(
     checkoutStarted: {
       type: Number,
       default: 0,
+    },
+    archived: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
   },
   { timestamps: true }

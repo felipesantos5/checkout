@@ -159,44 +159,42 @@ export const handleGetPaymentMetrics = async (req: Request, res: Response) => {
       }
     }
 
-    // Processar cada venda
-    await Promise.all(
-      sales.map(async (sale) => {
-        const revenueInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
-        const feesInBRL = await convertToBRL(sale.platformFeeInCents || 0, sale.currency || "BRL");
-        const { key } = formatKeyAndLabel(sale.createdAt);
+    // Processar cada venda sequencialmente para evitar race condition em +=
+    for (const sale of sales) {
+      const revenueInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+      const feesInBRL = await convertToBRL(sale.platformFeeInCents || 0, sale.currency || "BRL");
+      const { key } = formatKeyAndLabel(sale.createdAt);
 
-        if (sale.paymentMethod === "paypal") {
-          paypalMetrics.totalSales += 1;
-          paypalMetrics.totalRevenue += revenueInBRL;
-          paypalMetrics.totalFees += feesInBRL;
+      if (sale.paymentMethod === "paypal") {
+        paypalMetrics.totalSales += 1;
+        paypalMetrics.totalRevenue += revenueInBRL;
+        paypalMetrics.totalFees += feesInBRL;
 
-          // Adicionar ao gráfico
-          if (chartMap.has(key)) {
-            chartMap.get(key)!.paypal += revenueInBRL / 100; // Converter para reais
-          }
-        } else if (sale.paymentMethod === "pagarme") {
-          pagarmeMetrics.totalSales += 1;
-          pagarmeMetrics.totalRevenue += revenueInBRL;
-          pagarmeMetrics.totalFees += feesInBRL;
-
-          // Adicionar ao gráfico
-          if (chartMap.has(key)) {
-            chartMap.get(key)!.pagarme += revenueInBRL / 100; // Converter para reais
-          }
-        } else {
-          // Default: stripe
-          stripeMetrics.totalSales += 1;
-          stripeMetrics.totalRevenue += revenueInBRL;
-          stripeMetrics.totalFees += feesInBRL;
-
-          // Adicionar ao gráfico
-          if (chartMap.has(key)) {
-            chartMap.get(key)!.stripe += revenueInBRL / 100; // Converter para reais
-          }
+        // Adicionar ao gráfico
+        if (chartMap.has(key)) {
+          chartMap.get(key)!.paypal += revenueInBRL / 100; // Converter para reais
         }
-      })
-    );
+      } else if (sale.paymentMethod === "pagarme") {
+        pagarmeMetrics.totalSales += 1;
+        pagarmeMetrics.totalRevenue += revenueInBRL;
+        pagarmeMetrics.totalFees += feesInBRL;
+
+        // Adicionar ao gráfico
+        if (chartMap.has(key)) {
+          chartMap.get(key)!.pagarme += revenueInBRL / 100; // Converter para reais
+        }
+      } else {
+        // Default: stripe
+        stripeMetrics.totalSales += 1;
+        stripeMetrics.totalRevenue += revenueInBRL;
+        stripeMetrics.totalFees += feesInBRL;
+
+        // Adicionar ao gráfico
+        if (chartMap.has(key)) {
+          chartMap.get(key)!.stripe += revenueInBRL / 100; // Converter para reais
+        }
+      }
+    }
 
     // Converter mapa para array ordenado
     const sortedKeys = Array.from(chartMap.keys()).sort();

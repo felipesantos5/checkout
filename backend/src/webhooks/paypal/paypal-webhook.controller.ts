@@ -34,11 +34,6 @@ export const handlePayPalWebhook = async (req: Request, res: Response) => {
     const event = JSON.parse(rawBody);
     const eventType = event.event_type;
 
-    console.log(`📩 [PayPal Webhook] Evento recebido: ${eventType}`);
-    console.log(`   - ID: ${event.id}`);
-    console.log(`   - Resource ID: ${event.resource?.id}`);
-    console.log(`   - Semaphore: ${paypalWebhookSemaphore.available} disponíveis, ${paypalWebhookSemaphore.waiting} aguardando`);
-
     // 5. Roteia para o handler apropriado (com controle de concorrência)
     await paypalWebhookSemaphore.run(async () => {
       switch (eventType) {
@@ -56,11 +51,10 @@ export const handlePayPalWebhook = async (req: Request, res: Response) => {
 
         case "CHECKOUT.ORDER.APPROVED":
           // Ordem aprovada pelo cliente (não é pagamento ainda)
-          console.log(`ℹ️ [PayPal] Ordem aprovada, aguardando captura...`);
           break;
 
         default:
-          console.log(`ℹ️ [PayPal Webhook] Evento não tratado: ${eventType}`);
+          break;
       }
     });
 

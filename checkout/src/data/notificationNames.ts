@@ -1,7 +1,7 @@
 // src/data/notificationNames.ts
 // Lista de nomes populares por idioma e gênero para notificações automáticas
 
-export type Region = 'pt' | 'en' | 'es' | 'fr';
+export type Region = 'pt' | 'en' | 'es' | 'fr' | 'de' | 'it';
 export type Gender = 'male' | 'female';
 
 export const notificationNames: Record<Region, Record<Gender, string[]>> = {
@@ -67,6 +67,38 @@ export const notificationNames: Record<Region, Record<Gender, string[]>> = {
       'Aurélie', 'Céline', 'Stéphanie', 'Virginie', 'Caroline', 'Lucie', 'Anaïs', 'Marine', 'Mathilde', 'Margot',
       'Alice', 'Louise', 'Emma', 'Inès', 'Jade', 'Zoé', 'Lola', 'Clara', 'Juliette', 'Justine',
       'Élodie', 'Anne', 'Laetitia', 'Delphine', 'Audrey', 'Mélanie', 'Océane', 'Eva', 'Noémie', 'Lisa'
+    ]
+  },
+  de: {
+    male: [
+      'Michael', 'Thomas', 'Andreas', 'Peter', 'Wolfgang', 'Klaus', 'Christian', 'Stefan', 'Jürgen', 'Markus',
+      'Matthias', 'Frank', 'Daniel', 'Sebastian', 'Alexander', 'Martin', 'Tobias', 'Florian', 'Jan', 'Patrick',
+      'David', 'Maximilian', 'Felix', 'Tim', 'Jonas', 'Leon', 'Lukas', 'Paul', 'Ben', 'Noah',
+      'Philipp', 'Simon', 'Niklas', 'Marcel Marcel', 'Manuel', 'Dominik', 'Julian', 'Kevin', 'Dennis', 'Oliver',
+      'Fabian', 'Johannes', 'Christoph', 'Raphael', 'Moritz', 'Erik', 'Lennart', 'Jakob', 'Anton', 'Emil'
+    ],
+    female: [
+      'Maria', 'Anna', 'Lisa', 'Laura', 'Julia', 'Sarah', 'Sophie', 'Katharina', 'Lena', 'Marie',
+      'Stefanie', 'Melanie', 'Nicole', 'Sandra', 'Sabrina', 'Christina', 'Andrea', 'Petra', 'Martina', 'Claudia',
+      'Emma', 'Hannah', 'Mia', 'Lea', 'Charlotte', 'Emily', 'Johanna', 'Paula', 'Sophia', 'Emilia',
+      'Franziska', 'Michelle', 'Jennifer', 'Vanessa', 'Jasmin', 'Nadine', 'Annika', 'Carina', 'Diana', 'Eva',
+      'Isabel', 'Janina', 'Theresa', 'Victoria', 'Alina', 'Amelie', 'Elena', 'Nele', 'Frieda', 'Greta'
+    ]
+  },
+  it: {
+    male: [
+      'Giuseppe', 'Antonio', 'Marco', 'Giovanni', 'Francesco', 'Mario', 'Luigi', 'Luca', 'Andrea', 'Alessandro',
+      'Matteo', 'Roberto', 'Stefano', 'Paolo', 'Carlo', 'Vincenzo', 'Salvatore', 'Lorenzo', 'Davide', 'Riccardo',
+      'Simone', 'Federico', 'Pietro', 'Michele', 'Nicola', 'Tommaso', 'Gabriele', 'Daniele', 'Leonardo', 'Emanuele',
+      'Fabio', 'Angelo', 'Massimo', 'Alberto', 'Giorgio', 'Claudio', 'Filippo', 'Enrico', 'Giacomo', 'Sergio',
+      'Alessio', 'Christian', 'Domenico', 'Diego', 'Edoardo', 'Gianluca', 'Samuele', 'Valerio', 'Cristian', 'Mattia'
+    ],
+    female: [
+      'Maria', 'Anna', 'Giulia', 'Sara', 'Laura', 'Chiara', 'Francesca', 'Elena', 'Alessia', 'Martina',
+      'Sofia', 'Valentina', 'Giorgia', 'Federica', 'Silvia', 'Elisa', 'Lucia', 'Serena', 'Roberta', 'Claudia',
+      'Ilaria', 'Stefania', 'Monica', 'Beatrice', 'Alessandra', 'Veronica', 'Simona', 'Cristina', 'Elisabetta', 'Paola',
+      'Alice', 'Arianna', 'Giada', 'Camilla', 'Aurora', 'Greta', 'Vittoria', 'Emma', 'Matilde', 'Nicole',
+      'Marta', 'Carlotta', 'Rebecca', 'Viola', 'Ludovica', 'Ginevra', 'Bianca', 'Miriam', 'Isabella', 'Angelica'
     ]
   }
 };

@@ -63,8 +63,6 @@ export const handlePaymentCaptureCompleted = async (event: PayPalWebhookEvent): 
       .populate("offerId");
 
     if (pendingSale) {
-      console.log(`✅ [PayPal Webhook] Venda encontrada: ${pendingSale._id}`);
-
       // Buscar oferta para enviar webhook
       const offer = await Offer.findById(pendingSale.offerId);
 
@@ -81,7 +79,6 @@ export const handlePaymentCaptureCompleted = async (event: PayPalWebhookEvent): 
         ];
 
         // Enviar webhook para área de membros (Husky)
-        console.log(`📤 [PayPal] Enviando webhook de acesso para Husky...`);
         await sendAccessWebhook(offer as any, pendingSale, items, "");
 
         // Enviar evento Purchase para Facebook CAPI
@@ -90,11 +87,6 @@ export const handlePaymentCaptureCompleted = async (event: PayPalWebhookEvent): 
 
       return;
     }
-
-    // 3. Se não encontrou venda, pode ser que o webhook chegou antes do captureOrder
-    // Neste caso, logamos para investigação
-    console.warn(`⚠️ [PayPal Webhook] Nenhuma venda encontrada para capture ${captureId}`);
-    console.warn(`   - Isso pode indicar que o webhook chegou antes da captura ser processada`);
   } catch (error: any) {
     console.error(`❌ [PayPal] Erro ao processar PAYMENT.CAPTURE.COMPLETED:`, error.message);
     throw error;
@@ -108,7 +100,6 @@ export const handlePaymentCaptureCompleted = async (event: PayPalWebhookEvent): 
 export const handlePaymentCaptureDenied = async (event: PayPalWebhookEvent): Promise<void> => {
   try {
     const capture = event.resource;
-    console.log(`❌ [PayPal] Pagamento negado: ${capture.id}`);
 
     // Buscar e atualizar a venda se existir
     const sale = await Sale.findOne({
@@ -121,7 +112,6 @@ export const handlePaymentCaptureDenied = async (event: PayPalWebhookEvent): Pro
       sale.failureReason = "payment_denied";
       sale.failureMessage = "Pagamento PayPal negado";
       await sale.save();
-      console.log(`✅ [PayPal] Venda ${sale._id} marcada como falha`);
     }
   } catch (error: any) {
     console.error(`❌ [PayPal] Erro ao processar PAYMENT.CAPTURE.DENIED:`, error.message);
@@ -135,7 +125,6 @@ export const handlePaymentCaptureDenied = async (event: PayPalWebhookEvent): Pro
 export const handlePaymentCaptureRefunded = async (event: PayPalWebhookEvent): Promise<void> => {
   try {
     const capture = event.resource;
-    console.log(`💰 [PayPal] Pagamento reembolsado: ${capture.id}`);
 
     // Buscar a venda pelo ID do PayPal
     const sale = await Sale.findOne({
@@ -145,7 +134,6 @@ export const handlePaymentCaptureRefunded = async (event: PayPalWebhookEvent): P
     if (sale) {
       sale.status = "refunded";
       await sale.save();
-      console.log(`✅ [PayPal] Venda ${sale._id} marcada como reembolsada`);
     }
   } catch (error: any) {
     console.error(`❌ [PayPal] Erro ao processar PAYMENT.CAPTURE.REFUNDED:`, error.message);
@@ -170,7 +158,6 @@ const retrySendAccessWebhook = async (sale: any): Promise<void> => {
       },
     ];
 
-    console.log(`🔄 [PayPal] Reenviando webhook de acesso para venda ${sale._id}...`);
     await sendAccessWebhook(offer as any, sale, items, "");
   } catch (error: any) {
     console.error(`❌ [PayPal] Erro ao reenviar webhook:`, error.message);
@@ -179,6 +166,8 @@ const retrySendAccessWebhook = async (sale: any): Promise<void> => {
 
 /**
  * Envia evento Purchase para o Facebook CAPI
+ * NOTA: Sale do webhook pode não ter todos os dados (userAgent, fbc, fbp)
+ * pois esses dados são capturados no momento da compra (captureOrder)
  */
 const sendFacebookPurchaseEvent = async (offer: any, sale: any, items: any[]): Promise<void> => {
   try {
@@ -203,7 +192,21 @@ const sendFacebookPurchaseEvent = async (offer: any, sale: any, items: any[]): P
 
     const totalValue = sale.totalAmountInCents / 100;
 
-    const userData = createFacebookUserData(sale.ip || "", "", sale.customerEmail, "", sale.customerName);
+    // Webhook não tem acesso a userAgent, fbc, fbp (foram capturados no captureOrder)
+    // Mas enviamos o que temos disponível (IP, email, phone, name)
+    const userData = createFacebookUserData(
+      sale.ip || "",
+      sale.userAgent || "", // Pode não estar disponível
+      sale.customerEmail,
+      sale.customerPhone || "",
+      sale.customerName,
+      sale.fbc, // Pode não estar disponível
+      sale.fbp, // Pode não estar disponível
+      sale.addressCity,
+      sale.addressState,
+      sale.addressZipCode,
+      sale.addressCountry
+    );
 
     const eventData = {
       event_name: "Purchase" as const,
@@ -220,16 +223,22 @@ const sendFacebookPurchaseEvent = async (offer: any, sale: any, items: any[]): P
       },
     };
 
-    console.log(`🔵 [PayPal] Enviando Purchase para ${pixels.length} pixel(s) Facebook`);
+    console.log(`🔵 [PayPal Webhook] Enviando Purchase para ${pixels.length} pixel(s) Facebook | Valor: ${totalValue}`);
+    console.log(`   - User Data: email=${!!userData.em}, phone=${!!userData.ph}, fbc=${!!userData.fbc}, fbp=${!!userData.fbp}`);
 
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       pixels.map((pixel) =>
-        sendFacebookEvent(pixel.pixelId, pixel.accessToken, eventData).catch((err) =>
-          console.error(`❌ Erro Facebook pixel ${pixel.pixelId}:`, err)
-        )
+        sendFacebookEvent(pixel.pixelId, pixel.accessToken, eventData).catch((err) => {
+          console.error(`❌ Erro Facebook pixel ${pixel.pixelId}:`, err);
+          throw err;
+        })
       )
     );
+
+    const successful = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+    console.log(`📊 [PayPal Webhook] Facebook Purchase: ${successful} sucesso, ${failed} falhas`);
   } catch (error: any) {
-    console.error(`⚠️ [PayPal] Erro ao enviar evento Facebook:`, error.message);
+    console.error(`❌ [PayPal Webhook] Erro ao enviar evento Facebook:`, error.message);
   }
 };

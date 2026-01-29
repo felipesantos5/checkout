@@ -67,8 +67,6 @@ export const sendAccessWebhook = async (
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`❌ Erro no Webhook de Integração: ${response.status} - ${errorText}`);
-    } else {
-      console.log(`✅ Integração de Acesso enviada com sucesso!`);
     }
   } catch (error: any) {
     console.error(`❌ Falha ao enviar integração: ${error.message}`);

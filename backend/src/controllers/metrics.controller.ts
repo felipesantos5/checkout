@@ -560,27 +560,35 @@ export const handleGetDashboardOverview = async (req: Request, res: Response) =>
     // Calcular KPIs Totais
     let totalRevenueInBRL = 0;
     let extraRevenueInBRL = 0;
+    const revenueByGateway: Record<string, number> = {
+      stripe: 0,
+      paypal: 0,
+      pagarme: 0
+    };
     const totalSales = allSales.length;
 
-    await Promise.all(
-      allSales.map(async (sale) => {
-        const saleAmountInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
-        totalRevenueInBRL += saleAmountInBRL;
+    // Processamento sequencial para evitar race condition em +=
+    for (const sale of allSales) {
+      const saleAmountInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+      totalRevenueInBRL += saleAmountInBRL;
 
-        if (sale.isUpsell) {
-          extraRevenueInBRL += saleAmountInBRL;
-        } else {
-          if (sale.items && sale.items.length > 0) {
-            for (const item of sale.items) {
-              if (item.isOrderBump) {
-                const itemAmountInBRL = await convertToBRL(item.priceInCents, sale.currency || "BRL");
-                extraRevenueInBRL += itemAmountInBRL;
-              }
+      // Breakdown por gateway
+      const gateway = sale.gateway || sale.paymentMethod || "stripe";
+      revenueByGateway[gateway] = (revenueByGateway[gateway] || 0) + saleAmountInBRL;
+
+      if (sale.isUpsell) {
+        extraRevenueInBRL += saleAmountInBRL;
+      } else {
+        if (sale.items && sale.items.length > 0) {
+          for (const item of sale.items) {
+            if (item.isOrderBump) {
+              const itemAmountInBRL = await convertToBRL(item.priceInCents, sale.currency || "BRL");
+              extraRevenueInBRL += itemAmountInBRL;
             }
           }
         }
-      })
-    );
+      }
+    }
 
     const averageTicket = totalSales > 0 ? totalRevenueInBRL / totalSales : 0;
     const views = allMetrics.filter((m) => m.type === "view");
@@ -762,29 +770,27 @@ export const handleGetDashboardOverview = async (req: Request, res: Response) =>
         .lean(),
     ]);
 
-    // Calcular KPIs do período anterior
+    // Calcular KPIs do período anterior (Sequencial)
     let previousTotalRevenueInBRL = 0;
     let previousExtraRevenueInBRL = 0;
 
-    await Promise.all(
-      previousSales.map(async (sale) => {
-        const saleAmountInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
-        previousTotalRevenueInBRL += saleAmountInBRL;
+    for (const sale of previousSales) {
+      const saleAmountInBRL = await convertToBRL(sale.totalAmountInCents, sale.currency || "BRL");
+      previousTotalRevenueInBRL += saleAmountInBRL;
 
-        if (sale.isUpsell) {
-          previousExtraRevenueInBRL += saleAmountInBRL;
-        } else {
-          if (sale.items && sale.items.length > 0) {
-            for (const item of sale.items) {
-              if (item.isOrderBump) {
-                const itemAmountInBRL = await convertToBRL(item.priceInCents, sale.currency || "BRL");
-                previousExtraRevenueInBRL += itemAmountInBRL;
-              }
+      if (sale.isUpsell) {
+        previousExtraRevenueInBRL += saleAmountInBRL;
+      } else {
+        if (sale.items && sale.items.length > 0) {
+          for (const item of sale.items) {
+            if (item.isOrderBump) {
+              const itemAmountInBRL = await convertToBRL(item.priceInCents, sale.currency || "BRL");
+              previousExtraRevenueInBRL += itemAmountInBRL;
             }
           }
         }
-      })
-    );
+      }
+    }
 
     const previousTotalSales = previousSales.length;
     const previousAverageTicket = previousTotalSales > 0 ? previousTotalRevenueInBRL / previousTotalSales : 0;
@@ -821,6 +827,9 @@ export const handleGetDashboardOverview = async (req: Request, res: Response) =>
         paymentApprovalRate, // % de pagamentos aprovados do total de tentativas
         totalPaymentAttempts, // Total de tentativas (aprovadas + negadas)
         totalFailedPayments: totalFailedSales, // Total de pagamentos negados
+
+        // Breakdown por gateway
+        revenueByGateway,
 
         // Comparações com período anterior
         totalRevenueChange: calculateChangePercentage(totalRevenueInBRL, previousTotalRevenueInBRL),

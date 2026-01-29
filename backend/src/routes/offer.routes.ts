@@ -28,6 +28,12 @@ router.delete("/:id", protectRoute, offerController.handleDeleteOffer);
 // POST /api/offers/:id/duplicate (Duplica uma oferta)
 router.post("/:id/duplicate", protectRoute, offerController.handleDuplicateOffer);
 
+// PATCH /api/offers/:id/archive (Arquiva uma oferta)
+router.patch("/:id/archive", protectRoute, offerController.handleArchiveOffer);
+
+// PATCH /api/offers/:id/unarchive (Desarquiva uma oferta)
+router.patch("/:id/unarchive", protectRoute, offerController.handleUnarchiveOffer);
+
 // --- Rotas Públicas (Checkout) ---
 
 // GET /api/offers/slug/:slug

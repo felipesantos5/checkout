@@ -19,9 +19,19 @@ export interface ISale extends Document {
 
   customerName: string;
   customerEmail: string;
+  customerPhone?: string;
 
   ip?: string;
   country?: string;
+  userAgent?: string;
+
+  // Dados do Facebook para CAPI (Conversion API)
+  fbc?: string; // Cookie _fbc do Facebook
+  fbp?: string; // Cookie _fbp do Facebook
+  addressCity?: string;
+  addressState?: string;
+  addressZipCode?: string;
+  addressCountry?: string;
 
   totalAmountInCents: number;
   platformFeeInCents: number;
@@ -62,9 +72,19 @@ const saleSchema = new Schema<ISale>(
 
     customerName: { type: String, required: true },
     customerEmail: { type: String, required: true, index: true },
+    customerPhone: { type: String, default: "" },
 
     ip: { type: String, default: "" },
     country: { type: String, default: "BR" },
+    userAgent: { type: String, default: "" },
+
+    // Dados do Facebook para CAPI (Conversion API)
+    fbc: { type: String, default: "" },
+    fbp: { type: String, default: "" },
+    addressCity: { type: String, default: "" },
+    addressState: { type: String, default: "" },
+    addressZipCode: { type: String, default: "" },
+    addressCountry: { type: String, default: "" },
 
     isUpsell: { type: Boolean, default: false },
 
