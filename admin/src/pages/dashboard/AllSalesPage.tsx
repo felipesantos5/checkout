@@ -1,18 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { API_URL } from "@/config/BackendUrl";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Download, RefreshCw, Zap, ArrowUpCircle, ShoppingBag } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Download, RefreshCw, Zap, ArrowUpCircle, ShoppingBag, DollarSign, ShoppingCart, TrendingUp, Percent, X } from "lucide-react";
 import { formatCurrency } from "@/helper/formatCurrency";
 import { formatDate } from "@/helper/formatDate";
-import { getCountryFlag } from "@/helper/getCountryFlag";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CountryFlag } from "@/components/CountryFlag";
+import { Label } from "@/components/ui/label";
 
 interface Sale {
   _id: string;
@@ -73,7 +74,6 @@ const statusConfig = {
 
 // Helper para determinar o tipo de venda
 const getSaleTypeIcon = (sale: Sale) => {
-  // Upsell tem prioridade
   if (sale.isUpsell) {
     return (
       <Badge variant="outline" className="border-purple-200 text-purple-700 bg-purple-50">
@@ -82,7 +82,6 @@ const getSaleTypeIcon = (sale: Sale) => {
     );
   }
 
-  // Verificar se tem order bumps
   const hasBump = sale.items?.some((i) => i.isOrderBump);
   if (hasBump) {
     return (
@@ -92,7 +91,6 @@ const getSaleTypeIcon = (sale: Sale) => {
     );
   }
 
-  // Venda padrão
   return (
     <Badge variant="outline" className="text-muted-foreground">
       <ShoppingBag className="w-3 h-3 mr-1" /> Venda
@@ -110,15 +108,14 @@ export function AllSalesPage() {
   const [page, setPage] = useState(1);
   const [limit] = useState(50);
   const [searchEmail, setSearchEmail] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterOfferId, setFilterOfferId] = useState<string>("all");
-  const [filterCountry, setFilterCountry] = useState<string>("all");
-  const [filterPaymentMethod, setFilterPaymentMethod] = useState<string>("all");
-  const [filterWalletType, setFilterWalletType] = useState<string>("all");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["succeeded", "failed", "pending", "refunded"]);
+  const [selectedOffers, setSelectedOffers] = useState<string[]>([]);
+  const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<string[]>([]);
+  const [selectedWallets, setSelectedWallets] = useState<string[]>([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Buscar ofertas para o filtro
+  // Buscar ofertas
   useEffect(() => {
     const fetchOffers = async () => {
       try {
@@ -141,11 +138,22 @@ export function AllSalesPage() {
         limit: limit.toString(),
       });
 
-      if (filterStatus !== "all") params.append("status", filterStatus);
-      if (filterOfferId !== "all") params.append("offerId", filterOfferId);
-      if (filterCountry !== "all") params.append("country", filterCountry);
-      if (filterPaymentMethod !== "all") params.append("paymentMethod", filterPaymentMethod);
-      if (filterWalletType !== "all") params.append("walletType", filterWalletType);
+      if (selectedStatuses.length > 0 && selectedStatuses.length < 4) {
+        selectedStatuses.forEach(status => params.append("status", status));
+      }
+
+      if (selectedOffers.length > 0) {
+        selectedOffers.forEach(offerId => params.append("offerId", offerId));
+      }
+
+      if (selectedPaymentMethods.length > 0) {
+        selectedPaymentMethods.forEach(method => params.append("paymentMethod", method));
+      }
+
+      if (selectedWallets.length > 0) {
+        selectedWallets.forEach(wallet => params.append("walletType", wallet));
+      }
+
       if (searchEmail) params.append("email", searchEmail);
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
@@ -167,15 +175,23 @@ export function AllSalesPage() {
 
   useEffect(() => {
     fetchSales();
-  }, [page, filterStatus, filterOfferId, filterCountry, filterPaymentMethod, filterWalletType, startDate, endDate]);
+  }, [page, selectedStatuses, selectedOffers, selectedPaymentMethods, selectedWallets, startDate, endDate]);
 
-  // Buscar ao pressionar Enter no campo de email
-  const handleSearchKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      setPage(1);
-      fetchSales();
-    }
-  };
+  // Métricas calculadas
+  const metrics = useMemo(() => {
+    const succeededSales = sales.filter(s => s.status === "succeeded");
+    const totalRevenue = succeededSales.reduce((acc, sale) => acc + sale.totalAmountInCents, 0);
+    const totalSales = succeededSales.length;
+    const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+    const approvalRate = sales.length > 0 ? (succeededSales.length / sales.length) * 100 : 0;
+
+    return {
+      totalSales,
+      totalRevenue,
+      averageTicket,
+      approvalRate,
+    };
+  }, [sales]);
 
   // Exportar para CSV
   const handleExport = () => {
@@ -188,13 +204,9 @@ export function AllSalesPage() {
       const csvContent = [
         ["Data", "Cliente", "Email", "Oferta", "Tipo", "Status", "Valor", "Moeda", "País", "Método"].join(","),
         ...sales.map((sale) => {
-          // Determinar tipo de venda
           let tipo = "Venda";
-          if (sale.isUpsell) {
-            tipo = "Upsell";
-          } else if (sale.items?.some((i) => i.isOrderBump)) {
-            tipo = "+ Bump";
-          }
+          if (sale.isUpsell) tipo = "Upsell";
+          else if (sale.items?.some((i) => i.isOrderBump)) tipo = "+ Bump";
 
           return [
             new Date(sale.createdAt).toLocaleDateString(),
@@ -224,350 +236,402 @@ export function AllSalesPage() {
     }
   };
 
+  const clearAllFilters = () => {
+    setSearchEmail("");
+    setSelectedStatuses(["succeeded", "failed", "pending", "refunded"]);
+    setSelectedOffers([]);
+    setSelectedPaymentMethods([]);
+    setSelectedWallets([]);
+    setStartDate("");
+    setEndDate("");
+    setPage(1);
+  };
+
   const totalPages = total > 0 ? Math.ceil(total / limit) : 1;
 
-  // Lista de países únicos (você pode expandir isso)
-  const countries = ["BR", "US", "PT", "ES", "FR", "DE", "IT", "GB", "CA", "MX", "AR"];
-
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Todas as Vendas</h1>
-          <p className="text-muted-foreground">
-            {isLoading ? "Carregando..." : `${total} ${total === 1 ? "venda" : "vendas"} encontradas`}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => fetchSales()} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
-          <Button variant="outline" onClick={handleExport} disabled={sales.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
-        </div>
-      </div>
+    <div className="flex h-screen bg-background">
+      {/* Sidebar de Filtros */}
+      <aside className="w-80 border-r bg-card p-6 overflow-y-auto">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Filtros</h2>
+            <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+              <X className="h-4 w-4 mr-1" />
+              Limpar
+            </Button>
+          </div>
 
-      {/* Filtros */}
-      <Card className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {/* Busca por Email */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Email do Cliente</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          {/* Período */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Período</Label>
+            <div className="space-y-2">
               <Input
-                placeholder="Buscar por email..."
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                onKeyPress={handleSearchKeyPress}
-                className="pl-10"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                placeholder="Data inicial"
+              />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                placeholder="Data final"
               />
             </div>
           </div>
 
-          {/* Filtro de Status */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Status</label>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="succeeded">✓ Aprovadas</SelectItem>
-                <SelectItem value="failed">✕ Falhadas</SelectItem>
-                <SelectItem value="pending">⏱ Pendentes</SelectItem>
-                <SelectItem value="refunded">↩ Reembolsadas</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Filtro de Oferta */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Oferta</label>
-            <Select value={filterOfferId} onValueChange={setFilterOfferId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas as ofertas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as ofertas</SelectItem>
-                {offers && offers.length > 0 ? (
-                  offers.map((offer) => (
-                    <SelectItem key={offer._id} value={offer._id}>
-                      {offer.name}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="none" disabled>
-                    Nenhuma oferta encontrada
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Filtro de País */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">País</label>
-            <Select value={filterCountry} onValueChange={setFilterCountry}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os países" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os países</SelectItem>
-                {countries.map((country) => (
-                  <SelectItem key={country} value={country}>
-                    <span
-                      style={{
-                        fontFamily:
-                          '"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif',
-                      }}
-                    >
-                      {getCountryFlag(country)}
-                    </span>{" "}
-                    {country}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Filtro de Método de Pagamento */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Método de Pagamento</label>
-            <Select value={filterPaymentMethod} onValueChange={setFilterPaymentMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos os métodos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os métodos</SelectItem>
-                <SelectItem value="credit_card">💳 Cartão de Crédito</SelectItem>
-                <SelectItem value="paypal">PayPal</SelectItem>
-                <SelectItem value="pix">PIX</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Filtro de Wallet Type */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Wallet Digital</label>
-            <Select value={filterWalletType} onValueChange={setFilterWalletType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas as wallets" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as wallets</SelectItem>
-                <SelectItem value="apple_pay"> Apple Pay</SelectItem>
-                <SelectItem value="google_pay">🅖 Google Pay</SelectItem>
-                <SelectItem value="samsung_pay">Samsung Pay</SelectItem>
-                <SelectItem value="none">Apenas Cartão Normal</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Data Inicial */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Data Inicial</label>
-            <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </div>
-
-          {/* Data Final */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Data Final</label>
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          </div>
-
-          {/* Botão Limpar Filtros */}
-          <div className="space-y-2 flex items-end">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setSearchEmail("");
-                setFilterStatus("all");
-                setFilterOfferId("all");
-                setFilterCountry("all");
-                setFilterPaymentMethod("all");
-                setFilterWalletType("all");
-                setStartDate("");
-                setEndDate("");
-                setPage(1);
+          {/* Buscar por Email */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Email do Cliente</Label>
+            <Input
+              placeholder="Buscar por email..."
+              value={searchEmail}
+              onChange={(e) => setSearchEmail(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  setPage(1);
+                  fetchSales();
+                }
               }}
-            >
-              Limpar Filtros
-            </Button>
+            />
           </div>
+
+          {/* Status */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Status</Label>
+            <div className="space-y-2">
+              {Object.entries(statusConfig).map(([key, config]) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`status-${key}`}
+                    checked={selectedStatuses.includes(key)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedStatuses([...selectedStatuses, key]);
+                      } else {
+                        setSelectedStatuses(selectedStatuses.filter((s) => s !== key));
+                      }
+                      setPage(1);
+                    }}
+                  />
+                  <label htmlFor={`status-${key}`} className="text-sm cursor-pointer">
+                    {config.icon} {config.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Ofertas */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Ofertas</Label>
+            <div className="max-h-40 overflow-y-auto space-y-2 pr-2">
+              {offers.map((offer) => (
+                <div key={offer._id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`offer-${offer._id}`}
+                    checked={selectedOffers.includes(offer._id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedOffers([...selectedOffers, offer._id]);
+                      } else {
+                        setSelectedOffers(selectedOffers.filter((o) => o !== offer._id));
+                      }
+                      setPage(1);
+                    }}
+                  />
+                  <label htmlFor={`offer-${offer._id}`} className="text-sm cursor-pointer truncate">
+                    {offer.name}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Métodos de Pagamento */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Método de Pagamento</Label>
+            <div className="space-y-2">
+              {[
+                { key: "credit_card", label: "💳 Cartão de Crédito" },
+                { key: "paypal", label: "PayPal" },
+                { key: "pix", label: "PIX" },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`payment-${key}`}
+                    checked={selectedPaymentMethods.includes(key)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedPaymentMethods([...selectedPaymentMethods, key]);
+                      } else {
+                        setSelectedPaymentMethods(selectedPaymentMethods.filter((m) => m !== key));
+                      }
+                      setPage(1);
+                    }}
+                  />
+                  <label htmlFor={`payment-${key}`} className="text-sm cursor-pointer">
+                    {label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Wallets Digitais */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Wallets Digitais</Label>
+            <div className="space-y-2">
+              {[
+                { key: "apple_pay", label: " Apple Pay" },
+                { key: "google_pay", label: "🅖 Google Pay" },
+                { key: "samsung_pay", label: "Samsung Pay" },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`wallet-${key}`}
+                    checked={selectedWallets.includes(key)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedWallets([...selectedWallets, key]);
+                      } else {
+                        setSelectedWallets(selectedWallets.filter((w) => w !== key));
+                      }
+                      setPage(1);
+                    }}
+                  />
+                  <label htmlFor={`wallet-${key}`} className="text-sm cursor-pointer">
+                    {label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Botão Aplicar */}
+          <Button className="w-full bg-[#fdbf08] hover:bg-[#fdd049] text-black" onClick={() => fetchSales()}>
+            Aplicar Filtros
+          </Button>
         </div>
-      </Card>
+      </aside>
 
-      {/* Tabela */}
-      <Card className="overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="w-[120px]">Data</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Oferta</TableHead>
-              <TableHead className="w-[120px]">Tipo</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="w-[80px] text-center">País</TableHead>
-              <TableHead className="w-[120px]">Método</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-48 text-center">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ) : !sales || sales.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-48 text-center text-muted-foreground">
-                  Nenhuma venda encontrada com os filtros aplicados.
-                </TableCell>
-              </TableRow>
-            ) : (
-              sales.map((sale) => (
-                <TableRow key={sale._id} className="hover:bg-muted/50">
-                  {/* Data */}
-                  <TableCell>
-                    <div className="text-sm">{sale.createdAt ? formatDate(sale.createdAt) : "N/A"}</div>
-                  </TableCell>
+      {/* Conteúdo Principal */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          {/* Cabeçalho */}
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold">Todas as Vendas</h1>
+              <p className="text-muted-foreground">
+                {isLoading ? "Carregando..." : `${total} ${total === 1 ? "venda" : "vendas"} encontradas`}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => fetchSales()} disabled={isLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+              <Button variant="outline" onClick={handleExport} disabled={sales.length === 0}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
+            </div>
+          </div>
 
-                  {/* Cliente */}
-                  <TableCell>
-                    <div>
-                      <div className="font-medium text-sm">{sale.customerName}</div>
-                      <div className="text-xs text-muted-foreground">{sale.customerEmail}</div>
-                      {sale.customerPhone && <div className="text-xs text-muted-foreground">{sale.customerPhone}</div>}
-                    </div>
-                  </TableCell>
+          {/* Cards de Métricas */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-[#fdbf08]/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Vendas</CardTitle>
+                <ShoppingCart className="h-4 w-4 text-[#fdbf08]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{metrics.totalSales}</div>
+                <p className="text-xs text-muted-foreground">Vendas aprovadas</p>
+              </CardContent>
+            </Card>
 
-                  {/* Oferta */}
-                  <TableCell>
-                    {sale.offerId ? (
-                      <div>
-                        <div className="font-medium text-sm">{sale.offerId.name}</div>
-                        <div className="text-xs text-muted-foreground">{sale.offerId.slug}</div>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Oferta removida</span>
-                    )}
-                  </TableCell>
+            <Card className="border-[#fdbf08]/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+                <DollarSign className="h-4 w-4 text-[#fdbf08]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(metrics.totalRevenue)}</div>
+                <p className="text-xs text-muted-foreground">Receita total aprovada</p>
+              </CardContent>
+            </Card>
 
-                  {/* Tipo */}
-                  <TableCell>{getSaleTypeIcon(sale)}</TableCell>
+            <Card className="border-[#fdbf08]/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+                <TrendingUp className="h-4 w-4 text-[#fdbf08]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(metrics.averageTicket)}</div>
+                <p className="text-xs text-muted-foreground">Por venda aprovada</p>
+              </CardContent>
+            </Card>
 
-                  {/* Status */}
-                  <TableCell>
-                    {sale.status === "failed" && sale.failureMessage ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Badge variant="outline" className={statusConfig[sale.status]?.color || ""}>
-                              {statusConfig[sale.status]?.icon || ""} {statusConfig[sale.status]?.label || sale.status}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs bg-destructive text-destructive-foreground border-destructive">
-                            <p className="font-semibold">Motivo: {sale.failureReason}</p>
-                            <p className="text-xs mt-1">{sale.failureMessage}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
-                      <Badge variant="outline" className={statusConfig[sale.status]?.color || ""}>
-                        {statusConfig[sale.status]?.icon || ""} {statusConfig[sale.status]?.label || sale.status}
-                      </Badge>
-                    )}
-                  </TableCell>
+            <Card className="border-[#fdbf08]/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Taxa de Aprovação</CardTitle>
+                <Percent className="h-4 w-4 text-[#fdbf08]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{metrics.approvalRate.toFixed(1)}%</div>
+                <p className="text-xs text-muted-foreground">Vendas aprovadas / total</p>
+              </CardContent>
+            </Card>
+          </div>
 
-                  {/* Valor */}
-                  <TableCell className="text-right">
-                    <div className="font-semibold">
-                      {sale.totalAmountInCents && sale.currency
-                        ? formatCurrency(sale.totalAmountInCents, sale.currency)
-                        : "N/A"}
-                    </div>
-                  </TableCell>
-
-                  {/* País */}
-                  <TableCell className="text-center">
-                    <div
-                      className="text-2xl leading-none"
-                      style={{
-                        fontFamily:
-                          '"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif',
-                        fontSize: "2rem",
-                      }}
-                    >
-                      {getCountryFlag(sale.country || "BR")}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">{sale.country || "N/A"}</div>
-                  </TableCell>
-
-                  {/* Método */}
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      {/* Wallet Type (Apple Pay, Google Pay, etc) */}
-                      {sale.walletType === "apple_pay" && (
-                        <Badge variant="default" className="text-xs bg-black text-white hover:bg-black/90">
-                           Apple Pay
-                        </Badge>
-                      )}
-                      {sale.walletType === "google_pay" && (
-                        <Badge variant="default" className="text-xs bg-blue-600 text-white hover:bg-blue-700">
-                          🅖 Google Pay
-                        </Badge>
-                      )}
-                      {sale.walletType === "samsung_pay" && (
-                        <Badge variant="default" className="text-xs bg-blue-800 text-white hover:bg-blue-900">
-                          Samsung Pay
-                        </Badge>
-                      )}
-
-                      {/* Payment Method Fallback */}
-                      {!sale.walletType && (
-                        <Badge variant="secondary" className="text-xs">
-                          {sale.paymentMethod === "credit_card" && "💳 Cartão"}
-                          {sale.paymentMethod === "paypal" && "PayPal"}
-                          {sale.paymentMethod === "pix" && "PIX"}
-                          {sale.paymentMethodType === "card" && "💳 Cartão"}
-                          {!["credit_card", "paypal", "pix", "card"].includes(sale.paymentMethod) &&
-                           !["credit_card", "paypal", "pix", "card"].includes(sale.paymentMethodType || "") &&
-                           (sale.paymentMethodType || sale.paymentMethod)}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
+          {/* Tabela */}
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-[120px]">Data</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Oferta</TableHead>
+                  <TableHead className="w-[120px]">Tipo</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="w-[80px] text-center">País</TableHead>
+                  <TableHead className="w-[120px]">Método</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-48 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ) : !sales || sales.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-48 text-center text-muted-foreground">
+                      Nenhuma venda encontrada com os filtros aplicados.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sales.map((sale) => (
+                    <TableRow key={sale._id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <div className="text-sm">{sale.createdAt ? formatDate(sale.createdAt) : "N/A"}</div>
+                      </TableCell>
 
-      {/* Paginação */}
-      {!isLoading && sales && sales.length > 0 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Página {page} de {totalPages} ({total} {total === 1 ? "venda" : "vendas"})
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setPage(page - 1)} disabled={page === 1}>
-              Anterior
-            </Button>
-            <Button variant="outline" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
-              Próxima
-            </Button>
-          </div>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-sm">{sale.customerName}</div>
+                          <div className="text-xs text-muted-foreground">{sale.customerEmail}</div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        {sale.offerId ? (
+                          <div>
+                            <div className="font-medium text-sm">{sale.offerId.name}</div>
+                            <div className="text-xs text-muted-foreground">{sale.offerId.slug}</div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Oferta removida</span>
+                        )}
+                      </TableCell>
+
+                      <TableCell>{getSaleTypeIcon(sale)}</TableCell>
+
+                      <TableCell>
+                        {sale.status === "failed" && sale.failureMessage ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Badge variant="outline" className={statusConfig[sale.status]?.color || ""}>
+                                  {statusConfig[sale.status]?.icon || ""} {statusConfig[sale.status]?.label || sale.status}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs bg-destructive text-destructive-foreground border-destructive">
+                                <p className="font-semibold">Motivo: {sale.failureReason}</p>
+                                <p className="text-xs mt-1">{sale.failureMessage}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <Badge variant="outline" className={statusConfig[sale.status]?.color || ""}>
+                            {statusConfig[sale.status]?.icon || ""} {statusConfig[sale.status]?.label || sale.status}
+                          </Badge>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="font-semibold">
+                          {sale.totalAmountInCents && sale.currency ? formatCurrency(sale.totalAmountInCents, sale.currency) : "N/A"}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <CountryFlag countryCode={sale.country} />
+                          <span className="text-sm font-medium">{sale.country || "N/A"}</span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {sale.walletType === "apple_pay" && (
+                            <Badge variant="default" className="text-xs bg-black text-white hover:bg-black/90">
+                               Apple Pay
+                            </Badge>
+                          )}
+                          {sale.walletType === "google_pay" && (
+                            <Badge variant="default" className="text-xs bg-blue-600 text-white hover:bg-blue-700">
+                              🅖 Google Pay
+                            </Badge>
+                          )}
+                          {sale.walletType === "samsung_pay" && (
+                            <Badge variant="default" className="text-xs bg-blue-800 text-white hover:bg-blue-900">
+                              Samsung Pay
+                            </Badge>
+                          )}
+
+                          {!sale.walletType && (
+                            <Badge variant="secondary" className="text-xs">
+                              {sale.paymentMethod === "credit_card" && "💳 Cartão"}
+                              {sale.paymentMethod === "paypal" && "PayPal"}
+                              {sale.paymentMethod === "pix" && "PIX"}
+                              {sale.paymentMethodType === "card" && "💳 Cartão"}
+                              {!["credit_card", "paypal", "pix", "card"].includes(sale.paymentMethod) &&
+                                !["credit_card", "paypal", "pix", "card"].includes(sale.paymentMethodType || "") &&
+                                (sale.paymentMethodType || sale.paymentMethod)}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* Paginação */}
+          {!isLoading && sales && sales.length > 0 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Página {page} de {totalPages} ({total} {total === 1 ? "venda" : "vendas"})
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setPage(page - 1)} disabled={page === 1}>
+                  Anterior
+                </Button>
+                <Button variant="outline" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </main>
     </div>
   );
 }
