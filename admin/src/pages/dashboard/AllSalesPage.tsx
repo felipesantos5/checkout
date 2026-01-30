@@ -326,7 +326,7 @@ export function AllSalesPage() {
         size="icon"
         className={`fixed z-50 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg ${isSidebarOpen
           ? "top-20 left-[272px]" // 288px (w-72) - 16px = 272px
-          : "top-1/2 -translate-y-1/2 left-4"
+          : "top-1/2 -translate-y-1/2 left-[208px]"
           }`}
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
       >
