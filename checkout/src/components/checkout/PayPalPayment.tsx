@@ -18,7 +18,7 @@ interface PayPalPaymentProps {
     email: string;
     phone: string;
   };
-  onSuccess: (saleId: string, purchaseEventId: string) => void;
+  onSuccess: (saleId: string, purchaseEventId: string, redirectUrl?: string | null) => void;
   onError: (error: string) => void;
   onSwitchPaymentMethod?: () => void; // Callback opcional para trocar método de pagamento
 }
@@ -295,7 +295,8 @@ export const PayPalPayment: React.FC<PayPalPaymentProps> = ({
               const result = await response.json();
 
               if (result.success) {
-                onSuccess(result.saleId, purchaseEventId);
+                // Passa o redirectUrl do backend (que agora aponta para Thank You Page para PayPal)
+                onSuccess(result.saleId, purchaseEventId, result.upsellRedirectUrl);
               } else {
                 throw new Error(result.message || "Pagamento não aprovado.");
               }

@@ -45,6 +45,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
   const [paymentSucceeded, setPaymentSucceeded] = useState(false);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [saleId, setSaleId] = useState<string | null>(null); // Para PayPal
+  const [paypalRedirectUrl, setPaypalRedirectUrl] = useState<string | null>(null); // URL de redirecionamento do backend para PayPal
 
   // Estados para PIX
   const [pixData, setPixData] = useState<{
@@ -298,14 +299,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
   useEffect(() => {
     if (paymentSucceeded && (paymentIntentId || saleId)) {
       const timer = setTimeout(async () => {
-        // 1. PRIORIDADE: Upsell Habilitado
-        if (offerData.upsell?.enabled && offerData.upsell?.redirectUrl) {
-          // PayPal: Redireciona diretamente para a página de upsell (sem token, pois não suporta one-click)
-          if (saleId && !paymentIntentId) {
-            window.location.href = offerData.upsell.redirectUrl;
-            return;
-          }
+        // 1. PRIORIDADE: PayPal - Usa URL do backend (que agora redireciona para Thank You Page)
+        if (saleId && !paymentIntentId && paypalRedirectUrl) {
+          window.location.href = paypalRedirectUrl;
+          return;
+        }
 
+        // 2. PRIORIDADE: Upsell Habilitado (somente Stripe)
+        if (offerData.upsell?.enabled && offerData.upsell?.redirectUrl) {
           // Stripe: Gera token para one-click upsell
           if (paymentIntentId) {
             try {
@@ -333,14 +334,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
           }
         }
 
-        // 2. PRIORIDADE: Página de Obrigado Customizada do Cliente
+        // 3. PRIORIDADE: Página de Obrigado Customizada do Cliente
         // (Só executa se não houver upsell ou se o upsell falhar/estiver desabilitado)
         if (offerData.thankYouPageUrl) {
           window.location.href = offerData.thankYouPageUrl;
           return;
         }
 
-        // 3. PRIORIDADE: Página de Sucesso Padrão (Interna)
+        // 4. PRIORIDADE: Página de Sucesso Padrão (Interna)
         const params = new URLSearchParams();
         params.append("offerName", offerData.mainProduct.name);
         params.append("lang", offerData.language || "pt"); // Passa a linguagem
@@ -349,7 +350,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
 
       return () => clearTimeout(timer);
     }
-  }, [paymentSucceeded, paymentIntentId, saleId, offerData, navigate]);
+  }, [paymentSucceeded, paymentIntentId, saleId, paypalRedirectUrl, offerData, navigate]);
 
   const handleToggleBump = (bumpId: string) => {
     setSelectedBumps((prev) => {
@@ -647,7 +648,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
                   }}
                   paypalPurchaseEventId={`${checkoutSessionId}_paypal_purchase`}
                   paypalSelectedOrderBumps={selectedBumps}
-                  onPaypalSuccess={(paypalSaleId, purchaseEventId) => {
+                  onPaypalSuccess={(paypalSaleId, purchaseEventId, redirectUrl) => {
                     // Dispara evento Purchase do Facebook Pixel para PayPal
                     // Usa o mesmo event_id enviado ao backend CAPI para deduplicação
                     if (window.fbq) {
@@ -666,6 +667,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ offerData, checkoutS
                       );
                     }
                     setSaleId(paypalSaleId); // Armazena o saleId do PayPal
+                    setPaypalRedirectUrl(redirectUrl || null); // Armazena o URL de redirecionamento do backend
                     setPaymentSucceeded(true);
                   }}
                   onPaypalError={(msg) => setErrorMessage(msg)}
