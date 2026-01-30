@@ -76,6 +76,13 @@ export const generateUpsellToken = async (req: Request, res: Response) => {
 
     const token = uuidv4();
 
+    // Extrai informações do cliente do metadata para persistir no upsell
+    const metadata = paymentIntent.metadata || {};
+    const ip = metadata.ip || "";
+    const customerName = metadata.customerName || "";
+    const customerEmail = metadata.customerEmail || "";
+    const customerPhone = metadata.customerPhone || "";
+
     await UpsellSession.create({
       token,
       accountId: stripeAccountId,
@@ -83,6 +90,10 @@ export const generateUpsellToken = async (req: Request, res: Response) => {
       paymentMethodId: paymentIntent.payment_method as string,
       offerId: offer._id,
       paymentMethod: "stripe", // Stripe one-click upsell
+      ip, // Salva IP para manter localização correta
+      customerName,
+      customerEmail,
+      customerPhone,
     });
 
     // Constrói a URL de redirecionamento
@@ -174,6 +185,11 @@ export const handleOneClickUpsell = async (req: Request, res: Response) => {
           isUpsell: "true",
           originalOfferSlug: offer.slug,
           originalSessionToken: token,
+          // Passa informações do cliente da sessão para manter localização e dados corretos
+          ip: session.ip || "",
+          customerName: session.customerName || "",
+          customerEmail: session.customerEmail || "",
+          customerPhone: session.customerPhone || "",
         },
       },
       { stripeAccount: session.accountId }
