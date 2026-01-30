@@ -16,11 +16,6 @@ export const getUpsellScript = (req: Request, res: Response) => {
   // 2. Função Principal de Processamento
   async function handleUpsellAction(isBuy, btnElement) {
     const token = new URLSearchParams(window.location.search).get('token');
-    if (!token) {
-      console.error("❌ Token de upsell não encontrado na URL.");
-      alert('Erro: Link inválido (Token ausente).');
-      return;
-    }
 
     // Pega a URL de fallback do atributo data-fallback-url do botão
     const fallbackUrl = btnElement.getAttribute('data-fallback-url') || btnElement.dataset.fallbackUrl;

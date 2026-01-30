@@ -29,11 +29,14 @@ export const getSales = async (req: Request, res: Response) => {
 
     // 2. Filtro por Status
     if (status && status !== "all") {
-      query.status = status;
-    } else if (!status) {
-      // Default seguro: mostrar apenas vendas reais se nada for especificado
-      query.status = "succeeded";
+      // Se status for um array (múltiplos valores), usa $in
+      if (Array.isArray(status)) {
+        query.status = { $in: status };
+      } else {
+        query.status = status;
+      }
     }
+    // Removido o filtro padrão - mostra todos os status se não especificado
 
     // 3. Filtro por País
     if (country && country !== "all") {
@@ -74,31 +77,20 @@ export const getSales = async (req: Request, res: Response) => {
     }
 
     // Busca com paginação e ordenação por mais recente
-    const salesRaw = await Sale.find(query)
+    const sales = await Sale.find(query)
       .select("-updatedAt -__v") // Performance: remove campos inúteis
       .populate({
         path: "offerId",
         select: "name slug isActive",
-        match: { isActive: true }, // Filtra apenas ofertas ativas
+        // Removido filtro match: { isActive: true } para mostrar vendas de todas as ofertas
       })
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit))
       .lean(); // Converte para objeto JS puro para melhor performance
 
-    // Remove vendas onde offerId é null (ofertas inativas filtradas pelo match)
-    const sales = salesRaw.filter(sale => sale.offerId !== null);
-
-    // Recalcula o total considerando apenas ofertas ativas
-    const totalSalesWithActiveOffers = await Sale.find(query)
-      .populate({
-        path: "offerId",
-        select: "_id isActive",
-        match: { isActive: true },
-      })
-      .then(results => results.filter(sale => sale.offerId !== null).length);
-
-    const total = totalSalesWithActiveOffers;
+    // Conta o total de vendas (sem filtro de ofertas ativas)
+    const total = await Sale.countDocuments(query);
 
     return res.json({
       data: sales,
