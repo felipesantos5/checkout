@@ -10,14 +10,16 @@ import { getCountryFromIP } from "../../../helper/getCountryFromIP";
 
 /**
  * Helper: Extrai informações sobre o método de pagamento do Stripe
+ * Suporta tanto `latest_charge` (API recente) quanto `charges.data[0]` (retrocompatibilidade)
  */
 const extractPaymentMethodDetails = (paymentIntent: Stripe.PaymentIntent): {
   paymentMethodType: string;
   walletType: "apple_pay" | "google_pay" | "samsung_pay" | null;
 } => {
   try {
-    // Acessa os dados do charge para pegar detalhes do método de pagamento
-    const charge = (paymentIntent as any).charges?.data?.[0];
+    // Tenta latest_charge primeiro (API versions recentes), depois charges.data[0]
+    const piAny = paymentIntent as any;
+    const charge = piAny.latest_charge || piAny.charges?.data?.[0];
     if (!charge || !charge.payment_method_details) {
       console.log("⚠️ Charge ou payment_method_details não encontrado no PaymentIntent");
       return { paymentMethodType: "card", walletType: null };
@@ -61,18 +63,7 @@ export const handlePaymentIntentCreated = async (paymentIntent: Stripe.PaymentIn
       return;
     }
 
-    // Expande o PaymentIntent para ter acesso aos detalhes do charge (incluindo wallet)
-    try {
-      const expandedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id, {
-        expand: ['charges.data.payment_method_details'],
-      });
-      paymentIntent = expandedPaymentIntent;
-    } catch (expandError) {
-      // Se falhar a expansão, continua com os dados básicos
-      console.warn("⚠️ Não foi possível expandir PaymentIntent na criação:", expandError);
-    }
-
-    // 1. Busca Oferta e Dono
+    // 1. Busca Oferta e Dono PRIMEIRO (precisamos do stripeAccountId)
     const offer = await Offer.findOne({ slug: offerSlug }).populate("ownerId");
     if (!offer) {
       console.error(`❌ Oferta '${offerSlug}' não encontrada para PaymentIntent criado.`);
@@ -83,6 +74,19 @@ export const handlePaymentIntentCreated = async (paymentIntent: Stripe.PaymentIn
     if (!owner.stripeAccountId) {
       console.error("❌ Vendedor sem conta Stripe conectada.");
       return;
+    }
+
+    // Expande o PaymentIntent para ter acesso aos detalhes do charge (incluindo wallet)
+    try {
+      const expandedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id, {
+        expand: ['latest_charge.payment_method_details'],
+      }, {
+        stripeAccount: owner.stripeAccountId,
+      });
+      paymentIntent = expandedPaymentIntent;
+    } catch (expandError) {
+      // Se falhar a expansão, continua com os dados básicos
+      console.warn("⚠️ Não foi possível expandir PaymentIntent na criação:", expandError);
     }
 
     // 2. Idempotência (Evita duplicidade)
@@ -208,18 +212,7 @@ export const handlePaymentIntentFailed = async (paymentIntent: Stripe.PaymentInt
       return;
     }
 
-    // Expande o PaymentIntent para ter acesso aos detalhes do charge (incluindo wallet)
-    try {
-      const expandedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id, {
-        expand: ['charges.data.payment_method_details'],
-      });
-      paymentIntent = expandedPaymentIntent;
-    } catch (expandError) {
-      // Se falhar a expansão, continua com os dados básicos
-      console.warn("⚠️ Não foi possível expandir PaymentIntent falhado:", expandError);
-    }
-
-    // 1. Busca Oferta e Dono
+    // 1. Busca Oferta e Dono PRIMEIRO (precisamos do stripeAccountId)
     const offer = await Offer.findOne({ slug: offerSlug }).populate("ownerId");
     if (!offer) {
       console.error(`❌ Oferta '${offerSlug}' não encontrada para pagamento falhado.`);
@@ -230,6 +223,19 @@ export const handlePaymentIntentFailed = async (paymentIntent: Stripe.PaymentInt
     if (!owner.stripeAccountId) {
       console.error("❌ Vendedor sem conta Stripe conectada.");
       return;
+    }
+
+    // Expande o PaymentIntent para ter acesso aos detalhes do charge (incluindo wallet)
+    try {
+      const expandedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id, {
+        expand: ['latest_charge.payment_method_details'],
+      }, {
+        stripeAccount: owner.stripeAccountId,
+      });
+      paymentIntent = expandedPaymentIntent;
+    } catch (expandError) {
+      // Se falhar a expansão, continua com os dados básicos
+      console.warn("⚠️ Não foi possível expandir PaymentIntent falhado:", expandError);
     }
 
     // 2. Recupera Dados do Cliente
@@ -257,11 +263,12 @@ export const handlePaymentIntentFailed = async (paymentIntent: Stripe.PaymentInt
 
     const clientIp = metadata.ip || "";
 
-    // Detecta o país
+    // Detecta o país - suporta latest_charge e charges
     let countryCode = "BR";
-    const intentWithCharges = paymentIntent as any;
-    if (intentWithCharges.charges?.data?.[0]?.payment_method_details?.card?.country) {
-      countryCode = intentWithCharges.charges.data[0].payment_method_details.card.country;
+    const failedPiAny = paymentIntent as any;
+    const failedCharge = failedPiAny.latest_charge || failedPiAny.charges?.data?.[0];
+    if (failedCharge?.payment_method_details?.card?.country) {
+      countryCode = failedCharge.payment_method_details.card.country;
     } else if (clientIp) {
       countryCode = getCountryFromIP(clientIp);
     }
@@ -381,19 +388,7 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
       throw new Error("Metadata 'offerSlug' não encontrado.");
     }
 
-    // Expande o PaymentIntent para ter acesso aos detalhes do charge (incluindo wallet)
-    // O webhook básico do Stripe não inclui esses detalhes por padrão
-    console.log(`🔵 [Stripe] Expandindo PaymentIntent para obter detalhes do charge...`);
-    const expandedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id, {
-      expand: ['charges.data.payment_method_details'],
-    });
-
-    // Usa o PaymentIntent expandido daqui em diante
-    paymentIntent = expandedPaymentIntent;
-    console.log(`✅ [Stripe] PaymentIntent expandido com sucesso`);
-
-    // 1. Busca Oferta e Dono
-    // Precisamos dos campos do Facebook também
+    // 1. Busca Oferta e Dono PRIMEIRO (precisamos do stripeAccountId para expandir o PaymentIntent)
     console.log(`🔵 [Stripe] Buscando oferta: ${offerSlug}`);
     const offer = await Offer.findOne({ slug: offerSlug }).populate("ownerId");
     if (!offer) {
@@ -408,6 +403,21 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
       throw new Error("Vendedor sem conta Stripe conectada.");
     }
     console.log(`✅ [Stripe] Vendedor: ${owner.email} (Stripe Account: ${owner.stripeAccountId})`);
+
+    // Expande o PaymentIntent para ter acesso aos detalhes do charge (incluindo wallet)
+    // IMPORTANTE: Usa stripeAccount porque o PaymentIntent foi criado na conta conectada
+    try {
+      console.log(`🔵 [Stripe] Expandindo PaymentIntent para obter detalhes do charge...`);
+      const expandedPaymentIntent = await stripe.paymentIntents.retrieve(paymentIntent.id, {
+        expand: ['latest_charge.payment_method_details'],
+      }, {
+        stripeAccount: owner.stripeAccountId,
+      });
+      paymentIntent = expandedPaymentIntent;
+      console.log(`✅ [Stripe] PaymentIntent expandido com sucesso`);
+    } catch (expandError: any) {
+      console.warn(`⚠️ [Stripe] Não foi possível expandir PaymentIntent: ${expandError.message}. Continuando com dados básicos.`);
+    }
 
     // 2. Recupera Dados do Cliente (Fallback seguro para One-Click)
     let customerEmail: string | null | undefined = metadata.customerEmail;
@@ -436,11 +446,12 @@ export const handlePaymentIntentSucceeded = async (paymentIntent: Stripe.Payment
 
     // Detecta o país (prioridade: cartão > IP > fallback BR)
     let countryCode = "BR";
-    const intentWithCharges = paymentIntent as any;
+    const piAny = paymentIntent as any;
 
-    // 1. Tenta pegar do cartão (mais preciso)
-    if (intentWithCharges.charges?.data?.[0]?.payment_method_details?.card?.country) {
-      countryCode = intentWithCharges.charges.data[0].payment_method_details.card.country;
+    // 1. Tenta pegar do cartão (mais preciso) - suporta latest_charge e charges
+    const chargeForCountry = piAny.latest_charge || piAny.charges?.data?.[0];
+    if (chargeForCountry?.payment_method_details?.card?.country) {
+      countryCode = chargeForCountry.payment_method_details.card.country;
     } else if (clientIp) {
       // 2. Fallback: detecta pelo IP
       countryCode = getCountryFromIP(clientIp);
