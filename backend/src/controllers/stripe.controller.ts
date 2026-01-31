@@ -163,80 +163,118 @@ export const handleCreateAccountLink = async (req: Request, res: Response) => {
 };
 
 export const handleWebhook = async (req: Request, res: Response) => {
-  if (!webhookSecret) {
-    console.error("Segredo do Webhook do Stripe não está configurado.");
+  const sig = req.headers["stripe-signature"] as string;
+  const rawBody = req.body;
+
+  // Modo desenvolvimento: permite pular validação
+  const isDevelopment = process.env.NODE_ENV === "development" || process.env.SKIP_WEBHOOK_VALIDATION === "true";
+
+  if (!webhookSecret && !isDevelopment) {
+    console.error("❌ [Stripe Webhook] STRIPE_WEBHOOK_SECRET não está configurado no .env");
     return res.status(500).send("Webhook não configurado.");
   }
-
-  const sig = req.headers["stripe-signature"] as string;
-  const rawBody = req.body; // Graças ao 'express.raw()', este é o buffer
 
   let event: Stripe.Event;
 
   try {
-    // 1. Verifique a assinatura (SEGURANÇA MÁXIMA)
-    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    // Validação de assinatura (pula em desenvolvimento se necessário)
+    if (isDevelopment && !webhookSecret) {
+      console.warn("⚠️ [Stripe Webhook] MODO DEV: Pulando validação de assinatura (NÃO USE EM PRODUÇÃO!)");
+      event = req.body as Stripe.Event;
+    } else {
+      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret!);
+    }
+
+    console.log(`📥 [Stripe Webhook] Evento recebido: ${event.type} (ID: ${event.id})`);
   } catch (err: any) {
-    console.error(`Erro na verificação do Webhook: ${err.message}`);
+    console.error(`❌ [Stripe Webhook] Erro na verificação da assinatura: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // 2. Lide com os eventos que nos interessam
-  switch (event.type) {
-    // --- CASO 1: VENDA BEM-SUCEDIDA ---
-    case "payment_intent.succeeded": {
-      const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const metadata = paymentIntent.metadata || {};
+  // 2. Processa os eventos
+  try {
+    switch (event.type) {
+      // --- CASO 1: VENDA BEM-SUCEDIDA ---
+      case "payment_intent.succeeded": {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        const metadata = paymentIntent.metadata || {};
 
-      console.log(`✅ [Stripe] Pagamento aprovado: ${paymentIntent.id}`);
+        console.log(`✅ [Stripe] Pagamento aprovado: ${paymentIntent.id}`);
+        console.log(`📋 [Stripe] Metadata recebido:`, {
+          offerSlug: metadata.offerSlug,
+          customerEmail: metadata.customerEmail,
+          customerName: metadata.customerName,
+          isUpsell: metadata.isUpsell,
+        });
 
-      // Suporte a metadata NOVO (offerSlug) e ANTIGO (platformOfferId)
-      const offerSlug = metadata.offerSlug || metadata.originalOfferSlug;
-      const customerEmail = metadata.customerEmail;
-      const customerName = metadata.customerName;
-      const isUpsell = metadata.isUpsell === "true";
+        // Suporte a metadata NOVO (offerSlug) e ANTIGO (platformOfferId)
+        const offerSlug = metadata.offerSlug || metadata.originalOfferSlug;
+        const customerEmail = metadata.customerEmail;
+        const customerName = metadata.customerName;
+        const customerPhone = metadata.customerPhone;
+        const isUpsell = metadata.isUpsell === "true";
 
-      try {
         if (!offerSlug) {
           console.error(`❌ [Stripe] Metadata 'offerSlug' não encontrado no PaymentIntent ${paymentIntent.id}`);
-          return res.status(400).json({ error: "Metadata inválido" });
+          console.error(`❌ [Stripe] Metadata completo:`, metadata);
+          // Responde 200 para não retentar (erro de dados, não de processamento)
+          return res.status(200).json({ received: true, warning: "offerSlug não encontrado" });
         }
 
-        // Verifique se a venda já não foi salva (para evitar duplicatas)
+        // Idempotência: Verifica se a venda já existe
+        console.log(`🔍 [Stripe] Verificando se venda já existe: ${paymentIntent.id}`);
         const existingSale = await Sale.findOne({ stripePaymentIntentId: paymentIntent.id });
+
         if (existingSale) {
-          console.log(`⚠️ [Stripe] Venda ${paymentIntent.id} já existe com status ${existingSale.status}`);
+          console.log(`⚠️ [Stripe] Venda ${paymentIntent.id} já existe (ID: ${existingSale._id}, Status: ${existingSale.status})`);
 
           // Se estava pending, atualiza para succeeded
           if (existingSale.status === "pending") {
+            console.log(`🔄 [Stripe] Atualizando venda de pending para succeeded`);
             existingSale.status = "succeeded";
             existingSale.platformFeeInCents = paymentIntent.application_fee_amount || 0;
             await existingSale.save();
-            console.log(`✅ [Stripe] Venda ${existingSale._id} atualizada de pending para succeeded`);
+            console.log(`✅ [Stripe] Venda ${existingSale._id} atualizada para succeeded`);
+
+            // Dispara integrações se ainda não foram enviadas
+            if (!existingSale.integrationsFacebookSent || !existingSale.integrationsHuskySent || !existingSale.integrationsUtmfySent) {
+              console.log(`🔄 [Stripe] Disparando integrações faltantes...`);
+              const offer = await Offer.findById(existingSale.offerId).populate("ownerId");
+              if (offer) {
+                await dispatchIntegrations(offer, existingSale, existingSale.items || [], paymentIntent, metadata);
+              }
+            }
           }
 
-          break; // Sai do switch
+          // Responde 200 OK para o Stripe
+          return res.status(200).json({ received: true });
         }
 
-        // Busca a oferta pelo SLUG (não mais pelo ID)
+        // Busca a oferta pelo SLUG
+        console.log(`🔍 [Stripe] Buscando oferta: ${offerSlug}`);
         const offer = await Offer.findOne({ slug: offerSlug }).populate("ownerId");
+
         if (!offer) {
-          console.error(`❌ [Stripe] Oferta '${offerSlug}' não encontrada`);
-          return res.status(400).json({ error: `Oferta '${offerSlug}' não encontrada` });
+          console.error(`❌ [Stripe] Oferta '${offerSlug}' não encontrada no banco de dados`);
+          // Responde 200 para não retentar (erro de dados, não de processamento)
+          return res.status(200).json({ received: true, warning: "Oferta não encontrada" });
         }
 
-        console.log(`✅ [Stripe] Oferta encontrada: ${offer.name}`);
+        console.log(`✅ [Stripe] Oferta encontrada: ${offer.name} (ID: ${offer._id})`);
 
         // Monta lista de itens (produto principal + order bumps)
+        console.log(`📦 [Stripe] Montando lista de itens (isUpsell: ${isUpsell})`);
         const items = [];
 
         if (isUpsell) {
+          // Upsell: apenas um item
           items.push({
             name: offer.upsell?.name || metadata.productName || "Upsell",
             priceInCents: paymentIntent.amount,
             isOrderBump: false,
             customId: offer.upsell?.customId,
           });
+          console.log(`📦 [Stripe] Item upsell adicionado: ${items[0].name}`);
         } else {
           // Produto principal
           items.push({
@@ -246,9 +284,12 @@ export const handleWebhook = async (req: Request, res: Response) => {
             isOrderBump: false,
             customId: (offer.mainProduct as any).customId,
           });
+          console.log(`📦 [Stripe] Produto principal adicionado: ${offer.mainProduct.name}`);
 
           // Order Bumps selecionados
           const selectedOrderBumps = metadata.selectedOrderBumps ? JSON.parse(metadata.selectedOrderBumps) : [];
+          console.log(`📦 [Stripe] Order bumps selecionados: ${selectedOrderBumps.length}`);
+
           for (const bumpId of selectedOrderBumps) {
             const bump = offer.orderBumps.find((b: any) => b?._id?.toString() === bumpId);
             if (bump) {
@@ -259,11 +300,15 @@ export const handleWebhook = async (req: Request, res: Response) => {
                 isOrderBump: true,
                 customId: (bump as any).customId,
               });
+              console.log(`📦 [Stripe] Order bump adicionado: ${bump.name}`);
             }
           }
         }
 
-        // Crie a venda no banco de dados
+        console.log(`📦 [Stripe] Total de itens: ${items.length}`);
+
+        // Cria a venda no banco de dados
+        console.log(`💾 [Stripe] Criando venda no banco de dados...`);
         const newSale = new Sale({
           ownerId: offer.ownerId,
           offerId: offer._id,
@@ -271,19 +316,19 @@ export const handleWebhook = async (req: Request, res: Response) => {
           stripePaymentIntentId: paymentIntent.id,
           customerName: customerName || "Cliente Não Identificado",
           customerEmail: customerEmail || "email@nao.informado",
-          customerPhone: metadata.customerPhone || "",
+          customerPhone: customerPhone || "",
           ip: metadata.ip || "",
           country: metadata.country || "BR",
           userAgent: metadata.userAgent || "",
-          fbc: metadata.fbc,
-          fbp: metadata.fbp,
-          addressCity: metadata.addressCity,
-          addressState: metadata.addressState,
-          addressZipCode: metadata.addressZipCode,
-          addressCountry: metadata.addressCountry,
+          fbc: metadata.fbc || "",
+          fbp: metadata.fbp || "",
+          addressCity: metadata.addressCity || "",
+          addressState: metadata.addressState || "",
+          addressZipCode: metadata.addressZipCode || "",
+          addressCountry: metadata.addressCountry || "",
           totalAmountInCents: paymentIntent.amount,
           platformFeeInCents: paymentIntent.application_fee_amount || 0,
-          currency: offer.currency || "brl",
+          currency: paymentIntent.currency || offer.currency || "brl",
           status: "succeeded",
           paymentMethod: "stripe",
           gateway: "stripe",
@@ -292,41 +337,51 @@ export const handleWebhook = async (req: Request, res: Response) => {
         });
 
         await newSale.save();
-        console.log(`✅ [Stripe] Venda criada: ${newSale._id}`);
+        console.log(`✅ [Stripe] Venda criada com sucesso: ${newSale._id}`);
 
-        // IMPORTANTE: Dispara integrações (Facebook, Husky, UTMfy)
+        // Dispara integrações (Facebook, Husky, UTMfy)
+        console.log(`🚀 [Stripe] Iniciando disparos de integrações...`);
         await dispatchIntegrations(offer, newSale, items, paymentIntent, metadata);
-      } catch (dbError: any) {
-        console.error("❌ [Stripe] Falha ao salvar venda do webhook:", dbError);
-        console.error("❌ [Stripe] Stack:", dbError.stack);
-        // Retorne 500 para o Stripe tentar de novo
-        return res.status(500).json({ error: "Falha no banco de dados." });
+
+        console.log(`✅ [Stripe] Processamento do webhook concluído com sucesso`);
+        break;
       }
-      break;
-    }
 
-    // --- CASO 2: CANCELAMENTO (REEMBOLSO) ---
-    case "charge.refunded": {
-      const charge = event.data.object as Stripe.Charge;
-      const paymentIntentId = charge.payment_intent as string;
+      // --- CASO 2: CANCELAMENTO (REEMBOLSO) ---
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        const paymentIntentId = charge.payment_intent as string;
 
-      try {
+        console.log(`💸 [Stripe] Processando reembolso: ${charge.id}`);
+
         // Encontre a venda original e atualize seu status
-        await Sale.findOneAndUpdate({ stripePaymentIntentId: paymentIntentId }, { status: "refunded" });
-      } catch (dbError) {
-        console.error('Falha ao atualizar venda para "refunded":', dbError);
-        return res.status(500).json({ error: "Falha no banco de dados." });
+        const sale = await Sale.findOne({ stripePaymentIntentId: paymentIntentId });
+        if (sale) {
+          sale.status = "refunded";
+          await sale.save();
+          console.log(`✅ [Stripe] Venda ${sale._id} marcada como reembolsada`);
+        } else {
+          console.warn(`⚠️ [Stripe] Venda não encontrada para reembolso: ${paymentIntentId}`);
+        }
+        break;
       }
-      break;
+
+      default:
+        console.log(`ℹ️ [Stripe] Evento não tratado: ${event.type}`);
     }
 
-    default:
-      console.log(`Webhook: Evento não tratado ${event.type}`);
-  }
+    // Responde 200 OK para o Stripe
+    res.status(200).json({ received: true });
+  } catch (error: any) {
+    console.error(`❌ [Stripe] ERRO CRÍTICO ao processar webhook ${event.type}:`, error);
+    console.error(`❌ [Stripe] Mensagem:`, error.message);
+    console.error(`❌ [Stripe] Stack:`, error.stack);
 
-  // 3. Responda 200 OK para o Stripe
-  res.status(200).json({ received: true });
+    // Retorna 500 para o Stripe retentar
+    return res.status(500).json({ error: "Falha no processamento do webhook" });
+  }
 };
+
 
 export const handleGetBalance = async (req: Request, res: Response) => {
   try {
