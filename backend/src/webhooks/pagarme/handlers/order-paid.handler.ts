@@ -1,7 +1,9 @@
 // src/webhooks/pagarme/handlers/order-paid.handler.ts
 import Sale from "../../../models/sale.model";
 import Offer from "../../../models/offer.model";
-import axios from "axios";
+import { sendAccessWebhook } from "../../../services/integration.service";
+import { createFacebookUserData, sendFacebookEvent } from "../../../services/facebook.service";
+import { processUtmfyIntegrationForPayPal } from "../../../services/utmfy.service";
 
 /**
  * Handler para o evento order.paid da Pagar.me
@@ -29,19 +31,33 @@ export const handleOrderPaid = async (eventData: any) => {
 
     // Atualiza o status da venda para succeeded
     sale.status = "succeeded";
+    sale.integrationsLastAttempt = new Date();
     await sale.save();
 
     console.log(`[Pagar.me Webhook] Venda atualizada para succeeded: saleId=${sale._id}`);
 
     // Busca a oferta para obter configurações de integração
-    const offer = await Offer.findById(sale.offerId);
+    const offer = await Offer.findById(sale.offerId).populate("ownerId");
     if (!offer) {
       console.warn(`[Pagar.me Webhook] Oferta não encontrada: offerId=${sale.offerId}`);
       return;
     }
 
-    // Dispara webhooks de integração (UTMfy, Membership, etc.)
-    await triggerIntegrationWebhooks(sale, offer);
+    // Montar items para os webhooks
+    const items =
+      sale.items ||
+      [
+        {
+          _id: (offer.mainProduct as any)._id?.toString(),
+          name: offer.mainProduct.name,
+          priceInCents: offer.mainProduct.priceInCents,
+          isOrderBump: false,
+          customId: (offer.mainProduct as any).customId,
+        },
+      ];
+
+    // Dispara TODAS as integrações (Facebook, Husky, UTMfy)
+    await dispatchAllIntegrations(sale, offer, items);
 
     console.log(`[Pagar.me Webhook] Processamento concluído para orderId=${orderId}`);
   } catch (error: any) {
@@ -51,101 +67,129 @@ export const handleOrderPaid = async (eventData: any) => {
 };
 
 /**
- * Dispara os webhooks de integração configurados na oferta
+ * Dispara TODAS as integrações (Facebook, Husky, UTMfy) de forma padronizada
  */
-const triggerIntegrationWebhooks = async (sale: any, offer: any) => {
-  const webhookPromises: Promise<void>[] = [];
+const dispatchAllIntegrations = async (sale: any, offer: any, items: any[]) => {
+  // A: Webhook de Área de Membros (Husky/MemberKit)
+  try {
+    await sendAccessWebhook(offer as any, sale, items, sale.customerPhone || "");
+    sale.integrationsHuskySent = true;
+    console.log(`✅ [Pagar.me] Webhook Husky enviado com sucesso`);
+  } catch (error: any) {
+    console.error(`❌ [Pagar.me] Erro ao enviar webhook Husky:`, error.message);
+    sale.integrationsHuskySent = false;
+  }
 
-  // UTMfy Webhooks
-  if (offer.utmfyWebhookUrls && offer.utmfyWebhookUrls.length > 0) {
-    for (const webhookUrl of offer.utmfyWebhookUrls) {
-      if (webhookUrl && webhookUrl.trim() !== "") {
-        webhookPromises.push(sendUtmfyWebhook(webhookUrl, sale, offer));
+  // B: Facebook CAPI (Purchase Event)
+  try {
+    await sendFacebookPurchaseForPagarme(offer, sale, items);
+    sale.integrationsFacebookSent = true;
+    console.log(`✅ [Pagar.me] Evento Facebook enviado com sucesso`);
+  } catch (error: any) {
+    console.error(`❌ [Pagar.me] Erro ao enviar evento Facebook:`, error.message);
+    sale.integrationsFacebookSent = false;
+  }
+
+  // C: Webhook de Rastreamento (UTMfy)
+  try {
+    await processUtmfyIntegrationForPayPal(
+      offer as any,
+      sale,
+      items,
+      sale.pagarme_order_id, // Pagar.me Order ID
+      {
+        email: sale.customerEmail,
+        name: sale.customerName,
+        phone: sale.customerPhone,
+      },
+      {
+        ip: sale.ip,
+        userAgent: sale.userAgent,
+        utm_source: (sale as any).utm_source,
+        utm_medium: (sale as any).utm_medium,
+        utm_campaign: (sale as any).utm_campaign,
+        utm_term: (sale as any).utm_term,
+        utm_content: (sale as any).utm_content,
       }
+    );
+    sale.integrationsUtmfySent = true;
+    console.log(`✅ [Pagar.me] Webhook UTMfy enviado com sucesso`);
+  } catch (error: any) {
+    console.error(`❌ [Pagar.me] Erro ao enviar webhook UTMfy:`, error.message);
+    sale.integrationsUtmfySent = false;
+  }
+
+  // Salva as flags de integração
+  await sale.save();
+  console.log(`📊 [Pagar.me] Status das integrações: Husky=${sale.integrationsHuskySent}, Facebook=${sale.integrationsFacebookSent}, UTMfy=${sale.integrationsUtmfySent}`);
+};
+
+/**
+ * Envia evento Purchase para o Facebook CAPI após pagamento Pagar.me
+ */
+const sendFacebookPurchaseForPagarme = async (offer: any, sale: any, items: any[]): Promise<void> => {
+  // Coletar todos os pixels
+  const pixels: Array<{ pixelId: string; accessToken: string }> = [];
+
+  if (offer.facebookPixels && offer.facebookPixels.length > 0) {
+    pixels.push(...offer.facebookPixels);
+  }
+
+  if (offer.facebookPixelId && offer.facebookAccessToken) {
+    const alreadyExists = pixels.some((p) => p.pixelId === offer.facebookPixelId);
+    if (!alreadyExists) {
+      pixels.push({
+        pixelId: offer.facebookPixelId,
+        accessToken: offer.facebookAccessToken,
+      });
     }
   }
 
-  // Webhook de UTMfy legado (retrocompatibilidade)
-  if (offer.utmfyWebhookUrl && offer.utmfyWebhookUrl.trim() !== "") {
-    webhookPromises.push(sendUtmfyWebhook(offer.utmfyWebhookUrl, sale, offer));
-  }
+  if (pixels.length === 0) return;
 
-  // Membership Webhook
-  if (offer.membershipWebhook?.enabled && offer.membershipWebhook?.url) {
-    webhookPromises.push(sendMembershipWebhook(offer.membershipWebhook, sale, offer));
-  }
+  const totalValue = sale.totalAmountInCents / 100;
 
-  // Aguarda todos os webhooks serem enviados
-  await Promise.allSettled(webhookPromises);
-};
+  const userData = createFacebookUserData(
+    sale.ip || "",
+    sale.userAgent || "",
+    sale.customerEmail,
+    sale.customerPhone || "",
+    sale.customerName,
+    sale.fbc,
+    sale.fbp,
+    sale.addressCity,
+    sale.addressState,
+    sale.addressZipCode,
+    sale.addressCountry
+  );
 
-/**
- * Envia webhook para UTMfy
- */
-const sendUtmfyWebhook = async (webhookUrl: string, sale: any, offer: any) => {
-  try {
-    const payload = {
-      event: "sale.succeeded",
-      gateway: "pagarme",
-      sale_id: sale._id.toString(),
-      order_id: sale.pagarme_order_id,
-      customer_name: sale.customerName,
-      customer_email: sale.customerEmail,
-      amount: sale.totalAmountInCents,
-      currency: sale.currency,
-      offer_slug: offer.slug,
-      offer_name: offer.name,
-      items: sale.items,
-      created_at: sale.createdAt,
-    };
+  const eventData = {
+    event_name: "Purchase" as const,
+    event_time: Math.floor(new Date(sale.createdAt).getTime() / 1000),
+    event_id: `pagarme_purchase_${sale._id}`,
+    action_source: "website" as const,
+    user_data: userData,
+    custom_data: {
+      currency: (sale.currency || "BRL").toUpperCase(),
+      value: totalValue,
+      order_id: String(sale._id),
+      content_ids: items.map((i) => i._id || i.customId || "unknown"),
+      content_type: "product",
+    },
+  };
 
-    console.log(`[Pagar.me Webhook] Enviando webhook UTMfy: ${webhookUrl}`);
+  console.log(`🔵 [Pagar.me] Enviando Purchase para ${pixels.length} pixel(s) Facebook | Valor: ${totalValue}`);
 
-    await axios.post(webhookUrl, payload, {
-      timeout: 10000,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+  const results = await Promise.allSettled(
+    pixels.map((pixel) =>
+      sendFacebookEvent(pixel.pixelId, pixel.accessToken, eventData).catch((err) => {
+        console.error(`❌ Erro Facebook pixel ${pixel.pixelId}:`, err);
+        throw err;
+      })
+    )
+  );
 
-    console.log(`[Pagar.me Webhook] Webhook UTMfy enviado com sucesso`);
-  } catch (error: any) {
-    console.error(`[Pagar.me Webhook] Erro ao enviar webhook UTMfy:`, error.message);
-    // Não re-throw para não bloquear outros webhooks
-  }
-};
-
-/**
- * Envia webhook para sistema de membership
- */
-const sendMembershipWebhook = async (membershipConfig: any, sale: any, offer: any) => {
-  try {
-    const payload = {
-      event: "member.created",
-      gateway: "pagarme",
-      sale_id: sale._id.toString(),
-      order_id: sale.pagarme_order_id,
-      customer_name: sale.customerName,
-      customer_email: sale.customerEmail,
-      offer_slug: offer.slug,
-      offer_name: offer.name,
-      custom_id: offer.customId || "",
-      created_at: sale.createdAt,
-    };
-
-    console.log(`[Pagar.me Webhook] Enviando webhook Membership: ${membershipConfig.url}`);
-
-    await axios.post(membershipConfig.url, payload, {
-      timeout: 10000,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${membershipConfig.authToken}`,
-      },
-    });
-
-    console.log(`[Pagar.me Webhook] Webhook Membership enviado com sucesso`);
-  } catch (error: any) {
-    console.error(`[Pagar.me Webhook] Erro ao enviar webhook Membership:`, error.message);
-    // Não re-throw para não bloquear outros webhooks
-  }
+  const successful = results.filter((r) => r.status === "fulfilled").length;
+  const failed = results.filter((r) => r.status === "rejected").length;
+  console.log(`📊 [Pagar.me] Facebook Purchase: ${successful} sucesso, ${failed} falhas de ${pixels.length} pixels`);
 };

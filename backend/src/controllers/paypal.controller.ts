@@ -193,19 +193,27 @@ export const captureOrder = async (req: Request, res: Response) => {
       // INTEGRAÇÕES EXTERNAS
       // =================================================================
 
+      // Marca tentativa de integração
+      newSale.integrationsLastAttempt = new Date();
+
       // A: Webhook de Área de Membros (Husky/MemberKit)
       try {
         await sendAccessWebhook(offer as any, newSale, items, customerData?.phone || "");
+        newSale.integrationsHuskySent = true;
+        console.log(`✅ [PayPal] Webhook Husky enviado com sucesso`);
       } catch (webhookError: any) {
         console.error(`⚠️ [PayPal] Erro ao enviar webhook Husky:`, webhookError.message);
-        // Não falha a transação por causa do webhook
+        newSale.integrationsHuskySent = false;
       }
 
       // B: Facebook CAPI (Purchase Event)
       try {
         await sendFacebookPurchaseForPayPal(offer, newSale, items, clientIp, customerData, purchaseEventId);
+        newSale.integrationsFacebookSent = true;
+        console.log(`✅ [PayPal] Evento Facebook enviado com sucesso`);
       } catch (fbError: any) {
         console.error(`⚠️ [PayPal] Erro ao enviar evento Facebook:`, fbError.message);
+        newSale.integrationsFacebookSent = false;
       }
 
       // C: Webhook de Rastreamento (UTMfy)
@@ -231,10 +239,16 @@ export const captureOrder = async (req: Request, res: Response) => {
             userAgent: customerData?.userAgent,
           }
         );
+        newSale.integrationsUtmfySent = true;
+        console.log(`✅ [PayPal] Webhook UTMfy enviado com sucesso`);
       } catch (utmfyError: any) {
         console.error(`⚠️ [PayPal] Erro ao enviar webhook UTMfy:`, utmfyError.message);
-        // Não falha a transação por causa do webhook
+        newSale.integrationsUtmfySent = false;
       }
+
+      // Salva as flags de integração
+      await newSale.save();
+      console.log(`📊 [PayPal] Status das integrações: Husky=${newSale.integrationsHuskySent}, Facebook=${newSale.integrationsFacebookSent}, UTMfy=${newSale.integrationsUtmfySent}`);
 
       // D: Verificar se tem upsell habilitado e vault disponível
       let upsellToken: string | null = null;

@@ -46,11 +46,18 @@ export interface ISale extends Document {
   // Campos específicos do Pagar.me
   pagarme_order_id?: string; // ID do pedido na Pagar.me
   pagarme_transaction_id?: string; // ID da transação PIX na Pagar.me
-  
+
   failureReason?: string; // Motivo da falha (código de erro do Stripe)
   failureMessage?: string; // Mensagem de erro legível
   isUpsell: boolean;
   items: ISaleItem[]; // O que foi comprado
+
+  // Tracking de integrações externas (para debugging e reprocessamento)
+  integrationsFacebookSent?: boolean; // Se o evento foi enviado para Facebook CAPI
+  integrationsHuskySent?: boolean; // Se o webhook foi enviado para Husky/área de membros
+  integrationsUtmfySent?: boolean; // Se o webhook foi enviado para UTMfy
+  integrationsLastAttempt?: Date; // Última tentativa de envio das integrações
+
   createdAt: Date;
 }
 
@@ -137,6 +144,12 @@ const saleSchema = new Schema<ISale>(
 
     failureReason: { type: String, default: "" },
     failureMessage: { type: String, default: "" },
+
+    // Tracking de integrações externas
+    integrationsFacebookSent: { type: Boolean, default: false },
+    integrationsHuskySent: { type: Boolean, default: false },
+    integrationsUtmfySent: { type: Boolean, default: false },
+    integrationsLastAttempt: { type: Date, default: null },
 
     items: [saleItemSchema],
   },

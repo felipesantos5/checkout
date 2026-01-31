@@ -45,9 +45,10 @@ export const handlePaymentCaptureCompleted = async (event: PayPalWebhookEvent): 
     });
 
     if (existingSale) {
-      // Se a venda existe mas não foi enviada para o Husky, tenta enviar novamente
+      // Se a venda existe mas integrações falharam, tenta reenviar TODAS as integrações
       if (existingSale.status === "succeeded") {
-        await retrySendAccessWebhook(existingSale);
+        console.log(`🔄 [PayPal Webhook] Venda ${existingSale._id} já existe - verificando integrações...`);
+        await retryAllIntegrations(existingSale);
       }
       return;
     }
@@ -141,12 +142,16 @@ export const handlePaymentCaptureRefunded = async (event: PayPalWebhookEvent): P
 };
 
 /**
- * Tenta reenviar o webhook de acesso caso tenha falhado anteriormente
+ * NOVA FUNÇÃO: Tenta reenviar TODAS as integrações (Facebook, Husky, UTMfy)
+ * caso alguma tenha falhado anteriormente
  */
-const retrySendAccessWebhook = async (sale: any): Promise<void> => {
+const retryAllIntegrations = async (sale: any): Promise<void> => {
   try {
-    const offer = await Offer.findById(sale.offerId);
-    if (!offer) return;
+    const offer = await Offer.findById(sale.offerId).populate("ownerId");
+    if (!offer) {
+      console.warn(`⚠️ [PayPal Webhook] Oferta ${sale.offerId} não encontrada para reprocessamento`);
+      return;
+    }
 
     const items = sale.items || [
       {
@@ -158,9 +163,73 @@ const retrySendAccessWebhook = async (sale: any): Promise<void> => {
       },
     ];
 
-    await sendAccessWebhook(offer as any, sale, items, "");
+    // Marca tentativa de reprocessamento
+    sale.integrationsLastAttempt = new Date();
+
+    // A: Reenvia para Husky (área de membros) se não foi enviado ainda
+    if (!sale.integrationsHuskySent) {
+      try {
+        console.log(`🔄 [PayPal Webhook] Reenviando webhook Husky para venda ${sale._id}`);
+        await sendAccessWebhook(offer as any, sale, items, sale.customerPhone || "");
+        sale.integrationsHuskySent = true;
+        console.log(`✅ [PayPal Webhook] Webhook Husky reenviado com sucesso`);
+      } catch (error: any) {
+        console.error(`❌ [PayPal Webhook] Erro ao reenviar webhook Husky:`, error.message);
+      }
+    }
+
+    // B: Reenvia para Facebook CAPI se não foi enviado ainda
+    if (!sale.integrationsFacebookSent) {
+      try {
+        console.log(`🔄 [PayPal Webhook] Reenviando evento Facebook para venda ${sale._id}`);
+        await sendFacebookPurchaseEvent(offer, sale, items);
+        sale.integrationsFacebookSent = true;
+        console.log(`✅ [PayPal Webhook] Evento Facebook reenviado com sucesso`);
+      } catch (error: any) {
+        console.error(`❌ [PayPal Webhook] Erro ao reenviar evento Facebook:`, error.message);
+      }
+    }
+
+    // C: Reenvia para UTMfy se não foi enviado ainda
+    if (!sale.integrationsUtmfySent) {
+      try {
+        console.log(`🔄 [PayPal Webhook] Reenviando webhook UTMfy para venda ${sale._id}`);
+
+        // Importar função de reprocessamento do UTMfy
+        const { processUtmfyIntegrationForPayPal } = await import("../../../services/utmfy.service");
+
+        await processUtmfyIntegrationForPayPal(
+          offer as any,
+          sale,
+          items,
+          sale.stripePaymentIntentId.replace("PAYPAL_", ""), // Remove prefixo para obter order ID
+          {
+            email: sale.customerEmail,
+            name: sale.customerName,
+            phone: sale.customerPhone,
+          },
+          {
+            ip: sale.ip,
+            userAgent: sale.userAgent,
+            utm_source: (sale as any).utm_source,
+            utm_medium: (sale as any).utm_medium,
+            utm_campaign: (sale as any).utm_campaign,
+            utm_term: (sale as any).utm_term,
+            utm_content: (sale as any).utm_content,
+          }
+        );
+        sale.integrationsUtmfySent = true;
+        console.log(`✅ [PayPal Webhook] Webhook UTMfy reenviado com sucesso`);
+      } catch (error: any) {
+        console.error(`❌ [PayPal Webhook] Erro ao reenviar webhook UTMfy:`, error.message);
+      }
+    }
+
+    // Salva as flags de integração
+    await sale.save();
+    console.log(`📊 [PayPal Webhook] Integrações reprocessadas: Husky=${sale.integrationsHuskySent}, Facebook=${sale.integrationsFacebookSent}, UTMfy=${sale.integrationsUtmfySent}`);
   } catch (error: any) {
-    console.error(`❌ [PayPal] Erro ao reenviar webhook:`, error.message);
+    console.error(`❌ [PayPal Webhook] Erro ao reprocessar integrações:`, error.message);
   }
 };
 

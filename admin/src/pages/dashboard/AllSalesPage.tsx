@@ -325,7 +325,7 @@ export function AllSalesPage() {
         variant="outline"
         size="icon"
         className={`fixed z-50 transition-all duration-300 ease-in-out shadow-md hover:shadow-lg ${isSidebarOpen
-          ? "top-20 left-[272px]" // 288px (w-72) - 16px = 272px
+          ? "top-[60px] left-[272px]" // 288px (w-72) - 16px = 272px
           : "top-1/2 -translate-y-1/2 left-[208px]"
           }`}
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -339,7 +339,7 @@ export function AllSalesPage() {
           }`}
       >
         <div className={`space-y-4 ${isSidebarOpen ? "opacity-100" : "opacity-0"} transition-opacity duration-200`}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between ml-14">
             <h2 className="text-lg font-semibold">Filtros</h2>
             <Button variant="ghost" size="sm" onClick={clearAllFilters}>
               <X className="h-4 w-4 mr-1" />
@@ -377,7 +377,7 @@ export function AllSalesPage() {
               >
                 Hoje
               </Button>
-              <Button
+              {/* <Button
                 variant={periodFilter === "week" ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
@@ -389,7 +389,7 @@ export function AllSalesPage() {
                 className={periodFilter === "week" ? "bg-[#fdbf08] hover:bg-[#fdd049] text-black" : ""}
               >
                 7 dias
-              </Button>
+              </Button> */}
               <Button
                 variant={periodFilter === "month" ? "default" : "outline"}
                 size="sm"
@@ -509,7 +509,7 @@ export function AllSalesPage() {
             <Label className="text-sm font-medium">Método de Pagamento</Label>
             <div className="space-y-2">
               {[
-                { key: "credit_card", label: "💳 Cartão de Crédito" },
+                { key: "credit_card", label: "Cartão de Crédito" },
                 { key: "paypal", label: "PayPal" },
                 { key: "pix", label: "PIX" },
               ].map(({ key, label }) => (
@@ -572,7 +572,7 @@ export function AllSalesPage() {
 
       {/* Conteúdo Principal */}
       <main className="flex-1">
-        <div className="p-4 space-y-4 max-w-[1600px]">
+        <div className="p-4 px-6 space-y-4 max-w-[1600px]">
           {/* Cabeçalho */}
           <div className="flex justify-between items-center">
             <div>
@@ -736,16 +736,16 @@ export function AllSalesPage() {
                           )}
                           {sale.walletType === "google_pay" && (
                             <Badge variant="default" className="text-xs bg-blue-600 text-white hover:bg-blue-700">
-                              🅖 Google Pay
+                              Google Pay
                             </Badge>
                           )}
 
                           {!sale.walletType && (
                             <Badge variant="secondary" className="text-xs">
-                              {sale.paymentMethod === "credit_card" && "💳 Cartão"}
+                              {sale.paymentMethod === "credit_card" && "Cartão"}
                               {sale.paymentMethod === "paypal" && "PayPal"}
                               {sale.paymentMethod === "pix" && "PIX"}
-                              {sale.paymentMethodType === "card" && "💳 Cartão"}
+                              {sale.paymentMethodType === "card" && "Cartão"}
                               {!["credit_card", "paypal", "pix", "card"].includes(sale.paymentMethod) &&
                                 !["credit_card", "paypal", "pix", "card"].includes(sale.paymentMethodType || "") &&
                                 (sale.paymentMethodType || sale.paymentMethod)}
